@@ -1,3 +1,9 @@
+## Unreleased
+
+- Paint state names and composite titles at normal weight, as mermaid.js
+  renders them. They were measured at normal weight but painted bold, so the
+  last letter wrapped outside the state box.
+
 ## 0.3.1
 
 - Render faster: about 9x on a 500-node flowchart (28.4 ms to 3.1 ms, AOT)
