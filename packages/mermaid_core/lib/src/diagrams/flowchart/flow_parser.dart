@@ -79,11 +79,10 @@ final _hrefKeyword = RegExp(r'^href\s+');
 final _clickUrl = RegExp(r'^"([^"]*)"\s*(?:"([^"]*)")?');
 final _attributeKeyChar = RegExp(r'[A-Za-z0-9_-]');
 final _attributeValueChar = RegExp(r'[^,}]');
-final _textLinkStart = RegExp(r'([<xo])?(--|-\.|==)(?=\s)');
 final _solidTextLinkEnd = RegExp(r'(-{2,}[-xo>])');
 final _dottedTextLinkEnd = RegExp(r'(\.+-[xo>]?)');
 final _thickTextLinkEnd = RegExp(r'(={2,}[=xo>]?)');
-final _linkToken = RegExp(r'([<xo])?([-=~.]{2,})([xo>])?');
+final _space = RegExp(r'\s');
 final _lineBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
 final _legacyIcon = RegExp(r'fa[bklrs]?:fa-[\w-]+');
 final _blanks = RegExp(r'[ \t]+');
@@ -100,6 +99,9 @@ class _FlowParser {
   final subgraphs = <FlowSubgraph>[];
   final classDefs = <String, Map<String, String>>{};
   final _defaultLinkStyles = <String, String>{};
+
+  /// Link tokens (`-->`, `-.->`, ...) seen so far and their classification.
+  final _edgeSpecs = <String, _EdgeSpec>{};
   var direction = FlowDirection.tb;
   var _anonSubgraphCount = 0;
 
@@ -180,6 +182,10 @@ class _FlowParser {
   /// Splits the source into statements at newlines and top-level `;`,
   /// respecting quotes and bracket nesting, dropping inline `%%` comments,
   /// and keeping `accDescr { ... }` blocks together.
+  ///
+  /// Statements are copied as substrings of [text]; the buffer is used only
+  /// when a statement is not one contiguous range (comments, `accDescr`
+  /// blocks that span lines).
   List<_Statement> _splitStatements(String text) {
     final out = <_Statement>[];
     final buf = StringBuffer();
@@ -188,73 +194,81 @@ class _FlowParser {
     var depth = 0;
     var inQuote = false;
     var inAccBlock = false;
+    // Start of the range of [text] not yet copied into [buf].
+    var start = 0;
 
-    void flush() {
-      final s = buf.toString().trim();
+    void flush(int end) {
+      final String s;
+      if (buf.isEmpty) {
+        s = text.substring(start, end).trim();
+      } else {
+        buf.write(text.substring(start, end));
+        s = buf.toString().trim();
+        buf.clear();
+      }
       if (s.isNotEmpty) out.add(_Statement(s, bufLine));
-      buf.clear();
       bufLine = line;
     }
 
-    for (var i = 0; i < text.length; i++) {
-      final c = text[i];
-      if (c == '\n') {
+    final n = text.length;
+    for (var i = 0; i < n; i++) {
+      final c = text.codeUnitAt(i);
+      if (c == 0x0a) {
+        // \n
         line++;
         if (inAccBlock) {
-          buf.write(' ');
+          buf
+            ..write(text.substring(start, i))
+            ..write(' ');
+          start = i + 1;
           continue;
         }
         // Quoted strings (e.g. click tooltips) may span lines.
-        if (inQuote) {
-          buf.write('\n');
-          continue;
-        }
-        flush();
+        if (inQuote) continue;
+        flush(i);
+        start = i + 1;
         continue;
       }
       if (inQuote) {
-        buf.write(c);
-        if (c == '"') inQuote = false;
+        if (c == 0x22) inQuote = false;
         continue;
       }
       switch (c) {
-        case '"':
+        case 0x22: // "
           inQuote = true;
-          buf.write(c);
-        case '%' when i + 1 < text.length && text[i + 1] == '%':
+        case 0x25 when i + 1 < n && text.codeUnitAt(i + 1) == 0x25: // %%
           // Inline comment: skip to end of line.
-          while (i + 1 < text.length && text[i + 1] != '\n') {
+          buf.write(text.substring(start, i));
+          while (i + 1 < n && text.codeUnitAt(i + 1) != 0x0a) {
             i++;
           }
-        case '[' || '(':
+          start = i + 1;
+        case 0x5b || 0x28: // [ (
           depth++;
-          buf.write(c);
-        case '{':
+        case 0x7b: // {
+          buf.write(text.substring(start, i));
+          start = i;
           if (_accDescrOpen.hasMatch(buf.toString())) {
             inAccBlock = true;
           } else {
             depth++;
           }
-          buf.write(c);
-        case ']' || ')':
+        case 0x5d || 0x29: // ] )
           // Clamp: the asymmetric shape `A>text]` closes a bracket it never
           // opened, which must not swallow the following `;`.
           if (depth > 0) depth--;
-          buf.write(c);
-        case '}':
+        case 0x7d: // }
           if (inAccBlock) {
             inAccBlock = false;
           } else if (depth > 0) {
             depth--;
           }
-          buf.write(c);
-        case ';' when depth == 0:
-          flush();
-        default:
-          buf.write(c);
+        case 0x3b when depth == 0: // ;
+          flush(i);
+          start = i + 1;
       }
     }
-    flush();
+    flush(n);
     return out;
   }
 
@@ -814,6 +828,13 @@ class _FlowParser {
   (FlowNodeShape, String)? _tryParseShape(_Scanner sc) {
     // (opener, closers): the matched closer can refine the shape
     // (lean vs trapezoid).
+    if (sc.atEnd) return null;
+    switch (sc.text.codeUnitAt(sc.pos)) {
+      case 0x28 || 0x5b || 0x7b || 0x3e: // ( [ { >
+        break;
+      default:
+        return null;
+    }
     if (sc.tryConsume('(((')) {
       return (FlowNodeShape.doubleCircle, sc.readUntil([')))']).$2);
     }
@@ -850,7 +871,7 @@ class _FlowParser {
       );
     }
     if (sc.tryConsume('[')) {
-      return (FlowNodeShape.rect, sc.readUntil([']']).$2);
+      return (FlowNodeShape.rect, sc.readUntil(const [']']).$2);
     }
     if (sc.tryConsume('{{')) {
       return (FlowNodeShape.hexagon, sc.readUntil(['}}']).$2);
@@ -869,10 +890,10 @@ class _FlowParser {
   _EdgeSpec? _tryParseEdge(_Scanner sc) {
     sc.skipWs();
     // Text-form links: `-- label -->`, `-. label .->`, `== label ==>`.
-    final textForm = sc.tryMatch(_textLinkStart);
+    final textForm = sc.tryTextLinkStart();
     if (textForm != null) {
-      final startHead = textForm.group(1);
-      final endPattern = switch (textForm.group(2)!) {
+      final (startHead, kind) = textForm;
+      final endPattern = switch (kind) {
         '--' => _solidTextLinkEnd,
         '-.' => _dottedTextLinkEnd,
         _ => _thickTextLinkEnd,
@@ -882,18 +903,15 @@ class _FlowParser {
       return _withStartHead(spec, startHead, _normalizeLabel(label), sc.line);
     }
 
-    final m = sc.tryMatch(_linkToken);
-    if (m == null) return null;
-    final token = m.group(0)!;
-    final spec = _destructEdgeToken(token, sc.line);
+    final token = sc.tryLinkToken();
+    if (token == null) return null;
+    final spec = _edgeSpecs[token] ??= _destructEdgeToken(token, sc.line);
 
     // Optional `|label|` after the link.
-    String? label;
     sc.skipWs();
-    if (sc.tryConsume('|')) {
-      final (_, raw) = sc.readUntil(['|']);
-      label = _normalizeLabel(raw);
-    }
+    if (!sc.tryConsume('|')) return spec;
+    final (_, raw) = sc.readUntil(const ['|']);
+    final label = _normalizeLabel(raw);
     return _EdgeSpec(
       stroke: spec.stroke,
       headFrom: spec.headFrom,
@@ -1057,7 +1075,10 @@ class _Scanner {
   String rest(int n) => text.substring(pos, (pos + n).clamp(0, text.length));
 
   void skipWs() {
-    while (!atEnd && (text[pos] == ' ' || text[pos] == '\t')) {
+    final n = text.length;
+    while (pos < n) {
+      final c = text.codeUnitAt(pos);
+      if (c != 0x20 && c != 0x09) break;
       pos++;
     }
   }
@@ -1070,10 +1091,70 @@ class _Scanner {
     return false;
   }
 
-  Match? tryMatch(RegExp re) {
-    final m = re.matchAsPrefix(text, pos);
-    if (m != null) pos = m.end;
-    return m;
+  /// Matches `([<xo])?(--|-\.|==)(?=\s)` (the start of a text-form link)
+  /// at [pos]. On a match, moves past it and returns (start head, `--` /
+  /// `-.` / `==`).
+  (String?, String)? tryTextLinkStart() {
+    final n = text.length;
+    var p = pos;
+    if (p >= n) return null;
+    String? head;
+    final c0 = text.codeUnitAt(p);
+    if (c0 == 0x3c || c0 == 0x78 || c0 == 0x6f) {
+      // < x o
+      head = text[p];
+      p++;
+    }
+    if (p + 2 >= n || !_isSpaceAt(p + 2)) return null;
+    final a = text.codeUnitAt(p);
+    final b = text.codeUnitAt(p + 1);
+    final String kind;
+    if (a == 0x2d && b == 0x2d) {
+      kind = '--';
+    } else if (a == 0x2d && b == 0x2e) {
+      kind = '-.';
+    } else if (a == 0x3d && b == 0x3d) {
+      kind = '==';
+    } else {
+      return null;
+    }
+    pos = p + 2;
+    return (head, kind);
+  }
+
+  /// Matches the link token `([<xo])?([-=~.]{2,})([xo>])?` at [pos]. On a
+  /// match, moves past it and returns the token.
+  String? tryLinkToken() {
+    final n = text.length;
+    var p = pos;
+    if (p >= n) return null;
+    final c0 = text.codeUnitAt(p);
+    if (c0 == 0x3c || c0 == 0x78 || c0 == 0x6f) p++; // < x o
+    final coreStart = p;
+    while (p < n && _isLinkCore(text.codeUnitAt(p))) {
+      p++;
+    }
+    // Without the optional head the core would have to start at a `<xo`
+    // character, which is not a core character: no other match exists.
+    if (p - coreStart < 2) return null;
+    if (p < n) {
+      final c = text.codeUnitAt(p);
+      if (c == 0x78 || c == 0x6f || c == 0x3e) p++; // x o >
+    }
+    final token = text.substring(pos, p);
+    pos = p;
+    return token;
+  }
+
+  /// `[-=~.]`
+  static bool _isLinkCore(int c) =>
+      c == 0x2d || c == 0x3d || c == 0x7e || c == 0x2e;
+
+  /// Whether the code unit at [i] matches the regex class `\s`.
+  bool _isSpaceAt(int i) {
+    final c = text.codeUnitAt(i);
+    if (c < 0x80) return c == 0x20 || (c >= 0x09 && c <= 0x0d);
+    return _space.hasMatch(text[i]);
   }
 
   /// Consumes characters while they match [charClass].
@@ -1092,10 +1173,10 @@ class _Scanner {
     unicode: true,
   );
 
-  /// [_idChar] with an ASCII fast path (ids are mostly ASCII).
-  static bool _isIdChar(String c) {
-    final u = c.codeUnitAt(0);
-    if (u >= 0x80) return _idChar.hasMatch(c);
+  /// [_idChar] for the code unit [u] at [at], with an ASCII fast path (ids
+  /// are mostly ASCII).
+  bool _isIdUnit(int u, int at) {
+    if (u >= 0x80) return _idChar.hasMatch(text[at]);
     return (u >= 0x61 && u <= 0x7a) || // a-z
         (u >= 0x41 && u <= 0x5a) || // A-Z
         (u >= 0x30 && u <= 0x39) || // 0-9
@@ -1113,21 +1194,24 @@ class _Scanner {
   /// followed by `=`.
   String readNodeId() {
     final start = pos;
-    while (!atEnd) {
-      final c = text[pos];
-      final next = pos + 1 < text.length ? text[pos + 1] : null;
-      if (c == '-') {
+    final n = text.length;
+    while (pos < n) {
+      final c = text.codeUnitAt(pos);
+      if (c == 0x2d) {
         // Dash stays in the id only when it cannot start a link token.
-        if (next == null || next == '>' || next == '-' || next == '.') break;
+        if (pos + 1 >= n) break;
+        final next = text.codeUnitAt(pos + 1);
+        if (next == 0x3e || next == 0x2d || next == 0x2e) break; // > - .
         pos++;
         continue;
       }
-      if (c == '=') {
-        if (next == '=') break;
+      if (c == 0x3d) {
+        // =
+        if (pos + 1 < n && text.codeUnitAt(pos + 1) == 0x3d) break;
         pos++;
         continue;
       }
-      if (_isIdChar(c)) {
+      if (_isIdUnit(c, pos)) {
         pos++;
         continue;
       }
@@ -1138,32 +1222,32 @@ class _Scanner {
 
   /// Reads label content until one of [closers] (longest first), honoring
   /// quoted segments. Returns (closer, content).
+  ///
+  /// The content is every character between the start and the closer, so it
+  /// is one substring of [text].
   (String, String) readUntil(List<String> closers) {
-    final sorted = [...closers]..sort((a, b) => b.length.compareTo(a.length));
-    final buf = StringBuffer();
+    final sorted = closers.length == 1
+        ? closers
+        : ([...closers]..sort((a, b) => b.length.compareTo(a.length)));
+    final start = pos;
+    final n = text.length;
     var inQuote = false;
-    while (!atEnd) {
-      final c = text[pos];
+    while (pos < n) {
+      final c = text.codeUnitAt(pos);
       if (inQuote) {
-        buf.write(c);
-        if (c == '"') inQuote = false;
+        if (c == 0x22) inQuote = false;
         pos++;
         continue;
       }
       // Closers win over quote-starts so `"` itself can act as a closer.
       for (final closer in sorted) {
-        if (text.startsWith(closer, pos)) {
+        if (closer.codeUnitAt(0) == c && text.startsWith(closer, pos)) {
+          final content = text.substring(start, pos);
           pos += closer.length;
-          return (closer, buf.toString());
+          return (closer, content);
         }
       }
-      if (c == '"') {
-        inQuote = true;
-        buf.write(c);
-        pos++;
-        continue;
-      }
-      buf.write(c);
+      if (c == 0x22) inQuote = true;
       pos++;
     }
     throw MermaidParseException(
