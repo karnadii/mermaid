@@ -104,7 +104,7 @@ void _orderIndexed(Graph g, DagreConfig config, int maxRank, Map<int, List<Strin
   final names = g.nodes;
   final index = {for (var i = 0; i < names.length; i++) names[i]: i};
   var nextRoot = names.length;
-  _LayerGraph build(int rank, Relationship ship) {
+  IndexedLayerGraph build(int rank, Relationship ship) {
     createLayerRootName(g);
     return _buildIndexedLayerGraph(g, index, nextRoot++, rank, ship, byRank[rank] ?? const []);
   }
@@ -125,5 +125,10 @@ void _orderIndexed(Graph g, DagreConfig config, int maxRank, Map<int, List<Strin
   if (config.disableOptimalOrderHeuristic) {
     return;
   }
-  _IndexedOrder(g, names, down, up).run(maxRank);
+  final best = IndexedOrder.fromGraph(g, names, down, up).run(maxRank);
+  for (final layer in best) {
+    for (var i = 0; i < layer.length; i++) {
+      g.node(names[layer[i]])[orderK] = i;
+    }
+  }
 }

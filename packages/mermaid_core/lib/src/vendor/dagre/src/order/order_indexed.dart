@@ -9,8 +9,8 @@ part of 'index.dart';
 /// - the border nodes of clusters at this rank,
 /// - which nodes have their own label (clusters), because order writes to
 ///   those labels do not reach `g`.
-class _LayerGraph {
-  _LayerGraph(this.root);
+class IndexedLayerGraph {
+  IndexedLayerGraph(this.root);
 
   final int root;
   final Map<int, List<int>> children = {};
@@ -51,8 +51,30 @@ class _Sorted {
 /// string-keyed code in this directory (sortSubgraph, barycenter,
 /// resolveConflicts, sort, addSubgraphConstraints, crossCount,
 /// buildLayerMatrix) in the same iteration order, so the result is the same.
-class _IndexedOrder {
-  _IndexedOrder(this.g, this.names, this.down, this.up) {
+class IndexedOrder {
+  /// [order] and [rank] are per node index; [outTargets]/[outWeights]
+  /// list each node's out-edges in edge order, as crossCount reads them.
+  IndexedOrder(
+    this.order,
+    this.rank,
+    this.outTargets,
+    this.outWeights,
+    this.down,
+    this.up,
+  );
+
+  /// From the layout graph [g], whose node indices are [names].
+  factory IndexedOrder.fromGraph(
+    Graph g,
+    List<String> names,
+    List<IndexedLayerGraph> down,
+    List<IndexedLayerGraph> up,
+  ) {
+    final index = {for (var i = 0; i < names.length; i++) names[i]: i};
+    final order = <double>[];
+    final rank = <int?>[];
+    final outTargets = <List<int>>[];
+    final outWeights = <List<num>>[];
     for (var i = 0; i < names.length; i++) {
       final label = g.node(names[i]);
       order.add(label.getD2(orderK) ?? 0);
@@ -66,21 +88,20 @@ class _IndexedOrder {
       outTargets.add(outs);
       outWeights.add(weights);
     }
+    return IndexedOrder(order, rank, outTargets, outWeights, down, up);
   }
 
-  final Graph g;
-  final List<String> names;
-  final List<_LayerGraph> down;
-  final List<_LayerGraph> up;
-  late final Map<String, int> index = {
-    for (var i = 0; i < names.length; i++) names[i]: i,
-  };
-  final List<double> order = [];
-  final List<int?> rank = [];
-  final List<List<int>> outTargets = [];
-  final List<List<num>> outWeights = [];
+  final List<IndexedLayerGraph> down;
+  final List<IndexedLayerGraph> up;
+  final List<double> order;
+  final List<int?> rank;
+  final List<List<int>> outTargets;
+  final List<List<num>> outWeights;
 
-  void run(int maxRank) {
+  int get nodeCount => order.length;
+
+  /// Runs the sweeps and returns the layering with the fewest crossings.
+  List<List<int>> run(int maxRank) {
     num bestCC = double.infinity;
     List<List<int>> best = [];
     for (int i = 0, lastBest = 0; lastBest < 4; ++i, ++lastBest) {
@@ -93,14 +114,10 @@ class _IndexedOrder {
         bestCC = cc;
       }
     }
-    for (final layer in best) {
-      for (var i = 0; i < layer.length; i++) {
-        g.node(names[layer[i]])[orderK] = i;
-      }
-    }
+    return best;
   }
 
-  void _sweep(List<_LayerGraph> layerGraphs, bool biasRight) {
+  void _sweep(List<IndexedLayerGraph> layerGraphs, bool biasRight) {
     // Constraint graph: unique edges in insertion order.
     final cgEdges = <(int, int)>[];
     final cgKeys = <(int, int)>{};
@@ -136,7 +153,7 @@ class _IndexedOrder {
   }
 
   _Sorted _sortSubgraph(
-    _LayerGraph lg,
+    IndexedLayerGraph lg,
     int v,
     List<(int, int)> cgEdges,
     bool biasRight,
@@ -339,7 +356,7 @@ class _IndexedOrder {
   /// the same order replaces an earlier one), sorted by order.
   List<List<int>> _layerMatrix(int maxRank) {
     final byOrder = List<Map<int, int>>.generate(maxRank + 1, (_) => {});
-    for (var v = 0; v < names.length; v++) {
+    for (var v = 0; v < nodeCount; v++) {
       final r = rank[v];
       if (r != null) byOrder[r][order[v].toInt()] = v;
     }
@@ -351,7 +368,7 @@ class _IndexedOrder {
 
   int _crossCount(List<List<int>> layering) {
     var cc = 0;
-    final southPos = List<int>.filled(names.length, 0);
+    final southPos = List<int>.filled(nodeCount, 0);
     for (var l = 1; l < layering.length; ++l) {
       final north = layering[l - 1], south = layering[l];
       for (var i = 0; i < south.length; i++) {
@@ -393,9 +410,9 @@ class _IndexedOrder {
   }
 }
 
-/// [buildLayerGraph] as a [_LayerGraph]: same node order, parents, edges and
+/// [buildLayerGraph] as a [IndexedLayerGraph]: same node order, parents, edges and
 /// cluster labels.
-_LayerGraph _buildIndexedLayerGraph(
+IndexedLayerGraph _buildIndexedLayerGraph(
   Graph g,
   Map<String, int> index,
   int rootId,
@@ -403,7 +420,7 @@ _LayerGraph _buildIndexedLayerGraph(
   Relationship ship,
   List<String> nodesInRank,
 ) {
-  final lg = _LayerGraph(rootId);
+  final lg = IndexedLayerGraph(rootId);
   for (var v in nodesInRank) {
     Props node = g.node(v);
     if (!(node.getI2(rankK) == rank ||

@@ -10,8 +10,8 @@ part of 'bk.dart';
 /// - _findSmallestWidthAlignment starts its maximum at double.minPositive.
 /// Neighbour lists keep the graph's insertion order, so `find`, `sort` and
 /// the compaction stack see the same sequences as the reference code.
-class _IndexedBk {
-  _IndexedBk(
+class IndexedBk {
+  IndexedBk(
     this.label,
     this.names,
     this.layers,
@@ -26,7 +26,7 @@ class _IndexedBk {
   );
 
   /// From the non-compound copy that the reference position() makes.
-  factory _IndexedBk.fromGraph(Graph g, List<List<String>> layering) {
+  factory IndexedBk.fromGraph(Graph g, List<List<String>> layering) {
     final index = <String, int>{};
     final names = <String>[];
     final layers = <List<int>>[];
@@ -40,7 +40,7 @@ class _IndexedBk {
       layers.add(ids);
     }
     final labels = [for (final v in names) g.node(v)];
-    return _IndexedBk(
+    return IndexedBk(
       g.label,
       names,
       layers,
@@ -277,60 +277,56 @@ class _IndexedBk {
       }
     }
 
-    final xs = List<double?>.filled(n, null);
+    // Both passes walk the block graph with the reference's explicit stack:
+    // a node's coordinate is (re)computed each time it is popped after its
+    // first visit.
+    final xs = Float64List(n);
     final visited = List<bool>.filled(n, false);
     final stack = <int>[];
-    void iterate(
-      void Function(int) setXs,
-      List<List<int>> next,
-      List<int> other,
-    ) {
-      stack
-        ..clear()
-        ..addAll(blockNodes);
-      visited.fillRange(0, n, false);
-      while (stack.isNotEmpty) {
-        final elem = stack.removeLast();
-        if (visited[elem]) {
-          setXs(elem);
-        } else {
-          visited[elem] = true;
-          stack.add(elem);
-          for (final e in next[elem]) {
-            stack.add(other[e]);
-          }
+
+    // First pass, assign smallest coordinates.
+    stack.addAll(blockNodes);
+    while (stack.isNotEmpty) {
+      final elem = stack.removeLast();
+      if (visited[elem]) {
+        num acc = 0;
+        for (final e in blockIn[elem]) {
+          acc = math.max(acc, xs[edgeFrom[e]] + edgeSep[e]);
+        }
+        xs[elem] = acc.toDouble();
+      } else {
+        visited[elem] = true;
+        stack.add(elem);
+        for (final e in blockIn[elem]) {
+          stack.add(edgeFrom[e]);
         }
       }
     }
 
-    iterate(
-      (elem) {
-        num acc = 0;
-        for (final e in blockIn[elem]) {
-          acc = math.max(acc, xs[edgeFrom[e]]! + edgeSep[e]);
-        }
-        xs[elem] = acc.toDouble();
-      },
-      blockIn,
-      edgeFrom,
-    );
-
+    // Second pass, assign greatest coordinates.
     final ownBorder = reverseSep ? 'borderLeft' : 'borderRight';
-    iterate(
-      (elem) {
+    visited.fillRange(0, n, false);
+    stack.addAll(blockNodes);
+    while (stack.isNotEmpty) {
+      final elem = stack.removeLast();
+      if (visited[elem]) {
         num minv = double.maxFinite;
         for (final e in blockOut[elem]) {
-          minv = math.min(minv, xs[edgeTo[e]]! - edgeSep[e]);
+          minv = math.min(minv, xs[edgeTo[e]] - edgeSep[e]);
         }
         if (minv != double.maxFinite && borderType[elem] != ownBorder) {
-          xs[elem] = math.max(xs[elem] as num, minv).toDouble();
+          xs[elem] = math.max(xs[elem], minv).toDouble();
         }
-      },
-      blockOut,
-      edgeTo,
-    );
+      } else {
+        visited[elem] = true;
+        stack.add(elem);
+        for (final e in blockOut[elem]) {
+          stack.add(edgeTo[e]);
+        }
+      }
+    }
 
-    return [for (var v = 0; v < n; v++) xs[root[v]]!];
+    return [for (var v = 0; v < n; v++) xs[root[v]]];
   }
 
   Map<String, double> run() {
@@ -511,7 +507,7 @@ bool positionIndexed(Graph g) {
     prevY += maxHeight + rankSep;
   }
 
-  final bk = _IndexedBk(
+  final bk = IndexedBk(
     g.label,
     names,
     layers,

@@ -15,14 +15,8 @@ part of 'network_simplex.dart';
 /// tree and its root, not on the walk order, so those parts are free to use
 /// plain arrays.
 class _IndexedSimplex {
-  _IndexedSimplex(
-    this.labels,
-    this.rank,
-    this.src,
-    this.dst,
-    this.weight,
-    this.minLen,
-  ) : n = labels.length {
+  _IndexedSimplex(this.rank, this.src, this.dst, this.weight, this.minLen)
+    : n = rank.length {
     for (var i = 0; i < n; i++) {
       inEdges.add([]);
       outEdges.add([]);
@@ -47,10 +41,8 @@ class _IndexedSimplex {
       weight.add(label.getD(weightK));
       minLen.add(label.getD(minLenK));
     }
-    final labels = [for (final v in names) g.node(v)];
     return _IndexedSimplex(
-      labels,
-      [for (final l in labels) l.getD(rankK)],
+      [for (final v in names) g.node(v).getD(rankK)],
       src,
       dst,
       weight,
@@ -65,7 +57,7 @@ class _IndexedSimplex {
   /// longest-path ranks. Returns null when the reference code must run: an
   /// edge ends at a cluster node, the graph has a cycle, or the first node
   /// has a `parent` label.
-  static _IndexedSimplex? fromCompound(Graph g) {
+  static List<Props>? rankCompound(Graph g) {
     final labels = <Props>[];
     final index = <String, int>{};
     for (final v in g.nodesIterable) {
@@ -77,64 +69,25 @@ class _IndexedSimplex {
     }
     final n = labels.length;
     if (n == 0 || labels[0].get2(parentK) != null) return null;
-    final src = <int>[], dst = <int>[];
-    final weight = <double>[], minLen = <double>[];
-    final edgeOf = <int, int>{};
+    final edgeV = <int>[], edgeW = <int>[];
+    final edgeWeight = <double>[], edgeMinLen = <double>[];
     for (final e in g.edgesIterable) {
       final v = index[e.v], w = index[e.w];
       if (v == null || w == null) return null;
       final label = g.edge2(e);
-      final at = edgeOf[v * n + w];
-      if (at == null) {
-        edgeOf[v * n + w] = src.length;
-        src.add(v);
-        dst.add(w);
-        weight.add(0 + label.getD(weightK));
-        minLen.add(math.max(1.0, label.getD(minLenK)));
-      } else {
-        weight[at] = weight[at] + label.getD(weightK);
-        minLen[at] = math.max(minLen[at], label.getD(minLenK));
-      }
+      edgeV.add(v);
+      edgeW.add(w);
+      edgeWeight.add(label.getD(weightK));
+      edgeMinLen.add(label.getD(minLenK));
     }
-
-    // longestPath: rank(v) = min over out-edges of rank(w) - minLen, 0 for
-    // sinks. The values do not depend on the visit order.
-    final outs = List<List<int>>.generate(n, (_) => []);
-    for (var e = 0; e < src.length; e++) {
-      outs[src[e]].add(e);
+    final rank = networkSimplexRanks(n, edgeV, edgeW, edgeWeight, edgeMinLen);
+    if (rank == null) return null;
+    for (var i = 0; i < n; i++) {
+      labels[i][rankK] = rank[i];
     }
-    final rank = List<double>.filled(n, 0);
-    final state = List<int>.filled(n, 0); // 0 new, 1 open, 2 done
-    final stack = <int>[];
-    for (var root = 0; root < n; root++) {
-      if (state[root] != 0) continue;
-      stack.add(root);
-      while (stack.isNotEmpty) {
-        final v = stack.last;
-        if (state[v] == 0) {
-          state[v] = 1;
-          for (final e in outs[v]) {
-            final w = dst[e];
-            if (state[w] == 1) return null;
-            if (state[w] == 0) stack.add(w);
-          }
-        } else {
-          stack.removeLast();
-          if (state[v] == 2) continue;
-          state[v] = 2;
-          double? r;
-          for (final e in outs[v]) {
-            final x = rank[dst[e]] - minLen[e];
-            r = r == null ? x : math.min(r, x);
-          }
-          rank[v] = (r == null || r.isInfinite || r.isNaN) ? 0 : r;
-        }
-      }
-    }
-    return _IndexedSimplex(labels, rank, src, dst, weight, minLen);
+    return labels;
   }
 
-  final List<Props> labels;
   final int n;
 
   final List<double> rank;
@@ -174,9 +127,6 @@ class _IndexedSimplex {
       if (leave < 0) break;
       final enter = _enterEdge(leave);
       _exchange(leave, enter);
-    }
-    for (var i = 0; i < n; i++) {
-      labels[i][rankK] = rank[i];
     }
   }
 
@@ -367,4 +317,72 @@ class _IndexedSimplex {
           : rank[parent[v]] + minLen[e];
     }
   }
+}
+
+/// Ranks [n] nodes with network simplex on indices, as
+/// `networkSimplex(asNonCompoundGraph(g))` does: parallel edges merged in
+/// edge order (weights summed, minLen the maximum, as simplify() does),
+/// longest-path ranks, then the pivots. Returns null for a cyclic graph,
+/// where the reference code must run.
+List<double>? networkSimplexRanks(
+  int n,
+  List<int> edgeV,
+  List<int> edgeW,
+  List<double> edgeWeight,
+  List<double> edgeMinLen,
+) {
+  if (n == 0) return null;
+  final src = <int>[], dst = <int>[];
+  final weight = <double>[], minLen = <double>[];
+  final edgeOf = <int, int>{};
+  for (var i = 0; i < edgeV.length; i++) {
+    final v = edgeV[i], w = edgeW[i];
+    final at = edgeOf[v * n + w];
+    if (at == null) {
+      edgeOf[v * n + w] = src.length;
+      src.add(v);
+      dst.add(w);
+      weight.add(0 + edgeWeight[i]);
+      minLen.add(math.max(1.0, edgeMinLen[i]));
+    } else {
+      weight[at] = weight[at] + edgeWeight[i];
+      minLen[at] = math.max(minLen[at], edgeMinLen[i]);
+    }
+  }
+  // longestPath: rank(v) = min over out-edges of rank(w) - minLen, 0 for
+  // sinks. The values do not depend on the visit order.
+  final outs = List<List<int>>.generate(n, (_) => []);
+  for (var e = 0; e < src.length; e++) {
+    outs[src[e]].add(e);
+  }
+  final rank = List<double>.filled(n, 0);
+  final state = List<int>.filled(n, 0); // 0 new, 1 open, 2 done
+  final stack = <int>[];
+  for (var root = 0; root < n; root++) {
+    if (state[root] != 0) continue;
+    stack.add(root);
+    while (stack.isNotEmpty) {
+      final v = stack.last;
+      if (state[v] == 0) {
+        state[v] = 1;
+        for (final e in outs[v]) {
+          final w = dst[e];
+          if (state[w] == 1) return null;
+          if (state[w] == 0) stack.add(w);
+        }
+      } else {
+        stack.removeLast();
+        if (state[v] == 2) continue;
+        state[v] = 2;
+        double? r;
+        for (final e in outs[v]) {
+          final x = rank[dst[e]] - minLen[e];
+          r = r == null ? x : math.min(r, x);
+        }
+        rank[v] = (r == null || r.isInfinite || r.isNaN) ? 0 : r;
+      }
+    }
+  }
+  _IndexedSimplex(rank, src, dst, weight, minLen).run();
+  return rank;
 }

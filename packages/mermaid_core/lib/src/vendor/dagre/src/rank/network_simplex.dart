@@ -21,7 +21,12 @@ void networkSimplex(Graph g) {
   // without a `parent` label instead; when that is not the first node, keep
   // the reference code so the pivots stay the same.
   if (!useReferenceLayout && start != null && g.node(start).get2(parentK) == null) {
-    _IndexedSimplex.fromSimplified(g).run();
+    final simplex = _IndexedSimplex.fromSimplified(g);
+    simplex.run();
+    final names = g.nodes;
+    for (var i = 0; i < names.length; i++) {
+      g.node(names[i])[rankK] = simplex.rank[i];
+    }
     return;
   }
   _networkSimplexReference(g);
@@ -235,8 +240,5 @@ bool _isDescendant(Graph tree, Props vLabel, Props rootLabel) {
 /// when the reference path must run instead.
 bool networkSimplexCompound(Graph g) {
   if (useReferenceLayout) return false;
-  final simplex = _IndexedSimplex.fromCompound(g);
-  if (simplex == null) return false;
-  simplex.run();
-  return true;
+  return _IndexedSimplex.rankCompound(g) != null;
 }

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:mermaid_core/src/vendor/dagre/src/model/enums/align.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/model/enums/dummy.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/model/enums/label_pos.dart';
@@ -329,7 +330,7 @@ Map<String, double> _balance(Map<GraphAlign, Map<String, double>> xss, GraphAlig
 
 Map<String, double> positionX(Graph g) {
   if (!useReferenceLayout) {
-    return _IndexedBk.fromGraph(g, util.buildLayerMatrix(g)).run();
+    return IndexedBk.fromGraph(g, util.buildLayerMatrix(g)).run();
   }
   return _positionXReference(g);
 }
