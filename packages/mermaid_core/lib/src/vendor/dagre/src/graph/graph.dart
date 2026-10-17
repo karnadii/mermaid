@@ -96,7 +96,7 @@ class Graph {
 
   int get nodeCount => _nodeCount;
 
-  List<String> get nodes => List.from(_nodes.keys);
+  List<String> get nodes => _nodes.keys.toList();
 
   Iterable<String> get nodesIterable => _nodes.keys;
 
@@ -196,7 +196,7 @@ class Graph {
   List<String>? predecessors(String v) {
     var predsV = _preds[v];
     if (predsV != null) {
-      return List.from(predsV.keys);
+      return predsV.keys.toList();
     }
     return null;
   }
@@ -204,7 +204,7 @@ class Graph {
   List<String>? successors(String v) {
     var sucsV = _sucs[v];
     if (sucsV != null) {
-      return List.from(sucsV.keys);
+      return sucsV.keys.toList();
     }
     return null;
   }
@@ -241,7 +241,7 @@ class Graph {
 
   ///返回所有的EdgeObj对象
   List<Edge> get edges {
-    return List.from(_edgeObjs.values);
+    return _edgeObjs.values.toList();
   }
 
   Iterable<Edge> get edgesIterable {
@@ -268,7 +268,7 @@ class Graph {
   List<Edge>? inEdges(String v, [String? u]) {
     var inV = _in[v];
     if (inV != null) {
-      List<Edge> edges = List.from(inV.values);
+      List<Edge> edges = inV.values.toList();
       if (u == null) {
         return edges;
       }
@@ -282,7 +282,7 @@ class Graph {
   List<Edge>? outEdges(String v, [String? w]) {
     var outV = _out[v];
     if (outV != null) {
-      List<Edge> edges = List.from(outV.values);
+      List<Edge> edges = outV.values.toList();
       if (w == null) {
         return edges;
       }
@@ -362,7 +362,7 @@ class Graph {
     if (isCompound) {
       var children = _children[nodeId];
       if (children != null) {
-        return List.from(children.keys);
+        return children.keys.toList();
       }
     } else if (nodeId == _graphNodeId) {
       return nodes;
@@ -383,7 +383,7 @@ class Graph {
       successors(v)?.forEach((e) {
         ds.add(e);
       });
-      return List.from(ds);
+      return ds.toList();
     }
     return null;
   }
@@ -400,14 +400,14 @@ class Graph {
         _children.remove(v);
       }
 
-      List<EdgeKey> kl = List.from((_in[v] ?? {}).keys);
+      List<EdgeKey> kl = (_in[v]?.keys.toList() ?? <EdgeKey>[]);
       for (var e in kl) {
         removeEdge2(_edgeObjs[e]);
       }
       _in.remove(v);
       _preds.remove(v);
 
-      kl = List.from((_out[v] ?? {}).keys);
+      kl = (_out[v]?.keys.toList() ?? <EdgeKey>[]);
       for (var e in kl) {
         removeEdge2(_edgeObjs[e]);
       }

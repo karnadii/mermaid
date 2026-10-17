@@ -41,8 +41,10 @@ List<List<String>> initOrder(Graph g) {
   }
 
   var orderedVs =simpleNodes;
+  // Same comparisons as reading the labels in the comparator, read once.
+  final rankOf = {for (var v in orderedVs) v: g.node(v).getD(rankK)};
   orderedVs.sort((a, b) {
-    return g.node(a).getD(rankK).compareTo(g.node(b).getD(rankK));
+    return rankOf[a]!.compareTo(rankOf[b]!);
   });
   orderedVs.forEach(dfs);
   return layers;
