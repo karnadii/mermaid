@@ -55,6 +55,44 @@ class _EdgeSpec {
   final String? label;
 }
 
+// Statement and token patterns, compiled once.
+final _header = RegExp(r'^(graph|flowchart-elk|flowchart)\b\s*(.*)$');
+final _headerDirection = RegExp(r'^(TB|TD|BT|LR|RL|>|<|\^|v)(?=\s|$)');
+final _accDescrOpen = RegExp(r'accDescr\s*$');
+final _subgraphKeyword = RegExp(r'^subgraph\b');
+final _endKeyword = RegExp(r'^end$');
+final _directionStatement = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$');
+final _classDefKeyword = RegExp(r'^classDef\b');
+final _classKeyword = RegExp(r'^class\b');
+final _styleKeyword = RegExp(r'^style\b');
+final _linkStyleKeyword = RegExp(r'^linkStyle\b');
+final _clickKeyword = RegExp(r'^click\b');
+final _accessibility = RegExp(r'^acc(Title|Descr)\s*[:{]');
+final _subgraphIdTitle = RegExp(r'^([^\s\[\]"]+)\s*\[(.*)\]\s*$');
+final _quotedTitle = RegExp(r'^"[^"]*"$');
+final _classDefStatement = RegExp(r'^classDef\s+([^\s]+)\s+(.+)$');
+final _classStatement = RegExp(r'^class\s+([^\s]+)\s+([^\s]+)\s*$');
+final _styleStatement = RegExp(r'^style\s+([^\s]+)\s+(.+)$');
+final _linkStyleStatement = RegExp(r'^linkStyle\s+([\d,\s]+|default)\s+(.+)$');
+final _interpolate = RegExp(r'^interpolate\s+(\w+)\s*');
+final _clickStatement = RegExp(r'^click\s+(\S+)\s+([\s\S]*)$');
+final _hrefKeyword = RegExp(r'^href\s+');
+final _clickUrl = RegExp(r'^"([^"]*)"\s*(?:"([^"]*)")?');
+final _attributeKeyChar = RegExp(r'[A-Za-z0-9_-]');
+final _attributeValueChar = RegExp(r'[^,}]');
+final _textLinkStart = RegExp(r'([<xo])?(--|-\.|==)(?=\s)');
+final _solidTextLinkEnd = RegExp(r'(-{2,}[-xo>])');
+final _dottedTextLinkEnd = RegExp(r'(\.+-[xo>]?)');
+final _thickTextLinkEnd = RegExp(r'(={2,}[=xo>]?)');
+final _linkToken = RegExp(r'([<xo])?([-=~.]{2,})([xo>])?');
+final _dottedCore = RegExp(r'^-?\.+-?$');
+final _solidCore = RegExp(r'^-+$');
+final _thickCore = RegExp(r'^=+$');
+final _invisibleCore = RegExp(r'^~+$');
+final _lineBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
+final _legacyIcon = RegExp(r'fa[bklrs]?:fa-[\w-]+');
+final _blanks = RegExp(r'[ \t]+');
+
 class _FlowParser {
   _FlowParser(this.text, this.title, this.inheritDir);
 
@@ -82,9 +120,7 @@ class _FlowParser {
       throw const MermaidParseException('empty flowchart source');
     }
     final header = statements.first;
-    final headerMatch = RegExp(
-      r'^(graph|flowchart-elk|flowchart)\b\s*(.*)$',
-    ).firstMatch(header.text.trim());
+    final headerMatch = _header.firstMatch(header.text.trim());
     if (headerMatch == null) {
       throw MermaidParseException(
         'expected "graph" or "flowchart" header, got "${header.text.trim()}"',
@@ -140,7 +176,7 @@ class _FlowParser {
       '^': FlowDirection.bt,
       'v': FlowDirection.tb,
     };
-    final m = RegExp(r'^(TB|TD|BT|LR|RL|>|<|\^|v)(?=\s|$)').firstMatch(rest);
+    final m = _headerDirection.firstMatch(rest);
     if (m == null) return rest;
     direction = dirs[m.group(1)]!;
     return rest.substring(m.end).trim();
@@ -199,7 +235,7 @@ class _FlowParser {
           depth++;
           buf.write(c);
         case '{':
-          if (RegExp(r'accDescr\s*$').hasMatch(buf.toString())) {
+          if (_accDescrOpen.hasMatch(buf.toString())) {
             inAccBlock = true;
           } else {
             depth++;
@@ -230,15 +266,15 @@ class _FlowParser {
   void _parseStatement(_Statement st) {
     final s = st.text;
     if (s.isEmpty) return;
-    if (RegExp(r'^subgraph\b').hasMatch(s)) {
+    if (_subgraphKeyword.hasMatch(s)) {
       _openSubgraph(s.substring('subgraph'.length).trim(), st.line);
       return;
     }
-    if (RegExp(r'^end$').hasMatch(s)) {
+    if (_endKeyword.hasMatch(s)) {
       _closeSubgraph(st.line);
       return;
     }
-    final dir = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$').firstMatch(s);
+    final dir = _directionStatement.firstMatch(s);
     if (dir != null) {
       const dirs = {
         'TB': FlowDirection.tb,
@@ -256,28 +292,28 @@ class _FlowParser {
       }
       return;
     }
-    if (RegExp(r'^classDef\b').hasMatch(s)) {
+    if (_classDefKeyword.hasMatch(s)) {
       _parseClassDef(s, st.line);
       return;
     }
-    if (RegExp(r'^class\b').hasMatch(s)) {
+    if (_classKeyword.hasMatch(s)) {
       _parseClassStatement(s, st.line);
       return;
     }
-    if (RegExp(r'^style\b').hasMatch(s)) {
+    if (_styleKeyword.hasMatch(s)) {
       _parseStyleStatement(s, st.line);
       return;
     }
-    if (RegExp(r'^linkStyle\b').hasMatch(s)) {
+    if (_linkStyleKeyword.hasMatch(s)) {
       _parseLinkStyle(s, st.line);
       return;
     }
-    if (RegExp(r'^click\b').hasMatch(s)) {
+    if (_clickKeyword.hasMatch(s)) {
       _parseClick(s, st.line);
       return;
     }
     // Accessibility statements are parsed and discarded for now.
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(s)) return;
+    if (_accessibility.hasMatch(s)) return;
     _parseChain(st);
   }
 
@@ -286,14 +322,14 @@ class _FlowParser {
   void _openSubgraph(String header, int line) {
     String id;
     String titleText;
-    final bracket = RegExp(r'^([^\s\[\]"]+)\s*\[(.*)\]\s*$').firstMatch(header);
+    final bracket = _subgraphIdTitle.firstMatch(header);
     if (bracket != null) {
       id = bracket.group(1)!;
       titleText = _normalizeLabel(bracket.group(2)!);
     } else if (header.isEmpty) {
       id = 'subGraph${_anonSubgraphCount++}';
       titleText = '';
-    } else if (RegExp(r'^"[^"]*"$').hasMatch(header)) {
+    } else if (_quotedTitle.hasMatch(header)) {
       titleText = _normalizeLabel(header);
       id = 'subGraph${_anonSubgraphCount++}';
     } else if (!header.contains(' ')) {
@@ -329,7 +365,7 @@ class _FlowParser {
   // --- keyword statements -----------------------------------------------------
 
   void _parseClassDef(String s, int line) {
-    final m = RegExp(r'^classDef\s+([^\s]+)\s+(.+)$').firstMatch(s);
+    final m = _classDefStatement.firstMatch(s);
     if (m == null) {
       throw MermaidParseException('malformed classDef', line: line);
     }
@@ -340,7 +376,7 @@ class _FlowParser {
   }
 
   void _parseClassStatement(String s, int line) {
-    final m = RegExp(r'^class\s+([^\s]+)\s+([^\s]+)\s*$').firstMatch(s);
+    final m = _classStatement.firstMatch(s);
     if (m == null) {
       throw MermaidParseException('malformed class statement', line: line);
     }
@@ -359,7 +395,7 @@ class _FlowParser {
   }
 
   void _parseStyleStatement(String s, int line) {
-    final m = RegExp(r'^style\s+([^\s]+)\s+(.+)$').firstMatch(s);
+    final m = _styleStatement.firstMatch(s);
     if (m == null) {
       throw MermaidParseException('malformed style statement', line: line);
     }
@@ -371,14 +407,14 @@ class _FlowParser {
   }
 
   void _parseLinkStyle(String s, int line) {
-    final m = RegExp(r'^linkStyle\s+([\d,\s]+|default)\s+(.+)$').firstMatch(s);
+    final m = _linkStyleStatement.firstMatch(s);
     if (m == null) {
       throw MermaidParseException('malformed linkStyle statement', line: line);
     }
     var styleText = m.group(2)!.trim();
     // `interpolate <curve>` selects the edge curve (basis/linear/step/...).
     String? curve;
-    final interp = RegExp(r'^interpolate\s+(\w+)\s*').firstMatch(styleText);
+    final interp = _interpolate.firstMatch(styleText);
     if (interp != null) {
       curve = interp.group(1);
       styleText = styleText.substring(interp.end).trim();
@@ -415,14 +451,14 @@ class _FlowParser {
     // click <id> href "url" ["tooltip"] | click <id> "url" ["tooltip"]
     // click <id> call fn() | click <id> callback — parsed, ignored.
     // [\s\S] because quoted tooltips may contain newlines.
-    final m = RegExp(r'^click\s+(\S+)\s+([\s\S]*)$').firstMatch(s);
+    final m = _clickStatement.firstMatch(s);
     if (m == null) {
       throw MermaidParseException('malformed click statement', line: line);
     }
     final id = m.group(1)!;
     var rest = m.group(2)!.trim();
-    rest = rest.replaceFirst(RegExp(r'^href\s+'), '');
-    final url = RegExp(r'^"([^"]*)"\s*(?:"([^"]*)")?').firstMatch(rest);
+    rest = rest.replaceFirst(_hrefKeyword, '');
+    final url = _clickUrl.firstMatch(rest);
     if (url != null) {
       final node = _ensureNode(id);
       nodes[id] = node.copyWith(link: url.group(1), tooltip: url.group(2));
@@ -573,7 +609,7 @@ class _FlowParser {
           line: sc.line,
         );
       }
-      final key = sc.readWhile(RegExp(r'[A-Za-z0-9_-]')).trim();
+      final key = sc.readWhile(_attributeKeyChar).trim();
       sc.skipWs();
       if (!sc.tryConsume(':')) {
         throw MermaidParseException(
@@ -587,7 +623,7 @@ class _FlowParser {
         final (_, quoted) = sc.readUntil(['"']);
         value = quoted;
       } else {
-        value = sc.readWhile(RegExp(r'[^,}]')).trim();
+        value = sc.readWhile(_attributeValueChar).trim();
       }
       switch (key) {
         case 'shape':
@@ -834,20 +870,20 @@ class _FlowParser {
   _EdgeSpec? _tryParseEdge(_Scanner sc) {
     sc.skipWs();
     // Text-form links: `-- label -->`, `-. label .->`, `== label ==>`.
-    final textForm = sc.tryMatch(RegExp(r'([<xo])?(--|-\.|==)(?=\s)'));
+    final textForm = sc.tryMatch(_textLinkStart);
     if (textForm != null) {
       final startHead = textForm.group(1);
       final endPattern = switch (textForm.group(2)!) {
-        '--' => RegExp(r'(-{2,}[-xo>])'),
-        '-.' => RegExp(r'(\.+-[xo>]?)'),
-        _ => RegExp(r'(={2,}[=xo>]?)'),
+        '--' => _solidTextLinkEnd,
+        '-.' => _dottedTextLinkEnd,
+        _ => _thickTextLinkEnd,
       };
       final (label, endToken) = sc.readEdgeText(endPattern);
       final spec = _destructEdgeToken(endToken, sc.line);
       return _withStartHead(spec, startHead, _normalizeLabel(label), sc.line);
     }
 
-    final m = sc.tryMatch(RegExp(r'([<xo])?([-=~.]{2,})([xo>])?'));
+    final m = sc.tryMatch(_linkToken);
     if (m == null) return null;
     final token = m.group(0)!;
     final spec = _destructEdgeToken(token, sc.line);
@@ -923,11 +959,11 @@ class _FlowParser {
 
   bool _validEdgeCore(String core) {
     // Dotted cores may be a single `.` (from `-. text .-`).
-    if (RegExp(r'^-?\.+-?$').hasMatch(core)) return true;
+    if (_dottedCore.hasMatch(core)) return true;
     if (core.length < 2) return false;
-    if (RegExp(r'^-+$').hasMatch(core)) return true;
-    if (RegExp(r'^=+$').hasMatch(core)) return true;
-    return RegExp(r'^~+$').hasMatch(core);
+    if (_solidCore.hasMatch(core)) return true;
+    if (_thickCore.hasMatch(core)) return true;
+    return _invisibleCore.hasMatch(core);
   }
 
   _EdgeSpec _withStartHead(
@@ -974,13 +1010,13 @@ class _FlowParser {
     if (s.length >= 2 && s.startsWith('`') && s.endsWith('`')) {
       s = s.substring(1, s.length - 1);
     }
-    s = s.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+    s = s.replaceAll(_lineBreak, '\n');
     final withoutLegacyIcons = s.replaceAll(
-      RegExp(r'fa[bklrs]?:fa-[\w-]+'),
+      _legacyIcon,
       '',
     );
     if (withoutLegacyIcons != s) {
-      s = withoutLegacyIcons.replaceAll(RegExp(r'[ \t]+'), ' ');
+      s = withoutLegacyIcons.replaceAll(_blanks, ' ');
     }
     return s.trim();
   }
@@ -1034,6 +1070,22 @@ class _Scanner {
     unicode: true,
   );
 
+  /// [_idChar] with an ASCII fast path (ids are mostly ASCII).
+  static bool _isIdChar(String c) {
+    final u = c.codeUnitAt(0);
+    if (u >= 0x80) return _idChar.hasMatch(c);
+    return (u >= 0x61 && u <= 0x7a) || // a-z
+        (u >= 0x41 && u <= 0x5a) || // A-Z
+        (u >= 0x30 && u <= 0x39) || // 0-9
+        _asciiIdPunctuation.contains(u);
+  }
+
+  /// The ASCII punctuation in [_idChar]: `_ ! # $ % & * + . ? \ / '`.
+  static const _asciiIdPunctuation = {
+    0x5f, 0x21, 0x23, 0x24, 0x25, 0x26, 0x2a, 0x2b, 0x2e, 0x3f, 0x5c, 0x2f, //
+    0x27,
+  };
+
   /// Mirrors upstream NODE_STRING: `-` only when not followed by `>`, `-` or
   /// `.` (so ids may contain dashes without eating links), `=` only when not
   /// followed by `=`.
@@ -1053,7 +1105,7 @@ class _Scanner {
         pos++;
         continue;
       }
-      if (_idChar.hasMatch(c)) {
+      if (_isIdChar(c)) {
         pos++;
         continue;
       }
