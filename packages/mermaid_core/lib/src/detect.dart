@@ -107,8 +107,22 @@ final _frontmatter = RegExp(r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n');
 final _directive = RegExp(r'%%\{[\s\S]*?\}%%');
 final _frontmatterTitle = RegExp(r'^\s*title:\s*(.+)$', multiLine: true);
 
+/// Whether [text] may start with a `---` frontmatter fence after leading
+/// whitespace: a cheap check before the frontmatter patterns, which all
+/// start with `^\s*---`. Non-ASCII leading characters are left to the
+/// pattern.
+bool _mayStartWithFence(String text) {
+  for (var i = 0; i < text.length; i++) {
+    final c = text.codeUnitAt(i);
+    if (c == 0x20 || (c >= 0x09 && c <= 0x0d)) continue;
+    return c >= 0x80 || text.startsWith('---', i);
+  }
+  return false;
+}
+
 /// Extracts `title:` from YAML frontmatter if present.
 String? frontmatterTitle(String source) {
+  if (!_mayStartWithFence(source)) return null;
   final text = source.replaceAll('\r\n', '\n');
   final fm = _frontmatter.firstMatch(text);
   if (fm == null) return null;

@@ -72,6 +72,31 @@ final _frontmatterLayout = RegExp(
 );
 final _flowchartElkKeyword = RegExp(r'(?:^|\n)\s*flowchart-elk\b');
 
+/// Whether [text] may start with a `---` frontmatter fence after leading
+/// whitespace (see the copy in `detect.dart`).
+bool _mayStartWithFence(String text) {
+  for (var i = 0; i < text.length; i++) {
+    final c = text.codeUnitAt(i);
+    if (c == 0x20 || (c >= 0x09 && c <= 0x0d)) continue;
+    return c >= 0x80 || text.startsWith('---', i);
+  }
+  return false;
+}
+
+/// Whether [text] contains [literal]. [String.contains] compares the whole
+/// pattern at every position; this compares it only where the first code
+/// unit matches, which is much faster on long sources.
+bool _containsLiteral(String text, String literal) {
+  final first = literal.codeUnitAt(0);
+  final last = text.length - literal.length;
+  for (var i = 0; i <= last; i++) {
+    if (text.codeUnitAt(i) == first && text.startsWith(literal, i)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// The frontmatter body and the decoded `%%{init}%%` configs of one source.
 ///
 /// One render resolves the theme, look, layout and diagram config from the
@@ -80,10 +105,18 @@ final _flowchartElkKeyword = RegExp(r'(?:^|\n)\s*flowchart-elk\b');
 /// not modify them.
 class _Metadata {
   _Metadata(this.source) : text = source.replaceAll('\r\n', '\n') {
-    frontmatter = _frontmatterBlock.firstMatch(text)?.group(1);
-    inits = [
-      for (final m in _initDirective.allMatches(text)) _looseJson(m.group(1)!),
-    ];
+    // Cheap checks for the literal start of each pattern (`---` after
+    // leading whitespace, `%%{`) skip the regex scans for the common source
+    // without metadata.
+    frontmatter = _mayStartWithFence(text)
+        ? _frontmatterBlock.firstMatch(text)?.group(1)
+        : null;
+    inits = !_containsLiteral(text, '%%{')
+        ? const []
+        : [
+            for (final m in _initDirective.allMatches(text))
+              _looseJson(m.group(1)!),
+          ];
   }
 
   final String source;
@@ -178,7 +211,7 @@ String resolveLayout(String source, {String defaultLayout = 'dagre'}) {
   var layout = defaultLayout;
   final meta = _metadata(source);
   // The `flowchart-elk` keyword selects the elk engine.
-  if (meta.text.contains('flowchart-elk') &&
+  if (_containsLiteral(meta.text, 'flowchart-elk') &&
       _flowchartElkKeyword.hasMatch(meta.text)) {
     layout = 'elk';
   }
