@@ -262,16 +262,18 @@ String _num(double v) {
     final tie = ((scaled - r).abs() - 0.5).abs() < 1e-6;
     if (r != 0 && !tie) {
       final a = r.abs();
-      final sign = r < 0 ? '-' : '';
-      final whole = a ~/ 100;
-      final frac = a % 100;
-      if (frac == 0) return '$sign$whole';
-      if (frac % 10 == 0) return '$sign$whole.${frac ~/ 10}';
-      return frac < 10 ? '$sign$whole.0$frac' : '$sign$whole.$frac';
+      final whole = '${a ~/ 100}${_fractions[a % 100]}';
+      return r < 0 ? '-$whole' : whole;
     }
   }
   return _numSlow(v);
 }
+
+/// `''`, `.01` … `.99` with trailing zeros removed, indexed by hundredths.
+final _fractions = [
+  for (var i = 0; i < 100; i++)
+    i == 0 ? '' : (i % 10 == 0 ? '.${i ~/ 10}' : '.${i < 10 ? '0' : ''}$i'),
+];
 
 final _trailingZeros = RegExp(r'0+$');
 final _trailingDot = RegExp(r'\.$');
