@@ -67,7 +67,7 @@ List<SceneNode> renderIcon(String ref, Rect box, Color color) {
   Point tf(Point p) => Point(dx + p.x * scale, dy + p.y * scale);
 
   final out = <SceneNode>[];
-  for (final el in _svgElements(def.body)) {
+  for (final el in _parsedIcon(def)) {
     final geom = _geometryFor(el, tf, scale);
     if (geom == null) continue;
     final paint = _paintFor(el, color, scale);
@@ -76,6 +76,48 @@ List<SceneNode> renderIcon(String ref, Rect box, Color color) {
   }
   return out;
 }
+
+/// A drawable SVG element of an icon body with its attributes read once:
+/// icons repeat across a diagram and across renders, and reading the markup
+/// costs a regex search per attribute.
+class _IconElement {
+  _IconElement(String tag, String attrs)
+      : tag = tag,
+        path = tag == 'path'
+            ? parseSvgPath(_dAttr.firstMatch(attrs)?.group(1))
+            : const [],
+        values = [
+          for (final name in _numericAttrs[tag] ?? const <String>[])
+            _attrNum(attrs, name),
+        ],
+        fill = _styleProp(attrs, 'fill'),
+        stroke = _styleProp(attrs, 'stroke'),
+        strokeWidth = _styleProp(attrs, 'stroke-width');
+
+  final String tag;
+
+  /// The `d` commands of a `path`, in icon units.
+  final List<PathCommand> path;
+
+  /// The numeric attributes of [_numericAttrs] for [tag], in that order.
+  final List<double?> values;
+  final String? fill;
+  final String? stroke;
+  final String? strokeWidth;
+}
+
+const _numericAttrs = {
+  'line': ['x1', 'y1', 'x2', 'y2'],
+  'rect': ['x', 'y', 'width', 'height', 'rx', 'ry'],
+  'circle': ['cx', 'cy', 'r'],
+  'ellipse': ['cx', 'cy', 'rx', 'ry'],
+};
+
+final _parsedIcons = Expando<List<_IconElement>>();
+
+List<_IconElement> _parsedIcon(IconDef def) => _parsedIcons[def] ??= [
+      for (final el in _svgElements(def.body)) _IconElement(el.tag, el.attrs),
+    ];
 
 /// A single drawable SVG element: its tag name and raw attribute string.
 typedef _SvgElement = ({String tag, String attrs});
@@ -105,46 +147,45 @@ Iterable<_SvgElement> _svgElements(String body) sync* {
 }
 
 ShapeGeometry? _geometryFor(
-    _SvgElement el, Point Function(Point) tf, double scale) {
+    _IconElement el, Point Function(Point) tf, double scale) {
+  final v = el.values;
   switch (el.tag) {
     case 'path':
-      final d = _dAttr.firstMatch(el.attrs)?.group(1);
-      final cmds = parseSvgPath(d).map((c) => _transform(c, tf)).toList();
+      final cmds = el.path.map((c) => _transform(c, tf)).toList();
       return cmds.isEmpty ? null : PathGeometry(cmds);
     case 'line':
-      final x1 = _attrNum(el.attrs, 'x1') ?? 0;
-      final y1 = _attrNum(el.attrs, 'y1') ?? 0;
-      final x2 = _attrNum(el.attrs, 'x2') ?? 0;
-      final y2 = _attrNum(el.attrs, 'y2') ?? 0;
+      final x1 = v[0] ?? 0;
+      final y1 = v[1] ?? 0;
+      final x2 = v[2] ?? 0;
+      final y2 = v[3] ?? 0;
       return PathGeometry([MoveTo(tf(Point(x1, y1))), LineTo(tf(Point(x2, y2)))]);
     case 'rect':
-      final x = _attrNum(el.attrs, 'x') ?? 0;
-      final y = _attrNum(el.attrs, 'y') ?? 0;
-      final w = _attrNum(el.attrs, 'width') ?? 0;
-      final h = _attrNum(el.attrs, 'height') ?? 0;
+      final x = v[0] ?? 0;
+      final y = v[1] ?? 0;
+      final w = v[2] ?? 0;
+      final h = v[3] ?? 0;
       final tl = tf(Point(x, y));
       final br = tf(Point(x + w, y + h));
       return RectGeometry(
         Rect.fromLTRB(tl.x, tl.y, br.x, br.y),
-        rx: (_attrNum(el.attrs, 'rx') ?? 0) * scale,
-        ry: (_attrNum(el.attrs, 'ry') ?? 0) * scale,
+        rx: (v[4] ?? 0) * scale,
+        ry: (v[5] ?? 0) * scale,
       );
     case 'circle':
-      final c = tf(Point(_attrNum(el.attrs, 'cx') ?? 0, _attrNum(el.attrs, 'cy') ?? 0));
-      return CircleGeometry(c, (_attrNum(el.attrs, 'r') ?? 0) * scale);
+      final c = tf(Point(v[0] ?? 0, v[1] ?? 0));
+      return CircleGeometry(c, (v[2] ?? 0) * scale);
     case 'ellipse':
-      final c = tf(Point(_attrNum(el.attrs, 'cx') ?? 0, _attrNum(el.attrs, 'cy') ?? 0));
-      return EllipseGeometry(c, (_attrNum(el.attrs, 'rx') ?? 0) * scale,
-          (_attrNum(el.attrs, 'ry') ?? 0) * scale);
+      final c = tf(Point(v[0] ?? 0, v[1] ?? 0));
+      return EllipseGeometry(c, (v[2] ?? 0) * scale, (v[3] ?? 0) * scale);
   }
   return null;
 }
 
 /// Resolves the (fill, stroke) for an element. `none` disables a channel; an
 /// element with no explicit paint falls back to a solid [fallback] fill.
-(Fill?, Stroke?) _paintFor(_SvgElement el, Color fallback, double scale) {
-  final fillStr = _styleProp(el.attrs, 'fill');
-  final strokeStr = _styleProp(el.attrs, 'stroke');
+(Fill?, Stroke?) _paintFor(_IconElement el, Color fallback, double scale) {
+  final fillStr = el.fill;
+  final strokeStr = el.stroke;
   final hasAny = fillStr != null || strokeStr != null;
 
   Fill? fill;
@@ -157,7 +198,7 @@ ShapeGeometry? _geometryFor(
   Stroke? stroke;
   if (strokeStr != null && strokeStr != 'none') {
     final w = double.tryParse(
-            (_styleProp(el.attrs, 'stroke-width') ?? '1').replaceAll('px', '')) ??
+            (el.strokeWidth ?? '1').replaceAll('px', '')) ??
         1;
     stroke = Stroke(color: _parseColor(strokeStr) ?? fallback, width: w * scale);
   }
