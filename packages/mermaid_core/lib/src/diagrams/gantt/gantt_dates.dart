@@ -3,6 +3,8 @@
 /// a dayjs-equivalent dependency.
 library;
 
+final _durationSpec = RegExp(r'^(\d+(?:\.\d+)?)(ms|s|m|h|d|w)$');
+
 /// Parses [text] according to a dayjs-style [format] containing the tokens
 /// YYYY, MM, DD, HH, mm, ss with literal separators. Returns null when the
 /// text does not match.
@@ -46,7 +48,7 @@ DateTime? parseGanttDate(String text, String format) {
 
 /// Parses durations like `30m`, `4h`, `1d`, `2w` (mermaid taskDuration).
 Duration? parseGanttDuration(String text) {
-  final m = RegExp(r'^(\d+(?:\.\d+)?)(ms|s|m|h|d|w)$').firstMatch(text.trim());
+  final m = _durationSpec.firstMatch(text.trim());
   if (m == null) return null;
   final v = double.parse(m.group(1)!);
   return switch (m.group(2)!) {

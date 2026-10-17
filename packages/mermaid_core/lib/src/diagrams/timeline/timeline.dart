@@ -17,6 +17,12 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _timelineHeader = RegExp(r'^timeline\b(.*)$');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _sectionLine = RegExp(r'^section\s+(.+)$');
+final _accLine = RegExp(r'^acc(Title|Descr)\s*[:{]');
+final _lineBreakTag = RegExp(r'<br\s*/?>', caseSensitive: false);
+
 /// Layout direction parsed from the `timeline [LR|TD]` header. Upstream's
 /// renderer is columnar regardless of direction, so this is carried for
 /// fidelity but does not change the topology.
@@ -95,7 +101,7 @@ TimelineDiagram parseTimeline(String source) {
     if (comment >= 0) line = line.substring(0, comment).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      final header = RegExp(r'^timeline\b(.*)$').firstMatch(line);
+      final header = _timelineHeader.firstMatch(line);
       if (header == null) {
         throw MermaidParseException('expected "timeline" header', line: i + 1);
       }
@@ -109,18 +115,18 @@ TimelineDiagram parseTimeline(String source) {
       continue;
     }
     Match? m;
-    m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    m = _titleLine.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       continue;
     }
-    m = RegExp(r'^section\s+(.+)$').firstMatch(line);
+    m = _sectionLine.firstMatch(line);
     if (m != null) {
       sections.add((m.group(1)!.trim(), []));
       lastEvents = null;
       continue;
     }
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(line)) continue;
+    if (_accLine.hasMatch(line)) continue;
 
     // Continuation: `: another event` appends to the previous period.
     if (line.startsWith(':')) {
@@ -163,7 +169,7 @@ TimelineDiagram parseTimeline(String source) {
 }
 
 String _normalize(String s) =>
-    s.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n').trim();
+    s.replaceAll(_lineBreakTag, '\n').trim();
 
 // Section/task/event fills are upstream's `cScale<i>` and the per-node bottom
 // underline uses `cScaleInv<i>` (`.section-<i> {rect,path,circle} fill:

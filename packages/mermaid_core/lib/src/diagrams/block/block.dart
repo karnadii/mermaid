@@ -18,6 +18,28 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _blockHeader = RegExp(r'^block(-beta)?\b');
+final _blockHeaderPrefix = RegExp(r'^block(-beta)?\s*');
+final _blockColumns = RegExp(r'^columns\s+(-?\d+)$');
+final _blockClassDef = RegExp(r'^classDef\s+(\S+)\s+(.+)$');
+final _blockClassAssign = RegExp(r'^class\s+([^\s]+)\s+(\S+)\s*$');
+final _blockStyle = RegExp(r'^style\s+(\S+)\s+(.+)$');
+final _blockEdgeOperator = RegExp(r'-->|---|<--|==|-\.|\.-|--[ox]|[ox]--');
+final _blockGroupStart = RegExp(r'^block:([^\s:]+)(?::(\d+))?\s*$');
+final _blockSpanSuffix = RegExp(r':(\d+)$');
+final _blockArrowBlock = RegExp(r'^([^\s<]+)<\[(.*?)\]>\(([^)]*)\)$');
+final _blockShapeSpec = RegExp(
+    r'^([^\s([{>]+)\s*'
+    r'(\(\(\(|\(\(|\(\[|\[\(|\{\{|\[\[|\[/|\[\\|\(|\[|\{|>)'
+    r'(.*?)'
+    r'(\)\)\)|\)\)|\]\)|\)\]|\}\}|\]\]|/\]|\\\]|\)|\]|\})?\s*$',
+);
+final _blockDash = RegExp(r'[<ox]?[-=][-=.]*[-=](?:[>ox])?');
+final _blockOpenHalfEnd = RegExp(r'[>ox]$');
+final _blockLeadingNodeAndOp = RegExp(r'^\s*(?:"([^"]*)"|([^<>|"=.-][^<>|]*?))\s*([-=][-=.]*(?:[>ox])?)');
+final _blockPipedLabel = RegExp(r'^\s*\|\s*(?:"([^"]*)"|([^|]*))\|');
+final _blockSeparators = RegExp(r'[\s"\[\](){}]');
+
 enum BlockShape {
   rect,
   rounded,
@@ -139,11 +161,11 @@ BlockDiagram parseBlock(String source) {
     if (c >= 0) line = line.substring(0, c).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^block(-beta)?\b').hasMatch(line)) {
+      if (!_blockHeader.hasMatch(line)) {
         throw MermaidParseException('expected "block" header', line: i + 1);
       }
       seenHeader = true;
-      final rest = line.replaceFirst(RegExp(r'^block(-beta)?\s*'), '');
+      final rest = line.replaceFirst(_blockHeaderPrefix, '');
       if (rest.trim().isEmpty) continue;
       line = rest.trim();
     }
@@ -152,7 +174,7 @@ BlockDiagram parseBlock(String source) {
       if (scopes.length > 1) scopes.removeLast();
       continue;
     }
-    final colM = RegExp(r'^columns\s+(-?\d+)$').firstMatch(line);
+    final colM = _blockColumns.firstMatch(line);
     if (colM != null) {
       final n = int.parse(colM.group(1)!);
       if (scopes.last.group != null) {
@@ -163,13 +185,13 @@ BlockDiagram parseBlock(String source) {
       continue;
     }
     // classDef name fill:#f96,stroke:#333,...
-    final classDefM = RegExp(r'^classDef\s+(\S+)\s+(.+)$').firstMatch(line);
+    final classDefM = _blockClassDef.firstMatch(line);
     if (classDefM != null) {
       classDefs[classDefM.group(1)!] = _parseStyles(classDefM.group(2)!);
       continue;
     }
     // class id1,id2 className
-    final classM = RegExp(r'^class\s+([^\s]+)\s+(\S+)\s*$').firstMatch(line);
+    final classM = _blockClassAssign.firstMatch(line);
     if (classM != null) {
       final cls = classM.group(2)!;
       for (final id in classM.group(1)!.split(',')) {
@@ -180,18 +202,18 @@ BlockDiagram parseBlock(String source) {
       continue;
     }
     // style id k:v,...
-    final styleM = RegExp(r'^style\s+(\S+)\s+(.+)$').firstMatch(line);
+    final styleM = _blockStyle.firstMatch(line);
     if (styleM != null) {
       styleById[styleM.group(1)!] = _parseStyles(styleM.group(2)!);
       continue;
     }
     // Edge: A --> B, A -- "label" --> B, A ==> B, A -.- B, A --o B, A --x B.
-    if (line.contains(RegExp(r'-->|---|<--|==|-\.|\.-|--[ox]|[ox]--'))) {
+    if (line.contains(_blockEdgeOperator)) {
       _parseEdges(line, edges);
       continue;
     }
     // block:id[:span] [columns N] — opens a group.
-    final grpM = RegExp(r'^block:([^\s:]+)(?::(\d+))?\s*$').firstMatch(line);
+    final grpM = _blockGroupStart.firstMatch(line);
     if (grpM != null) {
       final group = BlockGroup(
         grpM.group(1)!,
@@ -266,14 +288,14 @@ List<String> _tokenizeBlocks(String line) {
 BlockNode _parseNode(String spec) {
   // optional :span suffix (outside brackets)
   var span = 1;
-  final spanM = RegExp(r':(\d+)$').firstMatch(spec);
+  final spanM = _blockSpanSuffix.firstMatch(spec);
   if (spanM != null && !spec.substring(0, spanM.start).endsWith('"')) {
     span = int.parse(spanM.group(1)!);
     spec = spec.substring(0, spanM.start);
   }
   if (spec == 'space') return BlockNode('', '', BlockShape.space, span, {});
   // Block arrow: id<["label"]>(dir[, dir]) — a fat arrow polygon.
-  final arrowM = RegExp(r'^([^\s<]+)<\[(.*?)\]>\(([^)]*)\)$').firstMatch(spec);
+  final arrowM = _blockArrowBlock.firstMatch(spec);
   if (arrowM != null) {
     final id = arrowM.group(1)!;
     var label = arrowM.group(2)!.trim();
@@ -314,12 +336,7 @@ BlockNode _parseNode(String spec) {
   }
   // Opening delimiters, longest first so `(((` wins over `((` etc. The id is
   // any run of non-delimiter chars. `>` opens the `odd` (`id>label]`) shape.
-  final m = RegExp(
-    r'^([^\s([{>]+)\s*'
-    r'(\(\(\(|\(\(|\(\[|\[\(|\{\{|\[\[|\[/|\[\\|\(|\[|\{|>)'
-    r'(.*?)'
-    r'(\)\)\)|\)\)|\]\)|\)\]|\}\}|\]\]|/\]|\\\]|\)|\]|\})?\s*$',
-  ).firstMatch(spec);
+  final m = _blockShapeSpec.firstMatch(spec);
   if (m == null) {
     return BlockNode(spec, spec, BlockShape.rect, span, {});
   }
@@ -377,7 +394,7 @@ void _parseEdges(String line, List<BlockEdge> edges) {
   // A link operator: an optional leading marker (`<`/`o`/`x`), a body of
   // `-`/`=`/`.` (at least two chars), and an optional trailing marker
   // (`>`/`o`/`x`). An embedded `=` => thick, an embedded `.` => dotted.
-  final dashRe = RegExp(r'[<ox]?[-=][-=.]*[-=](?:[>ox])?');
+  final dashRe = _blockDash;
   while (pos < whole.length) {
     final m = dashRe.firstMatch(whole.substring(pos));
     if (m == null) {
@@ -396,12 +413,10 @@ void _parseEdges(String line, List<BlockEdge> edges) {
     // A label can sit between two halves only when this leading operator does
     // not already terminate the arrow (no trailing marker); otherwise
     // `G-->H-->I` would mistake the node `H` for a label.
-    final openHalf = !RegExp(r'[>ox]$').hasMatch(opStr);
+    final openHalf = !_blockOpenHalfEnd.hasMatch(opStr);
     // pattern: optional `"label"` or bare label then another link body
     final twoPart = openHalf
-        ? RegExp(
-            r'^\s*(?:"([^"]*)"|([^<>|"=.-][^<>|]*?))\s*([-=][-=.]*(?:[>ox])?)',
-          ).firstMatch(rest)
+        ? _blockLeadingNodeAndOp.firstMatch(rest)
         : null;
     if (twoPart != null) {
       label = (twoPart.group(1) ?? twoPart.group(2) ?? '').trim();
@@ -409,9 +424,7 @@ void _parseEdges(String line, List<BlockEdge> edges) {
       after = after + twoPart.end;
     } else {
       // piped label: `-->|label|`
-      final piped = RegExp(
-        r'^\s*\|\s*(?:"([^"]*)"|([^|]*))\|',
-      ).firstMatch(rest);
+      final piped = _blockPipedLabel.firstMatch(rest);
       if (piped != null) {
         label = (piped.group(1) ?? piped.group(2) ?? '').trim();
         after = after + piped.end;
@@ -459,7 +472,7 @@ BlockMarker _markerFor(String ch) => switch (ch) {
 };
 
 String _cleanEdgeId(String tok) => tok
-    .split(RegExp(r'[\s"\[\](){}]'))
+    .split(_blockSeparators)
     .firstWhere((s) => s.isNotEmpty, orElse: () => '');
 
 Map<String, String> _parseStyles(String s) {

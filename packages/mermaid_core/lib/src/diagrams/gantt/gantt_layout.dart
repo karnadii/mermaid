@@ -16,6 +16,10 @@ import '../../theme/theme.dart';
 import 'gantt_dates.dart';
 import 'gantt_model.dart';
 
+final _tickIntervalSpec = RegExp(
+  r'^([1-9][0-9]*)(millisecond|second|minute|hour|day|week|month)$',
+);
+
 // Upstream config defaults (config.schema.yaml GanttDiagramConfig).
 const double _diagramPadding = 12;
 
@@ -60,9 +64,7 @@ class GanttConfig {
     final rawTick = values['tickInterval'];
     final tickInterval =
         rawTick is String &&
-            RegExp(
-              r'^([1-9][0-9]*)(millisecond|second|minute|hour|day|week|month)$',
-            ).hasMatch(rawTick)
+            _tickIntervalSpec.hasMatch(rawTick)
         ? rawTick
         : null;
     return GanttConfig(
@@ -609,9 +611,7 @@ List<DateTime> _ticks(
   int weekday = DateTime.sunday,
 }) {
   if (interval != null) {
-    final match = RegExp(
-      r'^([1-9][0-9]*)(millisecond|second|minute|hour|day|week|month)$',
-    ).firstMatch(interval)!;
+    final match = _tickIntervalSpec.firstMatch(interval)!;
     final count = int.parse(match.group(1)!);
     final unit = match.group(2)!;
     final out = <DateTime>[];

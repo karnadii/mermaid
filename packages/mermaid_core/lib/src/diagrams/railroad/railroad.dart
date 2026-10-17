@@ -21,6 +21,11 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _railroadHeader = RegExp(r'^railroad(-diagram|-beta)?\b');
+final _railroadTitle = RegExp(r'^title\s+"?([^"]+)"?\s*$');
+final _railroadBlockComment = RegExp(r'/\*.*?\*/', dotAll: true);
+final _railroadParenComment = RegExp(r'\(\*.*?\*\)', dotAll: true);
+
 // ---------------------------------------------------------------------------
 // Expression AST
 // ---------------------------------------------------------------------------
@@ -109,13 +114,13 @@ RailroadDiagram parseRailroad(String source) {
     final t = line.trim();
     if (t.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^railroad(-diagram|-beta)?\b').hasMatch(t)) {
+      if (!_railroadHeader.hasMatch(t)) {
         throw const MermaidParseException('expected "railroad" header');
       }
       seenHeader = true;
       continue;
     }
-    final tm = RegExp(r'^title\s+"?([^"]+)"?\s*$').firstMatch(t);
+    final tm = _railroadTitle.firstMatch(t);
     if (tm != null) {
       title = tm.group(1)!.trim();
       continue;
@@ -126,8 +131,8 @@ RailroadDiagram parseRailroad(String source) {
 
   // Strip EBNF block comments: `/* ... */` (W3C) and `(* ... *)` (ISO).
   var src = body.toString();
-  src = src.replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), ' ');
-  src = src.replaceAll(RegExp(r'\(\*.*?\*\)', dotAll: true), ' ');
+  src = src.replaceAll(_railroadBlockComment, ' ');
+  src = src.replaceAll(_railroadParenComment, ' ');
 
   final rules = <RailroadRule>[];
   for (final stmt in _splitTop(src, ';')) {

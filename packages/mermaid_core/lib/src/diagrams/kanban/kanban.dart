@@ -17,6 +17,21 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _kanbanItemSpec = RegExp(r'^([^\s\[\(\{@]+)\s*[\[\(\{]+(.*?)[\]\)\}]+\s*$');
+final _kanbanBareId = RegExp(r'^(\S+)$');
+final _kanbanLineBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
+final _kanbanHeader = RegExp(r'^\s*kanban\b');
+final _kanbanClassDef = RegExp(r'^classDef\s+([^\s]+)\s+(.+)$');
+final _kanbanClassAssign = RegExp(r'^class\s+([^\s]+)\s+([^\s]+)\s*$');
+final _kanbanStyle = RegExp(r'^style\s+([^\s]+)\s+(.+)$');
+final _kanbanClick = RegExp(r'^click\s+(\S+)\s+([\s\S]*)$');
+final _kanbanHrefPrefix = RegExp(r'^href\s+');
+final _kanbanClickAction = RegExp(r'^"([^"]*)"\s*(?:"([^"]*)")?');
+final _kanbanLinkStyle = RegExp(r'^linkStyle\b');
+final _kanbanMetadataBlockStart = RegExp(r'@\s*\{');
+final _kanbanNumber = RegExp(r'[-+]?\d*\.?\d+');
+final _kanbanNumberBare = RegExp(r'\d*\.?\d+');
+
 /// A single task card. Optional metadata (`ticket`/`priority`/`assigned`/
 /// `icon`) is parsed from a trailing `@{ ... }` YAML-ish block, matching
 /// upstream `kanbanDb.ts:addNode`.
@@ -64,9 +79,7 @@ class _NodeHead {
 _NodeHead _parseHead(String s) {
   final t = s.trim();
   // `id[label]`, `id(label)`, `id((label))`, `id{{label}}` — id + inner label.
-  final m = RegExp(
-    r'^([^\s\[\(\{@]+)\s*[\[\(\{]+(.*?)[\]\)\}]+\s*$',
-  ).firstMatch(t);
+  final m = _kanbanItemSpec.firstMatch(t);
   String? id;
   String label;
   if (m != null) {
@@ -75,14 +88,14 @@ _NodeHead _parseHead(String s) {
   } else {
     // Bare `id` with no brackets: id and label coincide (only when it is a
     // single token with no spaces; otherwise it is a plain label).
-    final bare = RegExp(r'^(\S+)$').firstMatch(t);
+    final bare = _kanbanBareId.firstMatch(t);
     id = bare?.group(1);
     label = t;
   }
   if (label.length >= 2 && label.startsWith('"') && label.endsWith('"')) {
     label = label.substring(1, label.length - 1);
   }
-  label = label.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+  label = label.replaceAll(_kanbanLineBreak, '\n');
   return _NodeHead(id, label);
 }
 
@@ -98,7 +111,7 @@ void _applyMeta(KanbanTask task, String key, String value) {
     case 'label':
     case 'descr':
       task.title = v.replaceAll(
-        RegExp(r'<br\s*/?>', caseSensitive: false),
+        _kanbanLineBreak,
         '\n',
       );
       break;
@@ -174,7 +187,7 @@ KanbanBoard parseKanban(String source) {
     if (c >= 0) line = line.substring(0, c);
     if (line.trim().isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^\s*kanban\b').hasMatch(line)) {
+      if (!_kanbanHeader.hasMatch(line)) {
         throw MermaidParseException('expected "kanban" header', line: i + 1);
       }
       seenHeader = true;
@@ -183,9 +196,7 @@ KanbanBoard parseKanban(String source) {
 
     final trimmed = line.trim();
 
-    final classDef = RegExp(
-      r'^classDef\s+([^\s]+)\s+(.+)$',
-    ).firstMatch(trimmed);
+    final classDef = _kanbanClassDef.firstMatch(trimmed);
     if (classDef != null) {
       final styles = _parseStyles(classDef.group(2)!);
       for (final name in classDef.group(1)!.split(',')) {
@@ -194,9 +205,7 @@ KanbanBoard parseKanban(String source) {
       lastTask = null;
       continue;
     }
-    final classStatement = RegExp(
-      r'^class\s+([^\s]+)\s+([^\s]+)\s*$',
-    ).firstMatch(trimmed);
+    final classStatement = _kanbanClassAssign.firstMatch(trimmed);
     if (classStatement != null) {
       for (final id in classStatement.group(1)!.split(',')) {
         final task = tasksById[id.trim()];
@@ -205,19 +214,17 @@ KanbanBoard parseKanban(String source) {
       lastTask = null;
       continue;
     }
-    final style = RegExp(r'^style\s+([^\s]+)\s+(.+)$').firstMatch(trimmed);
+    final style = _kanbanStyle.firstMatch(trimmed);
     if (style != null) {
       tasksById[style.group(1)!]?.styles.addAll(_parseStyles(style.group(2)!));
       lastTask = null;
       continue;
     }
-    final click = RegExp(r'^click\s+(\S+)\s+([\s\S]*)$').firstMatch(trimmed);
+    final click = _kanbanClick.firstMatch(trimmed);
     if (click != null) {
       var interaction = click.group(2)!.trim();
-      interaction = interaction.replaceFirst(RegExp(r'^href\s+'), '');
-      final url = RegExp(
-        r'^"([^"]*)"\s*(?:"([^"]*)")?',
-      ).firstMatch(interaction);
+      interaction = interaction.replaceFirst(_kanbanHrefPrefix, '');
+      final url = _kanbanClickAction.firstMatch(interaction);
       final task = tasksById[click.group(1)!];
       if (task != null && url != null) {
         task.link = url.group(1);
@@ -229,7 +236,7 @@ KanbanBoard parseKanban(String source) {
       continue;
     }
     // Kanban has no edges, so linkStyle has no applicable target.
-    if (RegExp(r'^linkStyle\b').hasMatch(trimmed)) {
+    if (_kanbanLinkStyle.hasMatch(trimmed)) {
       lastTask = null;
       continue;
     }
@@ -237,7 +244,7 @@ KanbanBoard parseKanban(String source) {
     // A `@{ ... }` shape-data block. May be on one line (`id@{ ... }`) or span
     // multiple lines. The id before `@{` names the target task; otherwise it
     // attaches to the most recently added task.
-    final blockStart = RegExp(r'@\s*\{').firstMatch(trimmed);
+    final blockStart = _kanbanMetadataBlockStart.firstMatch(trimmed);
     if (blockStart != null) {
       final prefix = trimmed.substring(0, blockStart.start).trim();
       final target = (prefix.isNotEmpty ? tasksById[prefix] : null) ?? lastTask;
@@ -326,7 +333,7 @@ Map<String, String> _taskStyles(KanbanBoard board, KanbanTask task) {
 double? _styleWidth(String? value) {
   if (value == null) return null;
   return double.tryParse(
-    RegExp(r'[-+]?\d*\.?\d+').firstMatch(value)?.group(0) ?? '',
+    _kanbanNumber.firstMatch(value)?.group(0) ?? '',
   );
 }
 
@@ -335,7 +342,7 @@ Color? _styleColor(String? value) =>
 
 List<double>? _styleDash(String? value) {
   if (value == null) return null;
-  final values = RegExp(r'\d*\.?\d+')
+  final values = _kanbanNumberBare
       .allMatches(value)
       .map((match) => double.tryParse(match.group(0)!))
       .whereType<double>()

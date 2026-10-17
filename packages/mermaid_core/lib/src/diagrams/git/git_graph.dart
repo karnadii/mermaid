@@ -23,6 +23,16 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _commitAttribute = RegExp(r'(id|type|tag)\s*:\s*("[^"]*"|\S+)');
+final _orderAttribute = RegExp(r'order\s*:\s*(\d+)');
+final _gitGraphHeader = RegExp(
+  r'^gitGraph\b\s*(TB|BT|LR|RL)?\s*:?\s*(.*)$',
+  caseSensitive: false,
+);
+final _commandWord = RegExp(r'^(\w[\w-]*)');
+final _orderSeparator = RegExp(r'\s+order\s*:');
+final _whitespaceRun = RegExp(r'\s+');
+
 enum GitCommitType { normal, reverse, highlight }
 
 enum GitDirection { leftRight, rightLeft, topBottom, bottomTop }
@@ -159,7 +169,7 @@ GitGraph parseGitGraph(String source, {GitGraphConfig? config}) {
     String? id;
     var type = GitCommitType.normal;
     final tags = <String>[];
-    final re = RegExp(r'(id|type|tag)\s*:\s*("[^"]*"|\S+)');
+    final re = _commitAttribute;
     for (final m in re.allMatches(rest)) {
       final key = m.group(1)!;
       final value = unquote(m.group(2)!, singleQuotes: false);
@@ -180,7 +190,7 @@ GitGraph parseGitGraph(String source, {GitGraphConfig? config}) {
   }
 
   int? parseOrder(String rest) {
-    final m = RegExp(r'order\s*:\s*(\d+)').firstMatch(rest);
+    final m = _orderAttribute.firstMatch(rest);
     return m == null ? null : int.tryParse(m.group(1)!);
   }
 
@@ -192,10 +202,7 @@ GitGraph parseGitGraph(String source, {GitGraphConfig? config}) {
     if (line.isEmpty) continue;
 
     if (!seenHeader) {
-      final m = RegExp(
-        r'^gitGraph\b\s*(TB|BT|LR|RL)?\s*:?\s*(.*)$',
-        caseSensitive: false,
-      ).firstMatch(line);
+      final m = _gitGraphHeader.firstMatch(line);
       if (m == null) {
         throw MermaidParseException('expected "gitGraph" header', line: i + 1);
       }
@@ -209,7 +216,7 @@ GitGraph parseGitGraph(String source, {GitGraphConfig? config}) {
       line = trailing; // `gitGraph: commit` on one line.
     }
 
-    final word = RegExp(r'^(\w[\w-]*)').firstMatch(line)?.group(1) ?? '';
+    final word = _commandWord.firstMatch(line)?.group(1) ?? '';
     final rest = line.substring(word.length).trim();
 
     switch (word) {
@@ -232,7 +239,7 @@ GitGraph parseGitGraph(String source, {GitGraphConfig? config}) {
 
       case 'branch':
         final name = unquote(
-          rest.split(RegExp(r'\s+order\s*:')).first,
+          rest.split(_orderSeparator).first,
           singleQuotes: false,
         );
         if (name.isEmpty) {
@@ -253,7 +260,7 @@ GitGraph parseGitGraph(String source, {GitGraphConfig? config}) {
         current = name;
 
       case 'merge':
-        final parts = rest.split(RegExp(r'\s+'));
+        final parts = rest.split(_whitespaceRun);
         final from = unquote(parts.first, singleQuotes: false);
         if (!branchHead.containsKey(from)) {
           throw MermaidParseException(

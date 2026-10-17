@@ -25,6 +25,8 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _sankeyHeader = RegExp(r'^\s*sankey(-beta)?\s*$');
+
 /// Typed values from `config.sankey`.
 ///
 /// Upstream's `useMaxWidth` is not represented here: it only switches the SVG
@@ -139,7 +141,7 @@ Sankey parseSankey(String source) {
     final line = lines[i];
     if (line.trim().isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^\s*sankey(-beta)?\s*$').hasMatch(line)) {
+      if (!_sankeyHeader.hasMatch(line)) {
         throw MermaidParseException('expected "sankey" header', line: i + 1);
       }
       seenHeader = true;

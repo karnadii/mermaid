@@ -23,6 +23,14 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _vennHeader = RegExp(r'^venn-beta\b');
+final _textOnlyLine = RegExp('^text\\s+(.+)\$');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _textLine = RegExp(r'^text\s+([\w,"\s]+?)\s+(\S.*)$');
+final _styleLine = RegExp(r'^style\s+([\w,"\s]+?)\s+(\S.*)$');
+final _textIdLabel = RegExp(r'^(.+?)\s*\[(?:"([^"]*)"|([^\]]*))\]\s*$');
+final _nonNumericChars = RegExp(r'[^0-9.\-]');
+
 /// A single subset entry: one or more member set ids, an area weight and an
 /// optional label. Mirrors upstream `VennData`.
 class VennSubset {
@@ -156,7 +164,7 @@ VennDiagram parseVenn(String source) {
     if (line.isEmpty) continue;
 
     if (!seenHeader) {
-      if (!RegExp(r'^venn-beta\b').hasMatch(line)) {
+      if (!_vennHeader.hasMatch(line)) {
         throw MermaidParseException('expected "venn-beta" header', line: i + 1);
       }
       seenHeader = true;
@@ -167,7 +175,7 @@ VennDiagram parseVenn(String source) {
     final indented =
         rawLine.isNotEmpty && (rawLine[0] == ' ' || rawLine[0] == '\t');
     if (indentMode && indented) {
-      final tm = RegExp('^text\\s+(.+)\$').firstMatch(line);
+      final tm = _textOnlyLine.firstMatch(line);
       if (tm != null) {
         final cs = currentSets;
         if (cs == null) {
@@ -179,7 +187,7 @@ VennDiagram parseVenn(String source) {
       }
     }
 
-    var m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    var m = _titleLine.firstMatch(line);
     if (m != null) {
       title = _normalizeText(m.group(1)!);
       continue;
@@ -230,7 +238,7 @@ VennDiagram parseVenn(String source) {
     }
 
     // Non-indented `text <sets> id["label"]`.
-    m = RegExp(r'^text\s+([\w,"\s]+?)\s+(\S.*)$').firstMatch(line);
+    m = _textLine.firstMatch(line);
     if (m != null) {
       final targets = _parseIdentifierList(m.group(1)!)..sort();
       final id = _parseTextId(m.group(2)!);
@@ -239,7 +247,7 @@ VennDiagram parseVenn(String source) {
     }
 
     // `style <targets> key:value, key:value`.
-    m = RegExp(r'^style\s+([\w,"\s]+?)\s+(\S.*)$').firstMatch(line);
+    m = _styleLine.firstMatch(line);
     if (m != null) {
       final targets = _parseIdentifierList(m.group(1)!)..sort();
       final decls = _parseStyleDeclarations(m.group(2)!);
@@ -258,9 +266,7 @@ class _TextId {
 }
 
 _TextId _parseTextId(String raw) {
-  final m = RegExp(
-    r'^(.+?)\s*\[(?:"([^"]*)"|([^\]]*))\]\s*$',
-  ).firstMatch(raw.trim());
+  final m = _textIdLabel.firstMatch(raw.trim());
   if (m != null) {
     return _TextId(
       _normalizeText(m.group(1)!),
@@ -903,7 +909,7 @@ Color? _resolveColor(String? css) {
 
 double? _parseNum(String? s) {
   if (s == null) return null;
-  return double.tryParse(s.replaceAll(RegExp(r'[^0-9.\-]'), ''));
+  return double.tryParse(s.replaceAll(_nonNumericChars, ''));
 }
 
 double? _parseOpacity(String? s) {

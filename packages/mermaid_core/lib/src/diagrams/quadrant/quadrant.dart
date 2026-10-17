@@ -16,6 +16,21 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _digitsOnly = RegExp(r'^\d+$');
+final _pixelValue = RegExp(r'^(\d+)px$');
+final _hexColor = RegExp(r'^#?([\dA-Fa-f]{6}|[\dA-Fa-f]{3})$');
+final _quadrantChartHeader = RegExp(r'^quadrantChart\b');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _classDefLine = RegExp(r'^classDef\s+(\w+)\s+(.+)$');
+final _xAxisLine = RegExp(r'^x-axis\s+(.+)$');
+final _yAxisLine = RegExp(r'^y-axis\s+(.+)$');
+final _quadrantLabelLine = RegExp(r'^quadrant-([1-4])\s+(.+)$');
+final _pointLine = RegExp(
+  r'^(.+?)(?::::(\w+))?\s*:\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]'
+  r'(?:\s+(.+))?$',
+);
+final _accLine = RegExp(r'^acc(Title|Descr)\s*[:{]');
+
 class QuadrantChart {
   const QuadrantChart({
     this.title,
@@ -198,7 +213,7 @@ QuadrantPointStyle _parseStyles(Iterable<String> styles, int lineNo) {
     final value = s.substring(idx + 1).trim();
     switch (key) {
       case 'radius':
-        if (!RegExp(r'^\d+$').hasMatch(value)) {
+        if (!_digitsOnly.hasMatch(value)) {
           throw MermaidParseException(
             'value for radius $value is invalid, please use a valid number',
             line: lineNo,
@@ -225,7 +240,7 @@ QuadrantPointStyle _parseStyles(Iterable<String> styles, int lineNo) {
         }
         result = result.merge(QuadrantPointStyle(strokeColor: c));
       case 'stroke-width':
-        final m = RegExp(r'^(\d+)px$').firstMatch(value);
+        final m = _pixelValue.firstMatch(value);
         if (m == null) {
           throw MermaidParseException(
             'value for stroke-width $value is invalid, please use a valid '
@@ -249,7 +264,7 @@ QuadrantPointStyle _parseStyles(Iterable<String> styles, int lineNo) {
 /// Accepts `#rgb`/`#rrggbb` (with or without leading `#`), matching upstream
 /// `validateHexCode`.
 Color? _parseHex(String value) {
-  if (!RegExp(r'^#?([\dA-Fa-f]{6}|[\dA-Fa-f]{3})$').hasMatch(value)) {
+  if (!_hexColor.hasMatch(value)) {
     return null;
   }
   return Color.tryParse(value.startsWith('#') ? value : '#$value');
@@ -277,7 +292,7 @@ QuadrantChart parseQuadrantChart(String source) {
     if (comment >= 0) line = line.substring(0, comment).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^quadrantChart\b').hasMatch(line)) {
+      if (!_quadrantChartHeader.hasMatch(line)) {
         throw MermaidParseException(
           'expected "quadrantChart" header',
           line: i + 1,
@@ -287,41 +302,38 @@ QuadrantChart parseQuadrantChart(String source) {
       continue;
     }
     Match? m;
-    m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    m = _titleLine.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       continue;
     }
     // classDef <name> <styles>
-    m = RegExp(r'^classDef\s+(\w+)\s+(.+)$').firstMatch(line);
+    m = _classDefLine.firstMatch(line);
     if (m != null) {
       classes[m.group(1)!] = _parseStyles(_splitStyles(m.group(2)!), i + 1);
       continue;
     }
-    m = RegExp(r'^x-axis\s+(.+)$').firstMatch(line);
+    m = _xAxisLine.firstMatch(line);
     if (m != null) {
       final axis = _parseAxisText(m.group(1)!, i + 1);
       xl = axis.$1;
       xr = axis.$2;
       continue;
     }
-    m = RegExp(r'^y-axis\s+(.+)$').firstMatch(line);
+    m = _yAxisLine.firstMatch(line);
     if (m != null) {
       final axis = _parseAxisText(m.group(1)!, i + 1);
       yb = axis.$1;
       yt = axis.$2;
       continue;
     }
-    m = RegExp(r'^quadrant-([1-4])\s+(.+)$').firstMatch(line);
+    m = _quadrantLabelLine.firstMatch(line);
     if (m != null) {
       quadrantLabels[int.parse(m.group(1)!) - 1] = m.group(2)!.trim();
       continue;
     }
     // Point: `label[:::class] : [x, y][ radius: N, color: #hex, ...]`
-    m = RegExp(
-      r'^(.+?)(?::::(\w+))?\s*:\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]'
-      r'(?:\s+(.+))?$',
-    ).firstMatch(line);
+    m = _pointLine.firstMatch(line);
     if (m != null) {
       final inline = m.group(5) != null
           ? _parseStyles(_splitStyles(m.group(5)!), i + 1)
@@ -337,7 +349,7 @@ QuadrantChart parseQuadrantChart(String source) {
       );
       continue;
     }
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(line)) continue;
+    if (_accLine.hasMatch(line)) continue;
     throw MermaidParseException('unrecognized statement "$line"', line: i + 1);
   }
   if (!seenHeader) {

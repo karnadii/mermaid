@@ -7,6 +7,12 @@ import '../../detect.dart';
 import '../../parse_error.dart';
 import 'pie_model.dart';
 
+final _pieHeader = RegExp(r'^pie(\s+showData)?(\s+title\s+(.+))?\s*$');
+final _showDataLine = RegExp(r'^showData\s*$');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _accLine = RegExp(r'^acc(Title|Descr)\s*[:{]');
+final _pieSliceLine = RegExp(r'^"([^"]*)"\s*:\s*([0-9.]+)\s*$');
+
 PieChart parsePieChart(String source) {
   final frontTitle = frontmatterTitle(source);
   final text = stripMetadata(source);
@@ -27,7 +33,7 @@ PieChart parsePieChart(String source) {
 
     if (!seenHeader) {
       final m =
-          RegExp(r'^pie(\s+showData)?(\s+title\s+(.+))?\s*$').firstMatch(line);
+          _pieHeader.firstMatch(line);
       if (m == null) {
         throw MermaidParseException('expected "pie" header', line: i + 1);
       }
@@ -37,19 +43,19 @@ PieChart parsePieChart(String source) {
       continue;
     }
 
-    var m = RegExp(r'^showData\s*$').firstMatch(line);
+    var m = _showDataLine.firstMatch(line);
     if (m != null) {
       showData = true;
       continue;
     }
-    m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    m = _titleLine.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       continue;
     }
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(line)) continue;
+    if (_accLine.hasMatch(line)) continue;
 
-    m = RegExp(r'^"([^"]*)"\s*:\s*([0-9.]+)\s*$').firstMatch(line);
+    m = _pieSliceLine.firstMatch(line);
     if (m != null) {
       final value = double.tryParse(m.group(2)!);
       if (value == null || value < 0) {

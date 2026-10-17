@@ -17,6 +17,17 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _cynefinTransition = RegExp(
+    r'^(clear|complicated|complex|chaotic|confusion|disorder)\s*-->\s*'
+    r'(clear|complicated|complex|chaotic|confusion|disorder)'
+    r'(?:\s*:\s*"?(.+?)"?)?$',
+);
+final _cynefinHeader = RegExp(r'^\s*cynefin(-beta)?\b');
+final _cynefinTitle = RegExp(r'^title\s+(.+)$');
+final _cynefinAccTitle = RegExp(r'^accTitle\s*:\s*(.+)$');
+final _cynefinAccDescr = RegExp(r'^accDescr\s*:\s*(.+)$');
+final _cynefinDomainName = RegExp(r'^(clear|complicated|complex|chaotic|confusion|disorder)$');
+
 /// A transition `from --> to (: "label")?` between two domains.
 class CynefinTransition {
   const CynefinTransition(this.from, this.to, this.label);
@@ -52,35 +63,31 @@ CynefinDiagram parseCynefin(String source) {
   String? accDescription;
   var seenHeader = false;
   String? current;
-  final transitionRe = RegExp(
-    r'^(clear|complicated|complex|chaotic|confusion|disorder)\s*-->\s*'
-    r'(clear|complicated|complex|chaotic|confusion|disorder)'
-    r'(?:\s*:\s*"?(.+?)"?)?$',
-  );
+  final transitionRe = _cynefinTransition;
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
     final c = line.indexOf('%%');
     if (c >= 0) line = line.substring(0, c);
     if (line.trim().isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^\s*cynefin(-beta)?\b').hasMatch(line)) {
+      if (!_cynefinHeader.hasMatch(line)) {
         throw MermaidParseException('expected "cynefin" header', line: i + 1);
       }
       seenHeader = true;
       continue;
     }
     final t = line.trim();
-    final tm = RegExp(r'^title\s+(.+)$').firstMatch(t);
+    final tm = _cynefinTitle.firstMatch(t);
     if (tm != null) {
       title = tm.group(1)!.trim();
       continue;
     }
-    final atm = RegExp(r'^accTitle\s*:\s*(.+)$').firstMatch(t);
+    final atm = _cynefinAccTitle.firstMatch(t);
     if (atm != null) {
       accTitle = atm.group(1)!.trim();
       continue;
     }
-    final adm = RegExp(r'^accDescr\s*:\s*(.+)$').firstMatch(t);
+    final adm = _cynefinAccDescr.firstMatch(t);
     if (adm != null) {
       accDescription = adm.group(1)!.trim();
       continue;
@@ -102,9 +109,7 @@ CynefinDiagram parseCynefin(String source) {
       }
       continue;
     }
-    final dm = RegExp(
-      r'^(clear|complicated|complex|chaotic|confusion|disorder)$',
-    ).firstMatch(t);
+    final dm = _cynefinDomainName.firstMatch(t);
     if (dm != null) {
       current = _canonicalDomain(dm.group(1)!);
       domains.putIfAbsent(current, () => []);

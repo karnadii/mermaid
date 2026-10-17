@@ -9,6 +9,24 @@ import '../../parse_error.dart';
 import 'gantt_dates.dart';
 import 'gantt_model.dart';
 
+final _ganttHeader = RegExp(r'^gantt\b');
+final _dateFormatLine = RegExp(r'^dateFormat\s+(.+)$');
+final _axisFormatLine = RegExp(r'^axisFormat\s+(.+)$');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _sectionLine = RegExp(r'^section\s+(.+)$');
+final _excludesLine = RegExp(r'^excludes\s+(.+)$');
+final _listSeparator = RegExp(r'[\s,]+');
+final _includesLine = RegExp(r'^includes\s+(.+)$');
+final _todayMarkerLine = RegExp(r'^todayMarker\s+(.+)$');
+final _inclusiveEndDatesLine = RegExp(r'^inclusiveEndDates\b');
+final _ignoredSettingLine = RegExp(
+  r'^('
+  r'topAxis|weekday|tickInterval|displayMode|compact|'
+  r'click|link|call|acc(Title|Descr))\b',
+);
+final _taskTag = RegExp(r'^(active|done|crit|milestone|vert)$');
+final _whitespaceRun = RegExp(r'\s+');
+
 GanttChart parseGanttChart(String source) {
   final frontTitle = frontmatterTitle(source);
   return _GanttParser(stripMetadata(source), frontTitle).parse();
@@ -43,7 +61,7 @@ class _GanttParser {
       if (comment >= 0) line = line.substring(0, comment).trim();
       if (line.isEmpty) continue;
       if (!seenHeader) {
-        if (!RegExp(r'^gantt\b').hasMatch(line)) {
+        if (!_ganttHeader.hasMatch(line)) {
           throw MermaidParseException('expected "gantt" header', line: i + 1);
         }
         seenHeader = true;
@@ -76,29 +94,29 @@ class _GanttParser {
   void _parseStatement(String line, int n) {
     Match? m;
 
-    m = RegExp(r'^dateFormat\s+(.+)$').firstMatch(line);
+    m = _dateFormatLine.firstMatch(line);
     if (m != null) {
       dateFormat = m.group(1)!.trim();
       return;
     }
-    m = RegExp(r'^axisFormat\s+(.+)$').firstMatch(line);
+    m = _axisFormatLine.firstMatch(line);
     if (m != null) {
       axisFormat = m.group(1)!.trim();
       return;
     }
-    m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    m = _titleLine.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       return;
     }
-    m = RegExp(r'^section\s+(.+)$').firstMatch(line);
+    m = _sectionLine.firstMatch(line);
     if (m != null) {
       sections.add((m.group(1)!.trim(), []));
       return;
     }
-    m = RegExp(r'^excludes\s+(.+)$').firstMatch(line);
+    m = _excludesLine.firstMatch(line);
     if (m != null) {
-      for (final raw in m.group(1)!.split(RegExp(r'[\s,]+'))) {
+      for (final raw in m.group(1)!.split(_listSeparator)) {
         final tok = raw.trim().toLowerCase();
         if (tok == 'weekends') {
           _excludeWeekdays.addAll({6, 7});
@@ -111,28 +129,26 @@ class _GanttParser {
       }
       return;
     }
-    m = RegExp(r'^includes\s+(.+)$').firstMatch(line);
+    m = _includesLine.firstMatch(line);
     if (m != null) {
       // Dates listed here are never treated as excluded (override excludes).
-      for (final raw in m.group(1)!.split(RegExp(r'[\s,]+'))) {
+      for (final raw in m.group(1)!.split(_listSeparator)) {
         final d = parseGanttDate(raw.trim(), dateFormat);
         if (d != null) _includeDates.add(DateTime(d.year, d.month, d.day));
       }
       return;
     }
-    m = RegExp(r'^todayMarker\s+(.+)$').firstMatch(line);
+    m = _todayMarkerLine.firstMatch(line);
     if (m != null) {
       if (m.group(1)!.trim().toLowerCase() == 'off') _todayMarkerOff = true;
       return;
     }
-    if (RegExp(r'^inclusiveEndDates\b').hasMatch(line)) {
+    if (_inclusiveEndDatesLine.hasMatch(line)) {
       _inclusiveEndDates = true;
       return;
     }
     // Recognized-but-unsupported settings: parsed and ignored.
-    if (RegExp(r'^('
-            r'topAxis|weekday|tickInterval|displayMode|compact|'
-            r'click|link|call|acc(Title|Descr))\b')
+    if (_ignoredSettingLine
         .hasMatch(line)) {
       return;
     }
@@ -153,7 +169,7 @@ class _GanttParser {
     var active = false, done = false, crit = false, milestone = false;
     var vert = false;
     while (parts.isNotEmpty &&
-        RegExp(r'^(active|done|crit|milestone|vert)$').hasMatch(parts.first)) {
+        _taskTag.hasMatch(parts.first)) {
       switch (parts.removeAt(0)) {
         case 'active':
           active = true;
@@ -190,7 +206,7 @@ class _GanttParser {
       if (part.startsWith('after ')) {
         // Latest end among the referenced tasks.
         DateTime? latest;
-        for (final ref in part.substring(6).split(RegExp(r'\s+'))) {
+        for (final ref in part.substring(6).split(_whitespaceRun)) {
           final t = byId[ref];
           if (t != null && (latest == null || t.end.isAfter(latest))) {
             latest = t.end;

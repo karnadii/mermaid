@@ -22,6 +22,16 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _c4NamedArgPrefix = RegExp(r'^\$\w+\s*=');
+final _c4Header = RegExp(r'^C4(Context|Container|Component|Dynamic|Deployment)\b');
+final _c4Title = RegExp(r'^title\s+(.+)$');
+final _c4Boundary = RegExp(r'^(Enterprise_Boundary|System_Boundary|Container_Boundary|Boundary|Deployment_Node|Node|Node_L|Node_R)\s*\((.*)\)\s*\{$');
+final _c4Element = RegExp(r'^(\w+)\s*\((.*)\)\s*$');
+final _c4Relation = RegExp(r'^(Bi)?Rel(_[UDLR]|_Up|_Down|_Left|_Right|_Back)?$');
+final _c4AccDescr = RegExp(r'^acc(Title|Descr)\s*[:{]');
+final _c4CamelBoundary = RegExp(r'(?<=[a-z])(?=[A-Z])');
+final _c4NamedArg = RegExp(r'^\$?(\w+)\s*=\s*(.*)$');
+
 /// The C4 diagram subtype (header keyword). Drives C4Dynamic auto-numbering.
 enum C4Subtype { context, container, component, dynamic, deployment }
 
@@ -231,7 +241,7 @@ C4Diagram parseC4Diagram(String source) {
   // $link, $type) so trailing/extra named args don't get mistaken for
   // label/desc/tech. Tested against the raw token so a quoted value such as
   // "$5 / item" is never dropped.
-  final namedArg = RegExp(r'^\$\w+\s*=');
+  final namedArg = _c4NamedArgPrefix;
   List<String> positional(String s) => [
     for (final a in rawArgs(s))
       if (!namedArg.hasMatch(a.trim())) unquoteLabel(a),
@@ -244,9 +254,7 @@ C4Diagram parseC4Diagram(String source) {
     if (comment >= 0) line = line.substring(0, comment).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      final h = RegExp(
-        r'^C4(Context|Container|Component|Dynamic|Deployment)\b',
-      ).firstMatch(line);
+      final h = _c4Header.firstMatch(line);
       if (h == null) {
         throw MermaidParseException('expected a C4 header', line: i + 1);
       }
@@ -261,7 +269,7 @@ C4Diagram parseC4Diagram(String source) {
       continue;
     }
     Match? m;
-    m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    m = _c4Title.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       continue;
@@ -274,9 +282,7 @@ C4Diagram parseC4Diagram(String source) {
       continue;
     }
     // Boundary(id, "label" [, "type"]) {
-    m = RegExp(
-      r'^(Enterprise_Boundary|System_Boundary|Container_Boundary|Boundary|Deployment_Node|Node|Node_L|Node_R)\s*\((.*)\)\s*\{$',
-    ).firstMatch(line);
+    m = _c4Boundary.firstMatch(line);
     if (m != null) {
       final fn = m.group(1)!;
       final a = positional(m.group(2)!);
@@ -304,7 +310,7 @@ C4Diagram parseC4Diagram(String source) {
       continue;
     }
     // Element: Kind(id, "label" [, "description"/"technology" ...])
-    m = RegExp(r'^(\w+)\s*\((.*)\)\s*$').firstMatch(line);
+    m = _c4Element.firstMatch(line);
     if (m != null) {
       final fn = m.group(1)!;
       // `a` for the Update* handlers keeps the $key=value tokens; element/rel
@@ -371,9 +377,7 @@ C4Diagram parseC4Diagram(String source) {
         continue;
       }
       // Rel(from, to, "label" [, "technology"]) and directional variants.
-      if (RegExp(
-        r'^(Bi)?Rel(_[UDLR]|_Up|_Down|_Left|_Right|_Back)?$',
-      ).hasMatch(fn)) {
+      if (_c4Relation.hasMatch(fn)) {
         if (p.length < 2) {
           throw MermaidParseException('$fn needs two endpoints', line: i + 1);
         }
@@ -438,7 +442,7 @@ C4Diagram parseC4Diagram(String source) {
         continue;
       }
     }
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(line)) continue;
+    if (_c4AccDescr.hasMatch(line)) continue;
     throw MermaidParseException('unrecognized statement "$line"', line: i + 1);
   }
   if (!seenHeader) {
@@ -459,7 +463,7 @@ String _c4StyleKey(String functionName) {
       ? functionName.substring(0, functionName.length - 4)
       : functionName;
   final snake = base
-      .replaceAllMapped(RegExp(r'(?<=[a-z])(?=[A-Z])'), (_) => '_')
+      .replaceAllMapped(_c4CamelBoundary, (_) => '_')
       .toLowerCase();
   return external ? 'external_$snake' : snake;
 }
@@ -469,7 +473,7 @@ String _c4StyleKey(String functionName) {
 Map<String, String> _styleArgs(Iterable<String> args) {
   final out = <String, String>{};
   for (final a in args) {
-    final m = RegExp(r'^\$?(\w+)\s*=\s*(.*)$').firstMatch(a.trim());
+    final m = _c4NamedArg.firstMatch(a.trim());
     if (m != null) {
       var v = m.group(2)!.trim();
       if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {

@@ -21,6 +21,20 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _eventModelingFrame = RegExp(
+    r'^(?:tf|timeframe|rf|resetframe)\s+(\d{1,3})\s+'
+    r'(rmo|readmodel|ui|cmd|command|evt|event|pcr|processor)\s+'
+    r'([_a-zA-Z][\w]*(?:\.[_a-zA-Z][\w]*)?)\s*'
+    r'(.*)$',
+);
+final _eventModelingHeader = RegExp(r'^eventmodeling\b');
+final _eventModelingDataHead = RegExp(r'^data\s+([_a-zA-Z][\w]*)\s*\{?\s*$');
+final _eventModelingEntityNoteGwt = RegExp(r'^(entity|note|gwt)\b');
+final _eventModelingDataRefIndex = RegExp(r'->>\s*(\d{1,3})');
+final _eventModelingDataRefName = RegExp(r'\[\[\s*([_a-zA-Z][\w]*)\s*\]\]');
+final _eventModelingDataBraces = RegExp(r'\{(.*)\}', dotAll: true);
+final _eventModelingQuotedString = RegExp(r'''(?:"([^"]*)"|'([^']*)')''');
+
 /// A single frame (`tf`/`timeframe` or `rf`/`resetframe`).
 class EmBlock {
   EmBlock(
@@ -100,12 +114,7 @@ EventModeling parseEventModeling(String source) {
   final dataEntities = <EmDataEntity>[];
   var seenHeader = false;
 
-  final frameRe = RegExp(
-    r'^(?:tf|timeframe|rf|resetframe)\s+(\d{1,3})\s+'
-    r'(rmo|readmodel|ui|cmd|command|evt|event|pcr|processor)\s+'
-    r'([_a-zA-Z][\w]*(?:\.[_a-zA-Z][\w]*)?)\s*'
-    r'(.*)$',
-  );
+  final frameRe = _eventModelingFrame;
 
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i].trim();
@@ -114,7 +123,7 @@ EventModeling parseEventModeling(String source) {
     if (line.isEmpty) continue;
 
     if (!seenHeader) {
-      if (!RegExp(r'^eventmodeling\b').hasMatch(line)) {
+      if (!_eventModelingHeader.hasMatch(line)) {
         throw MermaidParseException(
           'expected "eventmodeling" header',
           line: i + 1,
@@ -125,9 +134,7 @@ EventModeling parseEventModeling(String source) {
     }
 
     // `data <name> { ... multi-line ... }` block.
-    final dataHead = RegExp(
-      r'^data\s+([_a-zA-Z][\w]*)\s*\{?\s*$',
-    ).firstMatch(line);
+    final dataHead = _eventModelingDataHead.firstMatch(line);
     if (dataHead != null) {
       final bodyLines = <String>[];
       var j = i + 1;
@@ -147,7 +154,7 @@ EventModeling parseEventModeling(String source) {
 
     // `entity`, `note`, `gwt` declarations are parsed (and currently ignored
     // visually) so they do not break otherwise-valid diagrams.
-    if (RegExp(r'^(entity|note|gwt)\b').hasMatch(line)) {
+    if (_eventModelingEntityNoteGwt.hasMatch(line)) {
       continue;
     }
 
@@ -159,23 +166,21 @@ EventModeling parseEventModeling(String source) {
 
       // `->>` source frame references.
       final sources = <int>[];
-      for (final sm in RegExp(r'->>\s*(\d{1,3})').allMatches(rest)) {
+      for (final sm in _eventModelingDataRefIndex.allMatches(rest)) {
         sources.add(int.parse(sm.group(1)!));
       }
 
       // `[[dataRef]]`.
-      final dataRefM = RegExp(
-        r'\[\[\s*([_a-zA-Z][\w]*)\s*\]\]',
-      ).firstMatch(rest);
+      final dataRefM = _eventModelingDataRefName.firstMatch(rest);
 
       // Inline data: `{...}`, "...", or '...' (optionally preceded by
       // a `\`type\`` data-type tag, which we drop).
       String? inline;
-      final braceM = RegExp(r'\{(.*)\}', dotAll: true).firstMatch(rest);
+      final braceM = _eventModelingDataBraces.firstMatch(rest);
       if (braceM != null) {
         inline = braceM.group(1)!.trim();
       } else {
-        final quoteM = RegExp(r'''(?:"([^"]*)"|'([^']*)')''').firstMatch(rest);
+        final quoteM = _eventModelingQuotedString.firstMatch(rest);
         if (quoteM != null) {
           inline = (quoteM.group(1) ?? quoteM.group(2) ?? '').trim();
         }

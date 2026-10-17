@@ -17,6 +17,13 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _journeyHeader = RegExp(r'^journey\b');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _sectionLine = RegExp(r'^section\s+(.+)$');
+final _accDescrBlockStart = RegExp(r'^accDescr\s*\{');
+final _accLine = RegExp(r'^acc(Title|Descr)\s*[:{]');
+final _pxSuffix = RegExp(r'px$');
+
 class JourneyDiagram {
   const JourneyDiagram({required this.sections, this.title});
 
@@ -136,25 +143,25 @@ JourneyDiagram parseJourney(String source) {
     if (comment >= 0) line = line.substring(0, comment).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^journey\b').hasMatch(line)) {
+      if (!_journeyHeader.hasMatch(line)) {
         throw MermaidParseException('expected "journey" header', line: i + 1);
       }
       seenHeader = true;
       continue;
     }
     Match? m;
-    m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    m = _titleLine.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       continue;
     }
-    m = RegExp(r'^section\s+(.+)$').firstMatch(line);
+    m = _sectionLine.firstMatch(line);
     if (m != null) {
       sections.add((m.group(1)!.trim(), []));
       continue;
     }
     // Multi-line accDescr block: `accDescr { ... }` — skip until closing `}`.
-    if (RegExp(r'^accDescr\s*\{').hasMatch(line)) {
+    if (_accDescrBlockStart.hasMatch(line)) {
       if (!line.contains('}')) {
         while (i + 1 < lines.length && !lines[i + 1].contains('}')) {
           i++;
@@ -163,7 +170,7 @@ JourneyDiagram parseJourney(String source) {
       }
       continue;
     }
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(line)) continue;
+    if (_accLine.hasMatch(line)) continue;
 
     // Task: `name : score : actor1, actor2` (actors optional).
     final colon1 = line.indexOf(':');
@@ -554,7 +561,7 @@ double _fontSize(Object? value, double fallback, {double? exBase}) {
     final ex = double.tryParse(normalized.substring(0, normalized.length - 2));
     if (ex != null && ex.isFinite && ex > 0) return ex * exBase / 2;
   }
-  final pixels = double.tryParse(normalized.replaceFirst(RegExp(r'px$'), ''));
+  final pixels = double.tryParse(normalized.replaceFirst(_pxSuffix, ''));
   return pixels != null && pixels.isFinite && pixels > 0 ? pixels : fallback;
 }
 

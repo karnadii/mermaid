@@ -19,6 +19,23 @@ import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 import '../../vendor/dagre/dart_dagre.dart' as dagre;
 
+final _requirementNumber = RegExp(r'[-+]?\d*\.?\d+');
+final _requirementHeader = RegExp(r'^requirementDiagram\b');
+final _requirementEntry = RegExp(r'^([\w]+)\s*:\s*(.+)$');
+final _requirementBlock = RegExp(r'^(\w+)\s+(.+?)\s*\{$');
+final _requirementTitle = RegExp(r'^title\s+(.+)$');
+final _requirementAccOrDirection = RegExp(r'^(acc(Title|Descr)\s*[:{]|direction\s)');
+final _requirementClassDef = RegExp(r'^classDef\s+([^\s]+)\s+(.+?);?$');
+final _requirementClassAssign = RegExp(r'^class\s+([^\s]+)\s+([^\s]+)\s*;?$');
+final _requirementStyle = RegExp(r'^style\s+([^\s]+)\s+(.+?);?$');
+final _requirementInlineClass = RegExp(r'^(\S+):::(\S+)\s*;?$');
+final _requirementLink = RegExp(r'^(link|callback)\s+(\S+)\s+"([^"]*)"(?:\s+"([^"]*)")?');
+final _requirementClick = RegExp(r'^click\s+(\S+)\s+(.+)$');
+final _requirementClickQuotedAction = RegExp(r'^"([^"]*)"(?:\s+"([^"]*)")?');
+final _requirementClickCallPrefix = RegExp(r'^call\s+');
+final _requirementClickCallAction = RegExp(r'^(\w+)(?:\([^)]*\))?(?:\s+"([^"]*)")?');
+final _requirementTrailingSemicolon = RegExp(r';$');
+
 class RequirementDiagram {
   const RequirementDiagram({
     required this.nodes,
@@ -126,7 +143,7 @@ class RequirementConfig {
     final border = stringValue(v, 'rect_border_size', '1px');
     final borderSize =
         double.tryParse(
-          RegExp(r'[-+]?\d*\.?\d+').firstMatch(border)?.group(0) ?? '',
+          _requirementNumber.firstMatch(border)?.group(0) ?? '',
         ) ??
         1;
     return RequirementConfig(
@@ -218,7 +235,7 @@ RequirementDiagram parseRequirementDiagram(String source) {
     if (comment >= 0) line = line.substring(0, comment).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^requirementDiagram\b').hasMatch(line)) {
+      if (!_requirementHeader.hasMatch(line)) {
         throw MermaidParseException(
           'expected "requirementDiagram" header',
           line: i + 1,
@@ -239,7 +256,7 @@ RequirementDiagram parseRequirementDiagram(String source) {
         open = null;
         continue;
       }
-      final m = RegExp(r'^([\w]+)\s*:\s*(.+)$').firstMatch(line);
+      final m = _requirementEntry.firstMatch(line);
       if (m != null) {
         var key = m.group(1)!.toLowerCase();
         key = switch (key) {
@@ -259,7 +276,7 @@ RequirementDiagram parseRequirementDiagram(String source) {
     }
 
     Match? m;
-    m = RegExp(r'^(\w+)\s+(.+?)\s*\{$').firstMatch(line);
+    m = _requirementBlock.firstMatch(line);
     if (m != null && _kinds.contains(m.group(1))) {
       final decorated = m.group(2)!.split(':::');
       open = (
@@ -291,15 +308,15 @@ RequirementDiagram parseRequirementDiagram(String source) {
       _ensure(nodes, m.group(3)!);
       continue;
     }
-    m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    m = _requirementTitle.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       continue;
     }
-    if (RegExp(r'^(acc(Title|Descr)\s*[:{]|direction\s)').hasMatch(line)) {
+    if (_requirementAccOrDirection.hasMatch(line)) {
       continue;
     }
-    m = RegExp(r'^classDef\s+([^\s]+)\s+(.+?);?$').firstMatch(line);
+    m = _requirementClassDef.firstMatch(line);
     if (m != null) {
       final styles = _parseStyles(m.group(2)!);
       for (final name in m.group(1)!.split(',')) {
@@ -307,7 +324,7 @@ RequirementDiagram parseRequirementDiagram(String source) {
       }
       continue;
     }
-    m = RegExp(r'^class\s+([^\s]+)\s+([^\s]+)\s*;?$').firstMatch(line);
+    m = _requirementClassAssign.firstMatch(line);
     if (m != null) {
       for (final id in m.group(1)!.split(',')) {
         final node = nodes[id.trim()];
@@ -319,7 +336,7 @@ RequirementDiagram parseRequirementDiagram(String source) {
       }
       continue;
     }
-    m = RegExp(r'^style\s+([^\s]+)\s+(.+?);?$').firstMatch(line);
+    m = _requirementStyle.firstMatch(line);
     if (m != null) {
       final node = nodes[m.group(1)!];
       if (node != null) {
@@ -329,7 +346,7 @@ RequirementDiagram parseRequirementDiagram(String source) {
       }
       continue;
     }
-    m = RegExp(r'^(\S+):::(\S+)\s*;?$').firstMatch(line);
+    m = _requirementInlineClass.firstMatch(line);
     if (m != null) {
       final node = nodes[m.group(1)!];
       if (node != null) {
@@ -339,9 +356,7 @@ RequirementDiagram parseRequirementDiagram(String source) {
       }
       continue;
     }
-    m = RegExp(
-      r'^(link|callback)\s+(\S+)\s+"([^"]*)"(?:\s+"([^"]*)")?',
-    ).firstMatch(line);
+    m = _requirementLink.firstMatch(line);
     if (m != null) {
       final node = nodes[m.group(2)!];
       if (node != null) {
@@ -351,16 +366,14 @@ RequirementDiagram parseRequirementDiagram(String source) {
       }
       continue;
     }
-    m = RegExp(r'^click\s+(\S+)\s+(.+)$').firstMatch(line);
+    m = _requirementClick.firstMatch(line);
     if (m != null) {
       final node = nodes[m.group(1)!];
       var action = m.group(2)!.trim();
       if (node != null) {
         if (action.startsWith('href ')) {
           action = action.substring(5).trim();
-          final value = RegExp(
-            r'^"([^"]*)"(?:\s+"([^"]*)")?',
-          ).firstMatch(action);
+          final value = _requirementClickQuotedAction.firstMatch(action);
           if (value != null) {
             nodes[node.id] = node.copyWith(
               link: value.group(1),
@@ -368,10 +381,8 @@ RequirementDiagram parseRequirementDiagram(String source) {
             );
           }
         } else {
-          action = action.replaceFirst(RegExp(r'^call\s+'), '');
-          final value = RegExp(
-            r'^(\w+)(?:\([^)]*\))?(?:\s+"([^"]*)")?',
-          ).firstMatch(action);
+          action = action.replaceFirst(_requirementClickCallPrefix, '');
+          final value = _requirementClickCallAction.firstMatch(action);
           if (value != null) {
             nodes[node.id] = node.copyWith(
               callback: value.group(1),
@@ -404,7 +415,7 @@ Map<String, String> _parseStyles(String source) {
   var depth = 0;
   final part = StringBuffer();
   void add() {
-    final value = part.toString().trim().replaceFirst(RegExp(r';$'), '');
+    final value = part.toString().trim().replaceFirst(_requirementTrailingSemicolon, '');
     part.clear();
     final colon = value.indexOf(':');
     if (colon > 0) {
@@ -444,7 +455,7 @@ Color? _styleColor(String? value) =>
 double? _styleWidth(String? value) => value == null
     ? null
     : double.tryParse(
-        RegExp(r'[-+]?\d*\.?\d+').firstMatch(value)?.group(0) ?? '',
+        _requirementNumber.firstMatch(value)?.group(0) ?? '',
       );
 
 RenderScene layoutRequirementDiagram(

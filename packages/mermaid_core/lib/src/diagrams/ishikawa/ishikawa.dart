@@ -16,6 +16,10 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _ishikawaHeader = RegExp(r'^\s*ishikawa(-beta)?\b');
+final _ishikawaBreakOrNewline = RegExp(r'<br\s*/?>|\n');
+final _ishikawaWhitespace = RegExp(r'\s+');
+
 /// A node in the arbitrary-depth cause tree (mirrors upstream `IshikawaNode`).
 class IshikawaNode {
   IshikawaNode(this.text);
@@ -70,7 +74,7 @@ IshikawaDiagram parseIshikawa(String source) {
     if (c >= 0) line = line.substring(0, c);
     if (line.trim().isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^\s*ishikawa(-beta)?\b').hasMatch(line)) {
+      if (!_ishikawaHeader.hasMatch(line)) {
         throw MermaidParseException('expected "ishikawa" header', line: i + 1);
       }
       seenHeader = true;
@@ -682,12 +686,12 @@ class _MeasuredText {
   final Size size;
 }
 
-List<String> _splitLines(String text) => text.split(RegExp(r'<br\s*/?>|\n'));
+List<String> _splitLines(String text) => text.split(_ishikawaBreakOrNewline);
 
 String _wrapText(String text, int maxChars) {
   if (text.length <= maxChars) return text;
   final lines = <String>[];
-  for (final word in text.split(RegExp(r'\s+'))) {
+  for (final word in text.split(_ishikawaWhitespace)) {
     if (lines.isNotEmpty && lines.last.length + 1 + word.length <= maxChars) {
       lines[lines.length - 1] = '${lines.last} $word';
     } else {

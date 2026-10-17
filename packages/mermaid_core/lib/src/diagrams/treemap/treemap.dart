@@ -18,6 +18,20 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _treemapHeader = RegExp(r'^\s*treemap(-beta)?\b');
+final _classDefLine = RegExp(r'^classDef\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(.*?);?\s*$');
+final _titleOptionalLine = RegExp(r'^title(?:\s+(.*))?$');
+final _accLine = RegExp(r'^(accTitle|accDescr)\b');
+final _quotedItem = RegExp(
+  r'''^(?:"([^"]*)"|'([^']*)')\s*(?:(?:[:,])\s*([0-9_.,]+))?\s*(?::::([a-zA-Z_][a-zA-Z0-9_]*))?\s*$''',
+);
+final _bareItem = RegExp(
+  r'''^([^:,]+?)\s*(?:(?:[:,])\s*([0-9_.,]+))?\s*(?::::([a-zA-Z_][a-zA-Z0-9_]*))?\s*$''',
+);
+final _styleSeparator = RegExp('[,;]');
+final _formatSpec = RegExp(r'^(,)?(?:\.(\d+))?([f%eg])$');
+final _numberWithSuffix = RegExp(r'^(-?\d+)(.*)$');
+
 class TreemapNode {
   TreemapNode(this.label, this.value, {this.isLeafNode = false, this.cssClass});
 
@@ -111,7 +125,7 @@ Treemap parseTreemap(String source) {
     if (c >= 0) line = line.substring(0, c);
     if (line.trim().isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^\s*treemap(-beta)?\b').hasMatch(line)) {
+      if (!_treemapHeader.hasMatch(line)) {
         throw MermaidParseException('expected "treemap" header', line: i + 1);
       }
       seenHeader = true;
@@ -121,9 +135,7 @@ Treemap parseTreemap(String source) {
     final content = line.trim();
 
     // classDef <name> <styles>[;]
-    final cd = RegExp(
-      r'^classDef\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(.*?);?\s*$',
-    ).firstMatch(content);
+    final cd = _classDefLine.firstMatch(content);
     if (cd != null) {
       classes[cd.group(1)!] = _parseClass(cd.group(2) ?? '');
       continue;
@@ -131,7 +143,7 @@ Treemap parseTreemap(String source) {
 
     // `title <text>` directive (body) sets the diagram title when frontmatter
     // didn't already provide one. accTitle/accDescr are accepted and ignored.
-    final tm = RegExp(r'^title(?:\s+(.*))?$').firstMatch(content);
+    final tm = _titleOptionalLine.firstMatch(content);
     if (tm != null) {
       final t = tm.group(1)?.trim();
       if ((title == null || title.isEmpty) && t != null && t.isNotEmpty) {
@@ -139,7 +151,7 @@ Treemap parseTreemap(String source) {
       }
       continue;
     }
-    if (RegExp(r'^(accTitle|accDescr)\b').hasMatch(content)) continue;
+    if (_accLine.hasMatch(content)) continue;
 
     final parsed = _parseItem(content);
     if (parsed == null) continue;
@@ -166,14 +178,10 @@ Treemap parseTreemap(String source) {
 /// digits, `_`, `.`, `,`.
 TreemapNode? _parseItem(String content) {
   // "name" or 'name', optional ': value' / ', value', optional ':::class'.
-  final m = RegExp(
-    r'''^(?:"([^"]*)"|'([^']*)')\s*(?:(?:[:,])\s*([0-9_.,]+))?\s*(?::::([a-zA-Z_][a-zA-Z0-9_]*))?\s*$''',
-  ).firstMatch(content);
+  final m = _quotedItem.firstMatch(content);
   if (m == null) {
     // Tolerate an unquoted bare label (lenient fallback for our hand parser).
-    final bare = RegExp(
-      r'''^([^:,]+?)\s*(?:(?:[:,])\s*([0-9_.,]+))?\s*(?::::([a-zA-Z_][a-zA-Z0-9_]*))?\s*$''',
-    ).firstMatch(content);
+    final bare = _bareItem.firstMatch(content);
     if (bare == null) return null;
     final hasValue = bare.group(2) != null;
     return TreemapNode(
@@ -204,7 +212,7 @@ double _parseNumber(String s) {
 /// Parses a classDef style string (`fill:#f00,stroke:#000,color:#fff`).
 TreemapClass _parseClass(String styleText) {
   Color? fill, stroke, color;
-  for (final part in styleText.split(RegExp('[,;]'))) {
+  for (final part in styleText.split(_styleSeparator)) {
     final kv = part.split(':');
     if (kv.length < 2) continue;
     final key = kv[0].trim().toLowerCase();
@@ -269,7 +277,7 @@ String _fmt(double v) {
 String _formatValue(double value, String pattern) {
   final currency = pattern.startsWith(r'$');
   final spec = currency ? pattern.substring(1) : pattern;
-  final match = RegExp(r'^(,)?(?:\.(\d+))?([f%eg])$').firstMatch(spec);
+  final match = _formatSpec.firstMatch(spec);
   var text = _fmt(value);
   if (match != null) {
     final precision = int.tryParse(match.group(2) ?? '6') ?? 6;
@@ -294,7 +302,7 @@ String _formatValue(double value, String pattern) {
 /// The formatter may append a percent suffix or an exponent. Those characters
 /// must not affect where thousands separators are inserted.
 String _groupFormattedNumber(String text) {
-  final match = RegExp(r'^(-?\d+)(.*)$').firstMatch(text);
+  final match = _numberWithSuffix.firstMatch(text);
   if (match == null) return text;
   return '${_group(match.group(1)!)}${match.group(2)!}';
 }

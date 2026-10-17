@@ -16,6 +16,25 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _quotedLabel = RegExp(r'"([^"]*)"');
+final _quotedText = RegExp(r'"[^"]*"');
+final _xychartHeader = RegExp(r'^xychart(-beta)?(\s+horizontal)?\s*$');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _xAxisCategories = RegExp(
+  r'^x-axis\s+(?:("([^"]*)"|[^\[\d][^\[]*?)\s+)?\[(.*)\]\s*$',
+);
+final _xAxisRange = RegExp(
+  r'^x-axis\s+(?:("([^"]*)"|\S+)\s+)?([\d.+-]+)\s*-->\s*([\d.+-]+)\s*$',
+);
+final _yAxisTitleOnly = RegExp(r'^y-axis\s+(.+)$');
+final _yAxisRange = RegExp(
+  r'^y-axis\s+(?:("([^"]*)"|\S+(?:\s+\S+)*?)\s+)?([\d.+-]+)\s*-->\s*([\d.+-]+)\s*$',
+);
+final _seriesLine = RegExp(r'^(bar|line)\s+(?:("([^"]*)")\s+)?\[(.*)\]\s*$');
+final _accLine = RegExp(r'^acc(Title|Descr)\s*[:{]');
+final _trailingZeros = RegExp(r'0+$');
+final _trailingDot = RegExp(r'\.$');
+
 class XyAxisConfig {
   const XyAxisConfig({
     this.showLabel = true,
@@ -215,14 +234,14 @@ XyChart parseXyChart(String source) {
     for (final raw in list.split(',')) {
       final p = raw.trim();
       if (p.isEmpty) continue;
-      final lm = RegExp(r'"([^"]*)"').firstMatch(p);
+      final lm = _quotedLabel.firstMatch(p);
       if (lm != null) {
         labels.add(lm.group(1)!);
         hasLabel = true;
       } else {
         labels.add('');
       }
-      final numText = p.replaceAll(RegExp(r'"[^"]*"'), '').trim();
+      final numText = p.replaceAll(_quotedText, '').trim();
       values.add(
         double.tryParse(numText) ??
             (throw MermaidParseException('invalid number "$p"', line: line)),
@@ -238,9 +257,7 @@ XyChart parseXyChart(String source) {
     if (comment >= 0) line = line.substring(0, comment).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      final m = RegExp(
-        r'^xychart(-beta)?(\s+horizontal)?\s*$',
-      ).firstMatch(line);
+      final m = _xychartHeader.firstMatch(line);
       if (m == null) {
         throw MermaidParseException(
           'expected "xychart-beta" header',
@@ -252,44 +269,36 @@ XyChart parseXyChart(String source) {
       continue;
     }
     Match? m;
-    m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    m = _titleLine.firstMatch(line);
     if (m != null) {
       title = unquote(m.group(1)!);
       continue;
     }
     // x-axis ["title"] [cat, cat, ...]  |  x-axis ["title"] a --> b
-    m = RegExp(
-      r'^x-axis\s+(?:("([^"]*)"|[^\[\d][^\[]*?)\s+)?\[(.*)\]\s*$',
-    ).firstMatch(line);
+    m = _xAxisCategories.firstMatch(line);
     if (m != null) {
       if (m.group(1) != null) xTitle = unquote(m.group(1)!);
       categories = m.group(3)!.split(',').map((c) => unquote(c)).toList();
       continue;
     }
-    m = RegExp(
-      r'^x-axis\s+(?:("([^"]*)"|\S+)\s+)?([\d.+-]+)\s*-->\s*([\d.+-]+)\s*$',
-    ).firstMatch(line);
+    m = _xAxisRange.firstMatch(line);
     if (m != null) {
       if (m.group(1) != null) xTitle = unquote(m.group(1)!);
       xRange = (double.parse(m.group(3)!), double.parse(m.group(4)!));
       continue;
     }
-    m = RegExp(
-      r'^y-axis\s+(?:("([^"]*)"|\S+(?:\s+\S+)*?)\s+)?([\d.+-]+)\s*-->\s*([\d.+-]+)\s*$',
-    ).firstMatch(line);
+    m = _yAxisRange.firstMatch(line);
     if (m != null) {
       if (m.group(1) != null) yTitle = unquote(m.group(1)!);
       yRange = (double.parse(m.group(3)!), double.parse(m.group(4)!));
       continue;
     }
-    m = RegExp(r'^y-axis\s+(.+)$').firstMatch(line);
+    m = _yAxisTitleOnly.firstMatch(line);
     if (m != null) {
       yTitle = unquote(m.group(1)!);
       continue;
     }
-    m = RegExp(
-      r'^(bar|line)\s+(?:("([^"]*)")\s+)?\[(.*)\]\s*$',
-    ).firstMatch(line);
+    m = _seriesLine.firstMatch(line);
     if (m != null) {
       final kind = m.group(1) == 'bar' ? XySeriesKind.bar : XySeriesKind.line;
       final (values, pointLabels) = dataPoints(m.group(4)!, i + 1);
@@ -304,7 +313,7 @@ XyChart parseXyChart(String source) {
       );
       continue;
     }
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(line)) continue;
+    if (_accLine.hasMatch(line)) continue;
     throw MermaidParseException('unrecognized statement "$line"', line: i + 1);
   }
   if (!seenHeader) {
@@ -385,7 +394,7 @@ String _formatTick(double v) {
   if (v == v.roundToDouble() && v.abs() < 1e15) return '${v.round()}';
   // Trim trailing zeros from a fixed representation.
   var s = v.toStringAsFixed(6);
-  s = s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+  s = s.replaceAll(_trailingZeros, '').replaceAll(_trailingDot, '');
   return s;
 }
 

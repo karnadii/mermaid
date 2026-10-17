@@ -21,6 +21,11 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _packetHeader = RegExp(r'^packet(-beta)?\b');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _accLine = RegExp(r'^(accTitle|accDescr)\b');
+final _fieldLine = RegExp(r'^(\+?\d+)(?:\s*-\s*(\d+))?\s*:\s*"(.*)"\s*$');
+
 class PacketField {
   const PacketField(this.start, this.end, this.label);
   final int start;
@@ -82,22 +87,20 @@ Packet parsePacket(String source) {
     line = line.trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^packet(-beta)?\b').hasMatch(line)) {
+      if (!_packetHeader.hasMatch(line)) {
         throw MermaidParseException('expected "packet" header', line: i + 1);
       }
       seenHeader = true;
       continue;
     }
     // In-body `title ...` statement, and accessibility lines, are tolerated.
-    final titleM = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    final titleM = _titleLine.firstMatch(line);
     if (titleM != null) {
       bodyTitle = titleM.group(1)!.trim();
       continue;
     }
-    if (RegExp(r'^(accTitle|accDescr)\b').hasMatch(line)) continue;
-    final m = RegExp(
-      r'^(\+?\d+)(?:\s*-\s*(\d+))?\s*:\s*"(.*)"\s*$',
-    ).firstMatch(line);
+    if (_accLine.hasMatch(line)) continue;
+    final m = _fieldLine.firstMatch(line);
     if (m == null) {
       throw MermaidParseException('invalid packet field "$line"', line: i + 1);
     }

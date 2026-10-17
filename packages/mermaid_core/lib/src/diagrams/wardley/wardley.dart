@@ -18,6 +18,28 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _wardleyLabelCoords = RegExp(r'label\s*\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\]');
+final _wardleyInlineParens = RegExp(r'\(([^)]*)\)');
+final _wardleyHeader = RegExp(r'^wardley(-beta)?\b');
+final _wardleyHeaderPrefix = RegExp(r'^wardley(-beta)?\s*');
+final _wardleyComponent = RegExp(r'^component\s+(.+?)\s*\[\s*([\d.]+)\s*\](.*)$');
+final _wardleyTitle = RegExp(r'^title\s+(.+)$');
+final _wardleySize = RegExp(r'^size\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$');
+final _wardleyEvolution = RegExp(r'^evolution\s+(.+)$');
+final _wardleyPipelineBound = RegExp(r'@\s*([\d.]+)\s*$');
+final _wardleyXAxis = RegExp(r'^x-axis\s+(.+)$');
+final _wardleyYAxis = RegExp(r'^y-axis\s+(.+)$');
+final _wardleyPipeline = RegExp(r'^pipeline\s+(.+?)\s*\{$');
+final _wardleyNode = RegExp(r'^(anchor|component)\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\](.*)$');
+final _wardleyNote = RegExp(r'^note\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$');
+final _wardleyAnnotations = RegExp(r'^annotations\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$');
+final _wardleyAnnotation = RegExp(r'^annotation\s+(\d+)\s*,?\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]\s*(.*)$');
+final _wardleyAccelerator = RegExp(r'^(de)?accelerator\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$');
+final _wardleyEvolve = RegExp(r'^evolve\s+(.+?)\s+([\d.]+)$');
+final _wardleyLinkConnector = RegExp(r"(?<conn>\+'[^']*'(?:<>|<|>)|-\.->|\.-\.|-->|->|\+<>|\+>|\+<|>)");
+final _wardleyLinkPortSuffix = RegExp(r'(\+<>|\+>|\+<)\s*$');
+final _wardleyLinkLabel = RegExp(r"^\+'([^']*)'");
+
 /// Flow direction conveyed by a link's flow port / arrow decorator.
 enum WardleyFlow { forward, backward, bidirectional }
 
@@ -167,14 +189,12 @@ WardleyMap parseWardley(String source) {
     WardleySourceStrategy? strategy;
     var inertia = false;
 
-    final labelM = RegExp(
-      r'label\s*\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\]',
-    ).firstMatch(tail);
+    final labelM = _wardleyLabelCoords.firstMatch(tail);
     if (labelM != null) {
       lx = double.tryParse(labelM.group(1)!);
       ly = double.tryParse(labelM.group(2)!);
     }
-    for (final dm in RegExp(r'\(([^)]*)\)').allMatches(tail)) {
+    for (final dm in _wardleyInlineParens.allMatches(tail)) {
       final kw = dm.group(1)!.trim().toLowerCase();
       switch (kw) {
         case 'build':
@@ -198,11 +218,11 @@ WardleyMap parseWardley(String source) {
     if (c >= 0) line = line.substring(0, c).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^wardley(-beta)?\b').hasMatch(line)) {
+      if (!_wardleyHeader.hasMatch(line)) {
         throw MermaidParseException('expected "wardley" header', line: i + 1);
       }
       seenHeader = true;
-      final rest = line.replaceFirst(RegExp(r'^wardley(-beta)?\s*'), '');
+      final rest = line.replaceFirst(_wardleyHeaderPrefix, '');
       if (rest.trim().isEmpty) continue;
       line = rest.trim();
     }
@@ -215,9 +235,7 @@ WardleyMap parseWardley(String source) {
         pipelineMembers = null;
         continue;
       }
-      final pm = RegExp(
-        r'^component\s+(.+?)\s*\[\s*([\d.]+)\s*\](.*)$',
-      ).firstMatch(line);
+      final pm = _wardleyComponent.firstMatch(line);
       if (pm != null) {
         final name = unquote(pm.group(1)!);
         final ex = _toPercent(double.parse(pm.group(2)!));
@@ -242,14 +260,14 @@ WardleyMap parseWardley(String source) {
       continue;
     }
 
-    var m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    var m = _wardleyTitle.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       continue;
     }
 
     // size [w, h]
-    m = RegExp(r'^size\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$').firstMatch(line);
+    m = _wardleySize.firstMatch(line);
     if (m != null) {
       size = (
         width: double.parse(m.group(1)!),
@@ -259,14 +277,14 @@ WardleyMap parseWardley(String source) {
     }
 
     // evolution A -> B -> C  (with optional `/ second`, `@boundary`)
-    m = RegExp(r'^evolution\s+(.+)$').firstMatch(line);
+    m = _wardleyEvolution.firstMatch(line);
     if (m != null) {
       final parsedStages = <String>[];
       final parsedBoundaries = <double>[];
       var anyBoundary = false;
       for (var part in m.group(1)!.split('->')) {
         part = part.trim();
-        final bm = RegExp(r'@\s*([\d.]+)\s*$').firstMatch(part);
+        final bm = _wardleyPipelineBound.firstMatch(part);
         if (bm != null) {
           parsedBoundaries.add(double.parse(bm.group(1)!));
           anyBoundary = true;
@@ -287,19 +305,19 @@ WardleyMap parseWardley(String source) {
     }
 
     // x-axis / y-axis label overrides.
-    m = RegExp(r'^x-axis\s+(.+)$').firstMatch(line);
+    m = _wardleyXAxis.firstMatch(line);
     if (m != null) {
       xLabel = m.group(1)!.trim();
       continue;
     }
-    m = RegExp(r'^y-axis\s+(.+)$').firstMatch(line);
+    m = _wardleyYAxis.firstMatch(line);
     if (m != null) {
       yLabel = m.group(1)!.trim();
       continue;
     }
 
     // pipeline Parent {
-    m = RegExp(r'^pipeline\s+(.+?)\s*\{$').firstMatch(line);
+    m = _wardleyPipeline.firstMatch(line);
     if (m != null) {
       pipelineParent = unquote(m.group(1)!);
       pipelineMembers = <String>[];
@@ -308,9 +326,7 @@ WardleyMap parseWardley(String source) {
     }
 
     // anchor / component NAME [v, e] (decorators)
-    m = RegExp(
-      r'^(anchor|component)\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\](.*)$',
-    ).firstMatch(line);
+    m = _wardleyNode.firstMatch(line);
     if (m != null) {
       final isAnchor = m.group(1) == 'anchor';
       final name = unquote(m.group(2)!);
@@ -334,9 +350,7 @@ WardleyMap parseWardley(String source) {
     }
 
     // note "text" [v, e]
-    m = RegExp(
-      r'^note\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$',
-    ).firstMatch(line);
+    m = _wardleyNote.firstMatch(line);
     if (m != null) {
       notes.add(
         WardleyNote(
@@ -349,9 +363,7 @@ WardleyMap parseWardley(String source) {
     }
 
     // annotations [v, e]  (the box anchor)
-    m = RegExp(
-      r'^annotations\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$',
-    ).firstMatch(line);
+    m = _wardleyAnnotations.firstMatch(line);
     if (m != null) {
       annotationsBox = (
         x: _toPercent(double.parse(m.group(2)!)),
@@ -361,9 +373,7 @@ WardleyMap parseWardley(String source) {
     }
 
     // annotation N,[v, e] "text"
-    m = RegExp(
-      r'^annotation\s+(\d+)\s*,?\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]\s*(.*)$',
-    ).firstMatch(line);
+    m = _wardleyAnnotation.firstMatch(line);
     if (m != null) {
       final txt = m.group(4)!.trim();
       annotations.add(
@@ -378,9 +388,7 @@ WardleyMap parseWardley(String source) {
     }
 
     // accelerator / deaccelerator NAME [v, e]
-    m = RegExp(
-      r'^(de)?accelerator\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$',
-    ).firstMatch(line);
+    m = _wardleyAccelerator.firstMatch(line);
     if (m != null) {
       final marker = WardleyMarker(
         unquote(m.group(2)!),
@@ -396,7 +404,7 @@ WardleyMap parseWardley(String source) {
     }
 
     // evolve NAME target
-    m = RegExp(r'^evolve\s+(.+?)\s+([\d.]+)$').firstMatch(line);
+    m = _wardleyEvolve.firstMatch(line);
     if (m != null) {
       comps[m.group(1)!.trim()]?.evolveTo = _toPercent(
         double.parse(m.group(2)!),
@@ -409,9 +417,7 @@ WardleyMap parseWardley(String source) {
     //   arrow: -> | --> | -.-> | .-. | >       (ARROW / LINK_ARROW)
     //          | +'label'<> | +'label'< | +'label'>
     // The connector is the first such token after a `from` operand.
-    final connector = RegExp(
-      r"(?<conn>\+'[^']*'(?:<>|<|>)|-\.->|\.-\.|-->|->|\+<>|\+>|\+<|>)",
-    );
+    final connector = _wardleyLinkConnector;
     if (!line.startsWith('note') && connector.hasMatch(line)) {
       final cm = connector.firstMatch(line)!;
       var from = line.substring(0, cm.start).trim();
@@ -427,7 +433,7 @@ WardleyMap parseWardley(String source) {
       }
       // A trailing toPort on the right operand.
       WardleyFlow? toFlow;
-      final toPortM = RegExp(r'(\+<>|\+>|\+<)\s*$').firstMatch(rest);
+      final toPortM = _wardleyLinkPortSuffix.firstMatch(rest);
       if (toPortM != null) {
         final tp = toPortM.group(1)!;
         toFlow = tp.contains('<>')
@@ -441,7 +447,7 @@ WardleyMap parseWardley(String source) {
       if (from.isNotEmpty && to.isNotEmpty) {
         final dashed = conn.contains('-.->') || conn.contains('.-.');
         // Inline label, e.g. +'constraint'<>
-        final lblM = RegExp(r"^\+'([^']*)'").firstMatch(conn);
+        final lblM = _wardleyLinkLabel.firstMatch(conn);
         if (lblM != null) label ??= lblM.group(1);
 
         WardleyFlow? flow;

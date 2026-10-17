@@ -16,6 +16,18 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+final _bracketList = RegExp(r'\[(.*?)\]');
+final _radarHeader = RegExp(r'^radar(-beta)?\b');
+final _radarHeaderPrefix = RegExp(r'^radar(-beta)?\s*');
+final _titleLine = RegExp(r'^title\s+(.+)$');
+final _axisLine = RegExp(r'^axis\s+(.+)$');
+final _curveLine = RegExp(r'^curve\s+(.+?)\{(.*)\}\s*$');
+final _ticksLine = RegExp(r'^ticks\s+(\d+)$');
+final _showLegendLine = RegExp(r'^showLegend\s+(true|false)$');
+final _graticuleLine = RegExp(r'^graticule\s+(circle|polygon)$');
+final _maxLine = RegExp(r'^max\s+([\d.]+)$');
+final _minLine = RegExp(r'^min\s+([\d.]+)$');
+
 class RadarCurve {
   RadarCurve(this.label, this.values);
   final String label;
@@ -91,7 +103,7 @@ class RadarConfig {
 }
 
 String _unlabel(String s) {
-  final m = RegExp(r'\[(.*?)\]').firstMatch(s);
+  final m = _bracketList.firstMatch(s);
   var label = m != null ? m.group(1)! : s.trim();
   if (label.length >= 2 && label.startsWith('"') && label.endsWith('"')) {
     label = label.substring(1, label.length - 1);
@@ -170,22 +182,22 @@ RadarChart parseRadar(String source) {
     if (c >= 0) line = line.substring(0, c).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^radar(-beta)?\b').hasMatch(line)) {
+      if (!_radarHeader.hasMatch(line)) {
         throw MermaidParseException('expected "radar" header', line: i + 1);
       }
       seenHeader = true;
-      final rest = line.replaceFirst(RegExp(r'^radar(-beta)?\s*'), '');
+      final rest = line.replaceFirst(_radarHeaderPrefix, '');
       if (rest.trim().isEmpty) continue;
       line = rest.trim();
     }
-    var m = RegExp(r'^title\s+(.+)$').firstMatch(line);
+    var m = _titleLine.firstMatch(line);
     if (m != null) {
       // A body `title` wins over the frontmatter one, as in every other
       // diagram (upstream's `setDiagramTitle` simply overwrites).
       title = m.group(1)!.trim();
       continue;
     }
-    m = RegExp(r'^axis\s+(.+)$').firstMatch(line);
+    m = _axisLine.firstMatch(line);
     if (m != null) {
       for (final part in m.group(1)!.split(',')) {
         if (part.trim().isNotEmpty) {
@@ -195,34 +207,34 @@ RadarChart parseRadar(String source) {
       }
       continue;
     }
-    m = RegExp(r'^curve\s+(.+?)\{(.*)\}\s*$').firstMatch(line);
+    m = _curveLine.firstMatch(line);
     if (m != null) {
       final label = _unlabel(m.group(1)!);
       final values = _parseCurveEntries(m.group(2)!, axisNames, i + 1);
       curves.add(RadarCurve(label, values));
       continue;
     }
-    m = RegExp(r'^ticks\s+(\d+)$').firstMatch(line);
+    m = _ticksLine.firstMatch(line);
     if (m != null) {
       ticks = int.parse(m.group(1)!);
       continue;
     }
-    m = RegExp(r'^showLegend\s+(true|false)$').firstMatch(line);
+    m = _showLegendLine.firstMatch(line);
     if (m != null) {
       showLegend = m.group(1) == 'true';
       continue;
     }
-    m = RegExp(r'^graticule\s+(circle|polygon)$').firstMatch(line);
+    m = _graticuleLine.firstMatch(line);
     if (m != null) {
       graticule = m.group(1)!;
       continue;
     }
-    m = RegExp(r'^max\s+([\d.]+)$').firstMatch(line);
+    m = _maxLine.firstMatch(line);
     if (m != null) {
       max = double.parse(m.group(1)!);
       continue;
     }
-    m = RegExp(r'^min\s+([\d.]+)$').firstMatch(line);
+    m = _minLine.firstMatch(line);
     if (m != null) {
       min = double.parse(m.group(1)!);
       continue;
