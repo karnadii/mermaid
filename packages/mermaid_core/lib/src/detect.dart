@@ -84,26 +84,34 @@ final _detectors = [
 /// directives and `%%` comment lines, returning text whose first line is the
 /// diagram keyword line.
 String stripMetadata(String source) {
+  // Detection and the diagram parser both strip the same source.
+  if (identical(source, _lastSource)) return _lastStripped;
   var text = source.replaceAll('\r\n', '\n');
   // Frontmatter fences may be indented (common in demo/docs sources).
-  final fm =
-      RegExp(r'^\s*---[ \t]*\n[\s\S]*?\n[ \t]*---[ \t]*\n').firstMatch(text);
+  final fm = _frontmatter.firstMatch(text);
   if (fm != null) text = text.substring(fm.end);
-  text = text.replaceAll(RegExp(r'%%\{[\s\S]*?\}%%'), '');
+  if (text.contains('%%{')) text = text.replaceAll(_directive, '');
   final lines = text.split('\n').where((l) {
     final t = l.trimLeft();
     return t.isNotEmpty && !(t.startsWith('%%') && !t.startsWith('%%{'));
   });
-  return lines.join('\n');
+  final stripped = lines.join('\n');
+  _lastSource = source;
+  return _lastStripped = stripped;
 }
+
+String? _lastSource;
+String _lastStripped = '';
+
+final _frontmatter = RegExp(r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n');
+final _directive = RegExp(r'%%\{[\s\S]*?\}%%');
+final _frontmatterTitle = RegExp(r'^\s*title:\s*(.+)$', multiLine: true);
 
 /// Extracts `title:` from YAML frontmatter if present.
 String? frontmatterTitle(String source) {
   final text = source.replaceAll('\r\n', '\n');
-  final fm = RegExp(r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n')
-      .firstMatch(text);
+  final fm = _frontmatter.firstMatch(text);
   if (fm == null) return null;
-  final m =
-      RegExp(r'^\s*title:\s*(.+)$', multiLine: true).firstMatch(fm.group(1)!);
+  final m = _frontmatterTitle.firstMatch(fm.group(1)!);
   return m?.group(1)?.trim();
 }
