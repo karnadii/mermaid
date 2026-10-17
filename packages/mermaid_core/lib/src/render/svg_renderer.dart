@@ -482,13 +482,16 @@ void _writeNum(_SvgWriter b, double v) => b.writeNum(v);
 
 const _maxDigitsValue = 1000000000000000000;
 
-final _trailingZeros = RegExp(r'0+$');
-final _trailingDot = RegExp(r'\.$');
-
-String _numSlow(double v) => v
-    .toStringAsFixed(2)
-    .replaceFirst(_trailingZeros, '')
-    .replaceFirst(_trailingDot, '');
+/// `toStringAsFixed(2)` with trailing zeros and then a trailing dot removed.
+String _numSlow(double v) {
+  final s = v.toStringAsFixed(2);
+  var end = s.length;
+  while (end > 0 && s.codeUnitAt(end - 1) == 0x30) {
+    end--;
+  }
+  if (end > 0 && s.codeUnitAt(end - 1) == 0x2e) end--;
+  return end == s.length ? s : s.substring(0, end);
+}
 
 String _color(Color c) {
   final b = _SvgWriter(16);
