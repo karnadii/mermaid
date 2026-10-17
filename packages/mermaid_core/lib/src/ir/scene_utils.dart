@@ -97,10 +97,43 @@ Rect geometryBounds(ShapeGeometry g) => switch (g) {
     ry * 2,
   ),
   PolygonGeometry(:final points) => pointsBounds(points),
-  PathGeometry(:final commands) => pointsBounds([
-    for (final c in commands) ...pathCommandPoints(c),
-  ]),
+  PathGeometry(:final commands) => _pathBounds(commands),
 };
+
+/// [pointsBounds] of every point of [commands], without collecting them.
+Rect _pathBounds(List<PathCommand> commands) {
+  var empty = true;
+  var minX = 0.0, maxX = 0.0, minY = 0.0, maxY = 0.0;
+  void add(Point p) {
+    if (empty) {
+      empty = false;
+      minX = maxX = p.x;
+      minY = maxY = p.y;
+    }
+    minX = math.min(minX, p.x);
+    maxX = math.max(maxX, p.x);
+    minY = math.min(minY, p.y);
+    maxY = math.max(maxY, p.y);
+  }
+
+  for (final c in commands) {
+    switch (c) {
+      case MoveTo(:final p) || LineTo(:final p):
+        add(p);
+      case QuadTo(:final c, :final p):
+        add(c);
+        add(p);
+      case CubicTo(:final c1, :final c2, :final p):
+        add(c1);
+        add(c2);
+        add(p);
+      case ClosePath():
+        break;
+    }
+  }
+  if (empty) return const Rect.fromLTWH(0, 0, 0, 0);
+  return Rect.fromLTRB(minX, minY, maxX, maxY);
+}
 
 List<Point> pathCommandPoints(PathCommand c) => switch (c) {
   MoveTo(:final p) => [p],
