@@ -8,9 +8,24 @@ import '../graph/alg/preorder.dart';
 import '../util.dart' as util;
 import 'feasible_tree.dart';
 
+part 'network_simplex_indexed.dart';
+
 void networkSimplex(Graph g) {
   g = util.simplify(g);
   longestPath(g);
+  final start = g.nodes.isEmpty ? null : g.nodes[0];
+  // The indexed solver roots every tree walk at the feasible tree's first
+  // node. The reference code roots _updateRanks at the first tree node
+  // without a `parent` label instead; when that is not the first node, keep
+  // the reference code so the pivots stay the same.
+  if (start != null && g.node(start).get2(parentK) == null) {
+    _IndexedSimplex(g).run();
+    return;
+  }
+  _networkSimplexReference(g);
+}
+
+void _networkSimplexReference(Graph g) {
   var t = feasibleTree(g);
   _initLowLimValues(t);
   _initCutValues(t, g);

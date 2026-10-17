@@ -4,9 +4,13 @@ import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 
 import '../model/graph_label.dart';
 
+/// Edge key: (v, w, name). A record hashes the cached string hashes, where
+/// the original `v + "\x01" + w + "\x01" + name` key built and hashed a new
+/// string on every edge lookup.
+typedef EdgeKey = (String, String, String);
+
 class Graph {
   static const String _defaultEdgeId = "\x00";
-  static const String _edgeKeyDelim = "\x01";
   static const String _graphNodeId = "\x00";
   final bool isDirected;
   final bool isMultiGraph;
@@ -27,22 +31,22 @@ class Graph {
   final Map<String, Props?> _nodes = {};
 
   // v-> edgeObj
-  final Map<String, Map<String, Edge>> _in = {};
+  final Map<String, Map<EdgeKey, Edge>> _in = {};
 
   // u -> v -> Number
   final Map<String, Map<String, int>> _preds = {};
 
   // v -> edgeObj
-  final Map<String, Map<String, Edge>> _out = {};
+  final Map<String, Map<EdgeKey, Edge>> _out = {};
 
   // v -> w -> Number
   final Map<String, Map<String, int>> _sucs = {};
 
   // edgeId -> EdgeObj
-  final Map<String, Edge> _edgeObjs = {};
+  final Map<EdgeKey, Edge> _edgeObjs = {};
 
   // edgeId -> EdgeValue
-  final Map<String, Props?> _edgeLabels = {};
+  final Map<EdgeKey, Props?> _edgeLabels = {};
 
   // nodeId -> edgeObj
   Map<String, String> _parent = {};
@@ -396,7 +400,7 @@ class Graph {
         _children.remove(v);
       }
 
-      List<String> kl = List.from((_in[v] ?? {}).keys);
+      List<EdgeKey> kl = List.from((_in[v] ?? {}).keys);
       for (var e in kl) {
         removeEdge2(_edgeObjs[e]);
       }
@@ -495,16 +499,15 @@ class Graph {
     }
   }
 
-  String edgeArgsToId(bool isDirected, String v_, String? w_, [String? edgeId]) {
+  EdgeKey edgeArgsToId(bool isDirected, String v_, String? w_, [String? edgeId]) {
     String v = v_;
     String w = w_ ?? '';
-    int t = v.compareTo(w);
-    if (!isDirected && t > 0) {
+    if (!isDirected && v.compareTo(w) > 0) {
       var tmp = v;
       v = w;
       w = tmp;
     }
-    return v + _edgeKeyDelim + w + _edgeKeyDelim + ((edgeId == null || edgeId.isEmpty) ? _defaultEdgeId : edgeId);
+    return (v, w, (edgeId == null || edgeId.isEmpty) ? _defaultEdgeId : edgeId);
   }
 
   Edge edgeArgsToObj(bool isDirected, String v_, String w_, [String? edgeId]) {
@@ -519,7 +522,7 @@ class Graph {
     return Edge(v: v, w: w, id: edgeId);
   }
 
-  String edgeObjToId(bool isDirected, Edge obj) {
+  EdgeKey edgeObjToId(bool isDirected, Edge obj) {
     return edgeArgsToId(isDirected, obj.v, obj.w, obj.id);
   }
 }
