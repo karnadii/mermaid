@@ -968,17 +968,24 @@ _Fragment _layoutGraph(
 
   // Edges and their labels.
   final selfLoopCount = <String, int>{};
-  final edgeLabelObstacles = [
-    for (final p in placed.values)
-      if (!syntheticIds.contains(p.node.id))
-        Rect.fromCenter(p.center, p.shape.width, p.shape.height).inflate(4),
-  ];
+  final edgeLabelObstacles = edgeLabelSizes.isEmpty
+      ? const <Rect>[]
+      : [
+          for (final p in placed.values)
+            if (!syntheticIds.contains(p.node.id))
+              Rect.fromCenter(
+                p.center,
+                p.shape.width,
+                p.shape.height,
+              ).inflate(4),
+        ];
   // Group edges by unordered endpoint pair so straight-line engines (tidy-tree)
   // can fan out parallel/antiparallel edges instead of overlapping them into a
   // single line with arrowheads at both ends.
   String pairKey(String a, String b) => a.compareTo(b) <= 0 ? '$a $b' : '$b $a';
+  // Only tidy-tree reads the groups.
   final pairEdges = <String, List<int>>{};
-  for (var i = 0; i < graph.edges.length; i++) {
+  for (var i = 0; useTidyTree && i < graph.edges.length; i++) {
     final e = graph.edges[i];
     if (isAbsorbedEdge(e) || e.from == e.to) continue;
     (pairEdges[pairKey(e.from, e.to)] ??= []).add(i);
