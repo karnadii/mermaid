@@ -70,7 +70,7 @@ Future<void> main(List<String> args) async {
   }
 
   table('Self time', self, 30);
-  table('Inclusive time', incl, 40);
+  table('Inclusive time', incl, args.length > 2 ? int.parse(args[2]) : 40);
   await vm.dispose();
   exit(0);
 }

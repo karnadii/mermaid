@@ -3,6 +3,7 @@ import 'package:mermaid_core/src/vendor/dagre/src/model/props.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/rank/util.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 import '../graph/graph.dart';
+import '../reference_switch.dart';
 import '../graph/alg/postorder.dart';
 import '../graph/alg/preorder.dart';
 import '../util.dart' as util;
@@ -18,7 +19,7 @@ void networkSimplex(Graph g) {
   // node. The reference code roots _updateRanks at the first tree node
   // without a `parent` label instead; when that is not the first node, keep
   // the reference code so the pivots stay the same.
-  if (start != null && g.node(start).get2(parentK) == null) {
+  if (!useReferenceLayout && start != null && g.node(start).get2(parentK) == null) {
     _IndexedSimplex(g).run();
     return;
   }

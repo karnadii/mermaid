@@ -5,9 +5,12 @@ import 'package:mermaid_core/src/vendor/dagre/src/model/enums/label_pos.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 
 import '../graph/graph.dart';
+import '../reference_switch.dart';
 import '../model/props.dart';
 import '../util/util.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util.dart' as util;
+
+part 'bk_indexed.dart';
 
 Map<String, Map<String, bool>> _findType1Conflicts(Graph g, List<List<String>> layering) {
   Map<String, Map<String, bool>> conflicts = {};
@@ -324,6 +327,13 @@ Map<String, double> _balance(Map<GraphAlign, Map<String, double>> xss, GraphAlig
 }
 
 Map<String, double> positionX(Graph g) {
+  if (!useReferenceLayout) {
+    return _IndexedBk(g, util.buildLayerMatrix(g)).run();
+  }
+  return _positionXReference(g);
+}
+
+Map<String, double> _positionXReference(Graph g) {
   List<List<String>> layering = util.buildLayerMatrix(g);
   Map<String, Map<String, bool>> conflicts =_mergeMap( _findType1Conflicts(g, layering), _findType2Conflicts(g, layering));
   Map<GraphAlign, Map<String, double>> xss = {};

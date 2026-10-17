@@ -34,7 +34,7 @@ Map<int, List<String>> nodesByRank(Graph g) {
 }
 
 Graph buildLayerGraph(Graph g, int rank, Relationship ship, [List<String>? nodesInRank]) {
-  String root = _createRootNode(g);
+  String root = createLayerRootName(g);
   Graph result = Graph(isCompound: true);
   GraphLabel gp = GraphLabel();
   gp[rootK] = root;
@@ -72,7 +72,8 @@ Graph buildLayerGraph(Graph g, int rank, Relationship ship, [List<String>? nodes
   return result;
 }
 
-String _createRootNode(Graph g) {
+/// Takes a fresh id from the shared uniqueId counter, like dagre.js.
+String createLayerRootName(Graph g) {
   String v = uniqueId('_root');
   while (g.hasNode(v)) {
     v = uniqueId('_root');
