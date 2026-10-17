@@ -78,6 +78,88 @@ class _SvgWriter {
     _len = len;
   }
 
+  /// Appends `s.substring(start, end)` escaped like [_escapeText] or, for an
+  /// [attribute] value, like [_escapeAttr], without building the escaped
+  /// string. Returns false when [s] is outside Latin-1 and was added as a
+  /// separate part instead of being put into the buffer.
+  bool writeEscaped(
+    String s, {
+    required bool attribute,
+    int start = 0,
+    int? end,
+  }) {
+    final stop = end ?? s.length;
+    // Room for the worst case: every character becomes `&quot;`.
+    if (_len + (stop - start) * 6 > _buf.length) _grow((stop - start) * 6);
+    final buf = _buf;
+    var len = _len;
+    for (var i = start; i < stop; i++) {
+      final c = s.codeUnitAt(i);
+      // Every escaped character is below `?`.
+      if (c > 0x3e) {
+        if (c > 0xff) {
+          // Outside Latin-1: drop what this call wrote, take the string path.
+          final part = start == 0 && stop == s.length
+              ? s
+              : s.substring(start, stop);
+          write(attribute ? _escapeAttr(part) : _escapeText(part));
+          return false;
+        }
+        buf[len++] = c;
+        continue;
+      }
+      switch (c) {
+        case 0x26: // &
+          len = _putAscii(buf, len, '&amp;');
+        case 0x3c: // <
+          len = _putAscii(buf, len, '&lt;');
+        case 0x3e: // >
+          len = _putAscii(buf, len, '&gt;');
+        case 0x22 when attribute: // "
+          len = _putAscii(buf, len, '&quot;');
+        case 0x0a when attribute: // \n
+          buf[len++] = _space;
+        default:
+          buf[len++] = c;
+      }
+    }
+    _len = len;
+    return true;
+  }
+
+  /// Appends the escaped attribute value of [family]. A scene usually
+  /// uses one font family for every text, so its escaped bytes are kept and
+  /// copied for the next text with the same family.
+  void writeFontFamily(String family) {
+    if (!identical(family, _family)) {
+      final mark = _len;
+      if (!writeEscaped(family, attribute: true)) {
+        // Added as a separate part (outside Latin-1): nothing to keep.
+        _family = null;
+        return;
+      }
+      _family = family;
+      _familyBytes = Uint8List.sublistView(_buf, mark, _len).sublist(0);
+      return;
+    }
+    final bytes = _familyBytes;
+    final n = bytes.length;
+    if (_len + n > _buf.length) _grow(n);
+    _buf.setRange(_len, _len + n, bytes);
+    _len += n;
+  }
+
+  String? _family;
+  Uint8List _familyBytes = Uint8List(0);
+
+  /// Puts the ASCII string [s] into [buf] at [at] and returns the end.
+  static int _putAscii(Uint8List buf, int at, String s) {
+    for (var i = 0; i < s.length; i++) {
+      buf[at++] = s.codeUnitAt(i);
+    }
+    return at;
+  }
+
   /// Appends one Latin-1 character code.
   @pragma('vm:prefer-inline')
   void writeCharCode(int c) {
@@ -199,9 +281,15 @@ void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
         b.write('<a href="${_escapeAttr(link)}" target="_blank">');
       }
       b.write('<g');
-      if (id != null) b.write(' id="${_escapeAttr(id)}"');
+      if (id != null) {
+        b.write(' id="');
+        b.writeEscaped(id, attribute: true);
+        b.writeCharCode(_quote);
+      }
       if (semanticLabel != null) {
-        b.write(' aria-label="${_escapeAttr(semanticLabel)}"');
+        b.write(' aria-label="');
+        b.writeEscaped(semanticLabel, attribute: true);
+        b.writeCharCode(_quote);
       }
       if (link != null) b.write(' style="cursor:pointer"');
       b.write('>');
@@ -312,8 +400,12 @@ void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
       :final rotation,
       :final underline,
     ):
-      final lines = text.split('\n');
-      final lineHeight = bounds.height / lines.length;
+      // Lines are written as ranges of [text], without splitting it.
+      var lineCount = 1;
+      for (var i = 0; i < text.length; i++) {
+        if (text.codeUnitAt(i) == 0x0a) lineCount++;
+      }
+      final lineHeight = bounds.height / lineCount;
       final (anchor, x) = switch (align) {
         TextAlignH.left => ('start', bounds.left),
         TextAlignH.center => ('middle', bounds.center.x),
@@ -330,7 +422,7 @@ void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
         ..write('<text text-anchor="')
         ..write(anchor)
         ..write('" font-family="')
-        ..write(_escapeAttr(_svgFontFamily(style)))
+        ..writeFontFamily(_svgFontFamily(style))
         ..write('" font-size="');
       _writeNum(b, style.fontSize);
       b.writeCharCode(_quote);
@@ -342,7 +434,12 @@ void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
       b.write(' fill="');
       _writeColor(b, color);
       b.write('">');
-      for (var i = 0; i < lines.length; i++) {
+      var lineStart = 0;
+      for (var i = 0; i < lineCount; i++) {
+        var lineEnd = lineStart;
+        while (lineEnd < text.length && text.codeUnitAt(lineEnd) != 0x0a) {
+          lineEnd++;
+        }
         final y = bounds.top + lineHeight * i + lineHeight * 0.78;
         b.write('<tspan x="');
         _writeNum(b, x);
@@ -350,8 +447,14 @@ void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
         _writeNum(b, y);
         b
           ..write('">')
-          ..write(_escapeText(lines[i]))
+          ..writeEscaped(
+            text,
+            attribute: false,
+            start: lineStart,
+            end: lineEnd,
+          )
           ..write('</tspan>');
+        lineStart = lineEnd + 1;
       }
       b.write('</text>');
       if (rotation != 0) b.write('</g>');
