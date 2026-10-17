@@ -358,6 +358,27 @@ class IndexedOrder {
   /// buildLayerMatrix: per rank, nodes keyed by order (a later node with
   /// the same order replaces an earlier one), sorted by order.
   List<List<int>> _layerMatrix(int maxRank) {
+    // Orders are usually 0..k-1 per rank, which fills a dense list; anything
+    // else (gaps, two nodes with one order) takes the keyed path.
+    final counts = List<int>.filled(maxRank + 1, 0);
+    for (var v = 0; v < nodeCount; v++) {
+      final r = rank[v];
+      if (r != null) counts[r]++;
+    }
+    final layers = [for (final c in counts) List<int>.filled(c, -1)];
+    var dense = true;
+    for (var v = 0; v < nodeCount && dense; v++) {
+      final r = rank[v];
+      if (r == null) continue;
+      final layer = layers[r];
+      final o = order[v].toInt();
+      if (o < 0 || o >= layer.length || layer[o] >= 0) {
+        dense = false;
+      } else {
+        layer[o] = v;
+      }
+    }
+    if (dense) return layers;
     final byOrder = List<Map<int, int>>.generate(maxRank + 1, (_) => {});
     for (var v = 0; v < nodeCount; v++) {
       final r = rank[v];
@@ -368,6 +389,7 @@ class IndexedOrder {
         [for (final k in (m.keys.toList()..sort())) m[k]!],
     ];
   }
+
 
   int crossCount(List<List<int>> layering) {
     var cc = 0;
