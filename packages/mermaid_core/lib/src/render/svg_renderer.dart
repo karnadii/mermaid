@@ -16,7 +16,7 @@ import '../math/katex_fonts.dart';
 import '../text/text_style.dart';
 
 String renderSceneToSvg(RenderScene scene) {
-  final b = _SvgWriter()
+  final b = _SvgWriter.reused()
     ..write('<svg xmlns="http://www.w3.org/2000/svg" ')
     ..write('width="${_num(scene.size.width)}" ')
     ..write('height="${_num(scene.size.height)}" ')
@@ -36,7 +36,9 @@ String renderSceneToSvg(RenderScene scene) {
     _writeNode(b, node, ids);
   }
   b.write('</svg>');
-  return b.toString();
+  final svg = b.toString();
+  b.release();
+  return svg;
 }
 
 /// The embedded KaTeX fonts, built once: the base64 bodies are large.
@@ -54,6 +56,26 @@ const _katexFontFaces =
 /// becomes a string with one copy.
 class _SvgWriter {
   _SvgWriter([int capacity = 4096]) : _buf = Uint8List(capacity);
+
+  /// A writer on the buffer kept from the previous document, so a large
+  /// diagram does not allocate and copy its buffer again on every render.
+  /// Hand the buffer back with [release].
+  _SvgWriter.reused() : _buf = _spare ?? Uint8List(4096) {
+    _spare = null;
+  }
+
+  /// The buffer of the last released writer.
+  static Uint8List? _spare;
+
+  /// Buffers above this size are not kept, so one huge diagram does not hold
+  /// its memory for the rest of the process.
+  static const _maxSpare = 1 << 20;
+
+  /// Keeps this writer's buffer for the next [_SvgWriter.reused]. The writer
+  /// must not be used after this.
+  void release() {
+    if (_buf.length <= _maxSpare) _spare = _buf;
+  }
 
   Uint8List _buf;
   int _len = 0;
