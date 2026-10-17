@@ -112,6 +112,10 @@ class IndexedOrder {
         lastBest = 0;
         best = [for (final layer in layering) List<int>.of(layer)];
         bestCC = cc;
+        // No later sweep can beat zero crossings, and only [best] is used,
+        // so the remaining sweeps of the reference loop cannot change the
+        // result.
+        if (cc == 0) break;
       }
     }
     return best;
