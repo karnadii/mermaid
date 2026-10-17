@@ -153,9 +153,12 @@ class IndexedBk {
     for (final layer in layering) {
       var prevIdx = -1;
       for (final v in layer) {
-        final ws = List<int>.of(neighbors[v]);
+        var ws = neighbors[v];
         if (ws.isEmpty) continue;
-        ws.sort((a, b) => pos[a].compareTo(pos[b]));
+        // A single neighbour needs no copy or sort.
+        if (ws.length > 1) {
+          ws = List<int>.of(ws)..sort((a, b) => pos[a].compareTo(pos[b]));
+        }
         final mp = (ws.length - 1) / 2;
         for (int i = mp.floor(), il = mp.ceil(); i <= il; ++i) {
           final w = ws[i];
@@ -203,31 +206,27 @@ class IndexedBk {
     bool reverseSep,
   ) {
     // Block graph over roots: nodes in insertion order, one edge per pair
-    // holding the largest separation, adjacency in insertion order.
+    // holding the largest separation.
     final blockNodes = <int>[];
     final inBlock = List<bool>.filled(n, false);
-    final blockIn = List<List<int>>.generate(n, (_) => []);
-    final blockOut = List<List<int>>.generate(n, (_) => []);
     final edgeFrom = <int>[], edgeTo = <int>[];
     final edgeSep = <double>[];
     final edgeOf = <int, int>{};
     for (final layer in layering) {
-      int? u;
+      var u = -1;
       for (final v in layer) {
         final vRoot = root[v];
         if (!inBlock[vRoot]) {
           inBlock[vRoot] = true;
           blockNodes.add(vRoot);
         }
-        if (u != null) {
+        if (u >= 0) {
           final uRoot = root[u];
           final s = _sep(v, u, reverseSep, label.nodeSep, label.edgeSep);
           final key = uRoot * n + vRoot;
           final e = edgeOf[key];
           if (e == null) {
             edgeOf[key] = edgeSep.length;
-            blockOut[uRoot].add(edgeSep.length);
-            blockIn[vRoot].add(edgeSep.length);
             edgeFrom.add(uRoot);
             edgeTo.add(vRoot);
             edgeSep.add(math.max(s, 0).toDouble());
@@ -239,51 +238,73 @@ class IndexedBk {
       }
     }
 
+    // In- and out-edges per node as flat arrays (CSR), filled in edge
+    // order, which is the order the block graph's adjacency maps have.
+    final m = edgeSep.length;
+    final inStart = Int32List(n + 1), outStart = Int32List(n + 1);
+    for (var e = 0; e < m; e++) {
+      inStart[edgeTo[e] + 1]++;
+      outStart[edgeFrom[e] + 1]++;
+    }
+    for (var i = 0; i < n; i++) {
+      inStart[i + 1] += inStart[i];
+      outStart[i + 1] += outStart[i];
+    }
+    final inEdge = Int32List(m), outEdge = Int32List(m);
+    final inFill = Int32List.fromList(inStart),
+        outFill = Int32List.fromList(outStart);
+    for (var e = 0; e < m; e++) {
+      inEdge[inFill[edgeTo[e]]++] = e;
+      outEdge[outFill[edgeFrom[e]]++] = e;
+    }
+
     // Both passes walk the block graph with the reference's explicit stack:
     // a node's coordinate is (re)computed each time it is popped after its
     // first visit.
     final xs = Float64List(n);
-    final visited = List<bool>.filled(n, false);
+    final visited = Uint8List(n);
     final stack = <int>[];
 
     // First pass, assign smallest coordinates.
     stack.addAll(blockNodes);
     while (stack.isNotEmpty) {
       final elem = stack.removeLast();
-      if (visited[elem]) {
+      if (visited[elem] != 0) {
         num acc = 0;
-        for (final e in blockIn[elem]) {
+        for (var k = inStart[elem]; k < inStart[elem + 1]; k++) {
+          final e = inEdge[k];
           acc = math.max(acc, xs[edgeFrom[e]] + edgeSep[e]);
         }
         xs[elem] = acc.toDouble();
       } else {
-        visited[elem] = true;
+        visited[elem] = 1;
         stack.add(elem);
-        for (final e in blockIn[elem]) {
-          stack.add(edgeFrom[e]);
+        for (var k = inStart[elem]; k < inStart[elem + 1]; k++) {
+          stack.add(edgeFrom[inEdge[k]]);
         }
       }
     }
 
     // Second pass, assign greatest coordinates.
     final ownBorder = reverseSep ? 'borderLeft' : 'borderRight';
-    visited.fillRange(0, n, false);
+    visited.fillRange(0, n, 0);
     stack.addAll(blockNodes);
     while (stack.isNotEmpty) {
       final elem = stack.removeLast();
-      if (visited[elem]) {
+      if (visited[elem] != 0) {
         num minv = double.maxFinite;
-        for (final e in blockOut[elem]) {
+        for (var k = outStart[elem]; k < outStart[elem + 1]; k++) {
+          final e = outEdge[k];
           minv = math.min(minv, xs[edgeTo[e]] - edgeSep[e]);
         }
         if (minv != double.maxFinite && borderType[elem] != ownBorder) {
           xs[elem] = math.max(xs[elem], minv).toDouble();
         }
       } else {
-        visited[elem] = true;
+        visited[elem] = 1;
         stack.add(elem);
-        for (final e in blockOut[elem]) {
-          stack.add(edgeTo[e]);
+        for (var k = outStart[elem]; k < outStart[elem + 1]; k++) {
+          stack.add(edgeTo[outEdge[k]]);
         }
       }
     }
