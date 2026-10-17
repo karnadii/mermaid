@@ -249,13 +249,37 @@ bool _usesKatex(List<SceneNode> nodes) => nodes.any(
   },
 );
 
+/// Formats [v] like `toStringAsFixed(2)` with trailing zeros (and a trailing
+/// dot) removed. This runs for every coordinate in the scene, so the common
+/// case works on the integer hundredths and only falls back to the string
+/// path near a rounding tie (where `v * 100` may round differently from the
+/// exact decimal value), for `-0`, and for huge or non-finite values.
 String _num(double v) {
   if (v == v.roundToDouble()) return v.round().toString();
-  return v
-      .toStringAsFixed(2)
-      .replaceFirst(RegExp(r'0+$'), '')
-      .replaceFirst(RegExp(r'\.$'), '');
+  final scaled = v * 100;
+  if (scaled.abs() < 1e15) {
+    final r = scaled.round();
+    final tie = ((scaled - r).abs() - 0.5).abs() < 1e-6;
+    if (r != 0 && !tie) {
+      final a = r.abs();
+      final sign = r < 0 ? '-' : '';
+      final whole = a ~/ 100;
+      final frac = a % 100;
+      if (frac == 0) return '$sign$whole';
+      if (frac % 10 == 0) return '$sign$whole.${frac ~/ 10}';
+      return frac < 10 ? '$sign$whole.0$frac' : '$sign$whole.$frac';
+    }
+  }
+  return _numSlow(v);
 }
+
+final _trailingZeros = RegExp(r'0+$');
+final _trailingDot = RegExp(r'\.$');
+
+String _numSlow(double v) => v
+    .toStringAsFixed(2)
+    .replaceFirst(_trailingZeros, '')
+    .replaceFirst(_trailingDot, '');
 
 String _color(Color c) {
   final rgb = c.value & 0xffffff;
