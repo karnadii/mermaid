@@ -79,9 +79,81 @@ class _SvgWriter {
   }
 
   /// Appends one Latin-1 character code.
+  @pragma('vm:prefer-inline')
   void writeCharCode(int c) {
     if (_len == _buf.length) _grow(1);
     _buf[_len++] = c;
+  }
+
+  /// Appends [v] in the [_num] format. This runs for every coordinate in
+  /// the scene, so the common case writes the digits of the integer
+  /// hundredths directly and only falls back to the string path near a
+  /// rounding tie (where `v * 100` may round differently from the exact
+  /// decimal value), for `-0`, and for huge or non-finite values.
+  void writeNum(double v) {
+    // Room for a sign, 19 digits, a dot and two decimals.
+    if (_len + 24 > _buf.length) _grow(24);
+    if (v == v.roundToDouble()) {
+      final n = v.round();
+      if (n >= 0 && n < _maxDigitsValue) {
+        _putDigits(n);
+      } else if (n < 0 && n > -_maxDigitsValue) {
+        _buf[_len++] = 0x2d; // -
+        _putDigits(-n);
+      } else {
+        write('$n');
+      }
+      return;
+    }
+    final scaled = v * 100;
+    if (scaled < 1e15 && scaled > -1e15) {
+      final r = scaled.round();
+      final diff = scaled - r;
+      final tie =
+          diff > 0.499999 && diff < 0.500001 ||
+          diff < -0.499999 && diff > -0.500001;
+      if (r != 0 && !tie) {
+        var a = r;
+        if (r < 0) {
+          _buf[_len++] = 0x2d; // -
+          a = -r;
+        }
+        final whole = a ~/ 100;
+        _putDigits(whole);
+        final frac = a - whole * 100;
+        if (frac != 0) {
+          final tens = frac ~/ 10;
+          final ones = frac - tens * 10;
+          _buf[_len++] = 0x2e; // .
+          _buf[_len++] = 0x30 + tens;
+          if (ones != 0) _buf[_len++] = 0x30 + ones;
+        }
+        return;
+      }
+    }
+    write(_numSlow(v));
+  }
+
+  /// Puts the decimal digits of [n] (`0 <= n < 10^19`); the caller made
+  /// room for them.
+  void _putDigits(int n) {
+    final buf = _buf;
+    if (n < 10) {
+      buf[_len++] = 0x30 + n;
+      return;
+    }
+    var digits = 2;
+    for (var t = n ~/ 100; t > 0; t ~/= 10) {
+      digits++;
+    }
+    final end = _len + digits;
+    var i = end;
+    do {
+      final q = n ~/ 10;
+      buf[--i] = 0x30 + n - q * 10;
+      n = q;
+    } while (n > 0);
+    _len = end;
   }
 
   void _grow(int extra) {
@@ -405,65 +477,10 @@ String _num(double v) {
   return b.toString();
 }
 
-/// Writes [v] in the [_num] format. This runs for every coordinate in the
-/// scene, so the common case writes the digits of the integer hundredths
-/// directly and only falls back to the string path near a rounding tie
-/// (where `v * 100` may round differently from the exact decimal value), for
-/// `-0`, and for huge or non-finite values.
-void _writeNum(_SvgWriter b, double v) {
-  if (v == v.roundToDouble()) {
-    final n = v.round();
-    if (n.abs() < _maxDigitsValue) {
-      _writeInt(b, n);
-    } else {
-      b.write('$n');
-    }
-    return;
-  }
-  final scaled = v * 100;
-  if (scaled < 1e15 && scaled > -1e15) {
-    final r = scaled.round();
-    final diff = scaled - r;
-    final tie =
-        diff > 0.499999 && diff < 0.500001 ||
-        diff < -0.499999 && diff > -0.500001;
-    if (r != 0 && !tie) {
-      final a = r < 0 ? -r : r;
-      if (r < 0) b.writeCharCode(0x2d); // -
-      _writeInt(b, a ~/ 100);
-      final frac = a % 100;
-      if (frac != 0) {
-        b
-          ..writeCharCode(0x2e) // .
-          ..writeCharCode(0x30 + frac ~/ 10);
-        if (frac % 10 != 0) b.writeCharCode(0x30 + frac % 10);
-      }
-      return;
-    }
-  }
-  b.write(_numSlow(v));
-}
+/// Writes [v] in the [_num] format.
+void _writeNum(_SvgWriter b, double v) => b.writeNum(v);
 
 const _maxDigitsValue = 1000000000000000000;
-
-/// Writes the decimal digits of [n] (`|n|` below [_maxDigitsValue]).
-void _writeInt(_SvgWriter b, int n) {
-  if (n < 0) {
-    b.writeCharCode(0x2d); // -
-    n = -n;
-  }
-  if (n < 10) {
-    b.writeCharCode(0x30 + n);
-    return;
-  }
-  var d = 10;
-  while (d <= n ~/ 10) {
-    d *= 10;
-  }
-  for (; d > 0; d ~/= 10) {
-    b.writeCharCode(0x30 + n ~/ d % 10);
-  }
-}
 
 final _trailingZeros = RegExp(r'0+$');
 final _trailingDot = RegExp(r'\.$');
