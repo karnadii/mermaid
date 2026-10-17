@@ -182,6 +182,19 @@ class _SvgWriter {
     return at;
   }
 
+  /// Appends `#rrggbb` (lowercase) for the ARGB [value], ignoring alpha.
+  void writeColor(int value) {
+    if (_len + 7 > _buf.length) _grow(7);
+    final buf = _buf;
+    var len = _len;
+    buf[len++] = 0x23; // #
+    for (var shift = 20; shift >= 0; shift -= 4) {
+      final d = (value >> shift) & 0xf;
+      buf[len++] = d < 10 ? 0x30 + d : 0x57 + d; // 0-9, a-f
+    }
+    _len = len;
+  }
+
   /// Appends one Latin-1 character code.
   @pragma('vm:prefer-inline')
   void writeCharCode(int c) {
@@ -246,8 +259,16 @@ class _SvgWriter {
       buf[_len++] = 0x30 + n;
       return;
     }
-    var digits = 2;
-    for (var t = n ~/ 100; t > 0; t ~/= 10) {
+    var digits = n < 100
+        ? 2
+        : n < 1000
+        ? 3
+        : n < 10000
+        ? 4
+        : n < 100000
+        ? 5
+        : 6;
+    for (var t = n ~/ 1000000; t > 0; t ~/= 10) {
       digits++;
     }
     final end = _len + digits;
@@ -586,13 +607,25 @@ void _writePoint(_SvgWriter b, Point p) {
 String _svgFontFamily(TextStyleSpec style) => style.fontFamily;
 
 /// True if any text node uses a KaTeX math font (so we embed the @font-face).
-bool _usesKatex(List<SceneNode> nodes) => nodes.any(
-  (n) => switch (n) {
-    SceneGroup(:final children) => _usesKatex(children),
-    SceneText(:final style) => style.fontFamily.startsWith('KaTeX_'),
-    _ => false,
-  },
-);
+bool _usesKatex(List<SceneNode> nodes) {
+  for (var i = 0; i < nodes.length; i++) {
+    switch (nodes[i]) {
+      case SceneGroup(:final children):
+        if (_usesKatex(children)) return true;
+      case SceneText(:final style):
+        final family = style.fontFamily;
+        // `K` rejects the usual family without a prefix compare.
+        if (family.isNotEmpty &&
+            family.codeUnitAt(0) == 0x4b &&
+            family.startsWith('KaTeX_')) {
+          return true;
+        }
+      case SceneShape():
+        break;
+    }
+  }
+  return false;
+}
 
 /// Formats [v] like `toStringAsFixed(2)` with trailing zeros (and a trailing
 /// dot) removed.
@@ -625,14 +658,7 @@ String _color(Color c) {
 }
 
 /// Writes `#rrggbb` (lowercase) for [c], ignoring alpha.
-void _writeColor(_SvgWriter b, Color c) {
-  b.writeCharCode(0x23); // #
-  for (var shift = 20; shift >= 0; shift -= 4) {
-    b.writeCharCode(_hexDigits.codeUnitAt((c.value >> shift) & 0xf));
-  }
-}
-
-const _hexDigits = '0123456789abcdef';
+void _writeColor(_SvgWriter b, Color c) => b.writeColor(c.value);
 
 String _escapeText(String s) => !_needsEscape(s, false)
     ? s
