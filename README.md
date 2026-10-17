@@ -38,6 +38,13 @@ Wardley maps, event modeling, and railroad diagrams.
 It also supports Mermaid theme directives, `look: handDrawn`, icons, math in
 labels, and the `elk` and `tidy-tree` layout engines.
 
+## Performance
+
+Rendering a 500-node flowchart to SVG takes about 3 ms (native, Apple M5
+Pro), close to [Pele](https://pele.run) and about 300x faster than mermaid.js
+in a browser. See [`tool/bench/RESULTS.md`](tool/bench/RESULTS.md) for all
+cases and [`tool/bench`](tool/bench) to run the benchmark.
+
 ## Repository layout
 
 - `apps/demo`: macOS editor and preview app
