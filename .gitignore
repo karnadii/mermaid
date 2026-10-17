@@ -13,3 +13,6 @@ pubspec.lock
 # Flutter platform ephemeral
 **/macos/Flutter/ephemeral/
 **/Flutter/ephemeral/
+
+# Benchmark
+tool/bench/js/node_modules/

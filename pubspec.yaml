@@ -9,3 +9,4 @@ workspace:
   - packages/mermaid_samples
   - apps/demo
   - apps/website
+  - tool/bench

@@ -1,0 +1,15 @@
+name: mermaid_bench
+description: >-
+  Render-speed benchmark of mermaid_core against mermaid.js and Pele on a
+  shared corpus. Not published.
+publish_to: none
+environment:
+  sdk: ^3.12.0
+resolution: workspace
+
+dependencies:
+  mermaid_core: any
+  mermaid_samples: any
+
+dev_dependencies:
+  vm_service: ^15.4.0
