@@ -15,6 +15,11 @@ import '../geometry.dart';
 import '../ir/scene.dart';
 import 'svg_path.dart';
 
+// Hoisted so each pattern compiles once instead of on every call.
+final _styleAttr = RegExp(r'\sstyle="([^"]*)"');
+final _shapeElement = RegExp(r'<(path|line|rect|circle|ellipse)\b([^>]*)>');
+final _dAttr = RegExp(r'\sd="([^"]*)"');
+
 class IconDef {
   const IconDef(this.body, {this.width = 24, this.height = 24});
 
@@ -83,7 +88,7 @@ double? _attrNum(String attrs, String name) {
 
 String? _styleProp(String attrs, String prop) {
   // Prefer an inline style declaration, then a standalone attribute.
-  final style = RegExp(r'\sstyle="([^"]*)"').firstMatch(attrs)?.group(1);
+  final style = _styleAttr.firstMatch(attrs)?.group(1);
   if (style != null) {
     final m = RegExp('(?:^|;)\\s*$prop\\s*:\\s*([^;]+)').firstMatch(style);
     if (m != null) return m.group(1)!.trim();
@@ -94,8 +99,7 @@ String? _styleProp(String attrs, String prop) {
 
 /// Iterates the drawable elements of an SVG body fragment in document order.
 Iterable<_SvgElement> _svgElements(String body) sync* {
-  final re = RegExp(r'<(path|line|rect|circle|ellipse)\b([^>]*)>');
-  for (final m in re.allMatches(body)) {
+  for (final m in _shapeElement.allMatches(body)) {
     yield (tag: m.group(1)!, attrs: m.group(2)!);
   }
 }
@@ -104,7 +108,7 @@ ShapeGeometry? _geometryFor(
     _SvgElement el, Point Function(Point) tf, double scale) {
   switch (el.tag) {
     case 'path':
-      final d = RegExp(r'\sd="([^"]*)"').firstMatch(el.attrs)?.group(1);
+      final d = _dAttr.firstMatch(el.attrs)?.group(1);
       final cmds = parseSvgPath(d).map((c) => _transform(c, tf)).toList();
       return cmds.isEmpty ? null : PathGeometry(cmds);
     case 'line':

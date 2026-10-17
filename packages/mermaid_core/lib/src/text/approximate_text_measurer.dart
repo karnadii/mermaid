@@ -12,6 +12,9 @@ import '../math/katex_metrics.dart';
 import 'text_measurer.dart';
 import 'text_style.dart';
 
+// Hoisted so each pattern compiles once instead of on every call.
+final _whitespaceRun = RegExp(r'\s+');
+
 class ApproximateTextMeasurer implements TextMeasurer {
   const ApproximateTextMeasurer();
 
@@ -39,7 +42,7 @@ class ApproximateTextMeasurer implements TextMeasurer {
   }
 
   List<String> _wrap(String line, TextStyleSpec style, double maxWidth) {
-    final words = line.split(RegExp(r'\s+'));
+    final words = line.split(_whitespaceRun);
     final out = <String>[];
     var current = StringBuffer();
     for (final word in words) {

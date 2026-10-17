@@ -1,6 +1,11 @@
 /// ARGB color value type with CSS color parsing, independent of dart:ui.
 library;
 
+// Hoisted so each pattern compiles once instead of on every call.
+final _colorFunction = RegExp(r'^(rgb|rgba|hsl|hsla)\(([^)]*)\)$');
+final _whitespaceRun = RegExp(r'\s+');
+final _whitespaceChar = RegExp(r'\s');
+
 class Color {
   const Color(this.value);
 
@@ -67,7 +72,7 @@ class Color {
       }
       return null;
     }
-    final function = RegExp(r'^(rgb|rgba|hsl|hsla)\(([^)]*)\)$').firstMatch(s);
+    final function = _colorFunction.firstMatch(s);
     if (function != null) {
       final name = function.group(1)!;
       final parts = _functionParts(function.group(2)!);
@@ -99,13 +104,13 @@ class Color {
     }
     final slashParts = body.split('/');
     if (slashParts.length > 2) return null;
-    final channels = slashParts.first.trim().split(RegExp(r'\s+'));
+    final channels = slashParts.first.trim().split(_whitespaceRun);
     if (channels.length != 3 || channels.any((part) => part.isEmpty)) {
       return null;
     }
     if (slashParts.length == 2) {
       final alpha = slashParts[1].trim();
-      if (alpha.isEmpty || alpha.contains(RegExp(r'\s'))) return null;
+      if (alpha.isEmpty || alpha.contains(_whitespaceChar)) return null;
       channels.add(alpha);
     }
     return channels;
