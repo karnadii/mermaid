@@ -179,25 +179,24 @@ class _IndexedSimplex {
     final treeEdge = parentEdge[child];
     final childIsTail = src[treeEdge] == child;
     var cut = weight[treeEdge];
-    void visit(int e) {
-      final isOut = src[e] == child;
-      final other = isOut ? dst[e] : src[e];
-      if (other == par) return;
-      final pointsToHead = isOut == childIsTail;
-      final w = weight[e];
-      cut += pointsToHead ? w : -w;
-      // A tree edge to `other` other than the parent edge leads to a child.
-      if (parent[other] == child && parentEdge[other] == e) {
-        final otherCut = cutValue[other];
-        cut += pointsToHead ? -otherCut : otherCut;
+    // In-edges, then out-edges, as nodeEdges() lists them; the sum order
+    // matters for the floating-point result.
+    for (var pass = 0; pass < 2; pass++) {
+      final edges = pass == 0 ? inEdges[child] : outEdges[child];
+      for (var i = 0; i < edges.length; i++) {
+        final e = edges[i];
+        final isOut = src[e] == child;
+        final other = isOut ? dst[e] : src[e];
+        if (other == par) continue;
+        final pointsToHead = isOut == childIsTail;
+        final w = weight[e];
+        cut += pointsToHead ? w : -w;
+        // A tree edge to `other` other than the parent edge leads to a child.
+        if (parent[other] == child && parentEdge[other] == e) {
+          final otherCut = cutValue[other];
+          cut += pointsToHead ? -otherCut : otherCut;
+        }
       }
-    }
-
-    for (final e in inEdges[child]) {
-      visit(e);
-    }
-    for (final e in outEdges[child]) {
-      visit(e);
     }
     return cut;
   }
@@ -248,10 +247,10 @@ class _IndexedSimplex {
   /// ancestor of c's old parent and the other end y changes shape: the
   /// path from x up to c turns around and hangs from y. That subtree keeps
   /// its size, so it is renumbered within its old low..lim range and the
-  /// intervals elsewhere stay valid. Cut values depend only on the tree and
-  /// its root, so recomputing them inside that subtree gives the same
-  /// values as recomputing all of them. Every tree edge is tight, so ranks
-  /// change only in the moved subtree.
+  /// intervals elsewhere stay valid. A cut value depends only on the node's
+  /// subtree, which changes only on the chains from c and from c's old
+  /// parent up to that ancestor. Every tree edge is tight, so ranks change
+  /// only in the moved subtree.
   void _exchange(int leave, int enter) {
     if (!_integral) {
       _exchangeFull(leave, enter);
@@ -288,9 +287,15 @@ class _IndexedSimplex {
       z = oldParent;
     }
 
-    final post = _renumber(lca);
-    for (var i = 0; i < post.length - 1; i++) {
-      cutValue[post[i]] = _calcCutValue(post[i]);
+    _renumber(lca);
+    // Only nodes on the two changed chains below the ancestor have a new
+    // subtree: c up through x and y, and c's old parent p. Recompute them
+    // bottom-up; every other node keeps its subtree and its cut value.
+    for (var v = c; v != lca; v = parent[v]) {
+      cutValue[v] = _calcCutValue(v);
+    }
+    for (var v = p; v != lca; v = parent[v]) {
+      cutValue[v] = _calcCutValue(v);
     }
 
     // Ranks of the moved subtree, from x down.
