@@ -4,7 +4,9 @@
 ///   dart --profiler run tool/profile.dart "mesh: 500" [seconds] [rows]
 ///
 /// Set CALLERS=<function name> to also list which functions call it,
-/// for samples where it is on top of the stack (two frames up).
+/// for samples where it is on top of the stack (two frames up). Set
+/// INSIDE=<function name> to list the top frames of samples that have it on
+/// the stack, which splits its time into what it calls.
 library;
 
 import 'dart:developer';
@@ -73,6 +75,22 @@ Future<void> main(List<String> args) async {
   }
 
   table('Self time', self, 30);
+  final inside = Platform.environment['INSIDE'];
+  if (inside != null) {
+    final tops = <String, int>{};
+    var count = 0;
+    for (final s in samples.samples!) {
+      final stack = s.stack!;
+      if (stack.isEmpty || !stack.any((f) => name(f).startsWith(inside))) continue;
+      count++;
+      tops.update(name(stack.first), (v) => v + 1, ifAbsent: () => 1);
+    }
+    stdout.writeln('\nTop frames inside $inside ($count samples)');
+    final top = tops.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    for (final e in top.take(20)) {
+      stdout.writeln('${e.value.toString().padLeft(6)}  ${e.key}');
+    }
+  }
   final callersOf = Platform.environment['CALLERS'];
   if (callersOf != null) {
     final callers = <String, int>{};

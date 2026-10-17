@@ -180,9 +180,9 @@ class IndexedBk {
     return root;
   }
 
-  double _sep(int v, int w, bool reverseSep, num nodeSep, num edgeSep) {
-    num sum = 0;
-    num delta = 0;
+  double _sep(int v, int w, bool reverseSep, double nodeSep, double edgeSep) {
+    var sum = 0.0;
+    var delta = 0.0;
     sum += width[v] / 2;
     if (labelPos[v] == LabelPosition.left) {
       delta = -width[v] / 2;
@@ -204,7 +204,7 @@ class IndexedBk {
     if (delta != 0) {
       sum += reverseSep ? delta : -delta;
     }
-    return sum.toDouble();
+    return sum;
   }
 
   List<double> _horizontalCompaction(
@@ -282,12 +282,14 @@ class IndexedBk {
     while (stack.isNotEmpty) {
       final elem = stack.removeLast();
       if (visited[elem] != 0) {
-        num acc = 0;
+        // Starts at 0.0 rather than the reference's int 0: max() gives the
+        // same double either way, without mixed int/double comparisons.
+        var acc = 0.0;
         for (var k = inStart[elem]; k < inStart[elem + 1]; k++) {
           final e = inEdge[k];
           acc = math.max(acc, xs[edgeFrom[e]] + edgeSep[e]);
         }
-        xs[elem] = acc.toDouble();
+        xs[elem] = acc;
       } else {
         visited[elem] = 1;
         stack.add(elem);
@@ -304,13 +306,13 @@ class IndexedBk {
     while (stack.isNotEmpty) {
       final elem = stack.removeLast();
       if (visited[elem] != 0) {
-        num minv = double.maxFinite;
+        var minv = double.maxFinite;
         for (var k = outStart[elem]; k < outStart[elem + 1]; k++) {
           final e = outEdge[k];
           minv = math.min(minv, xs[edgeTo[e]] - edgeSep[e]);
         }
         if (minv != double.maxFinite && borderType[elem] != ownBorder) {
-          xs[elem] = math.max(xs[elem], minv).toDouble();
+          xs[elem] = math.max(xs[elem], minv);
         }
       } else {
         visited[elem] = 1;
