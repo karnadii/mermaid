@@ -60,7 +60,6 @@ final _header = RegExp(r'^(graph|flowchart-elk|flowchart)\b\s*(.*)$');
 final _headerDirection = RegExp(r'^(TB|TD|BT|LR|RL|>|<|\^|v)(?=\s|$)');
 final _accDescrOpen = RegExp(r'accDescr\s*$');
 final _subgraphKeyword = RegExp(r'^subgraph\b');
-final _endKeyword = RegExp(r'^end$');
 final _directionStatement = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$');
 final _classDefKeyword = RegExp(r'^classDef\b');
 final _classKeyword = RegExp(r'^class\b');
@@ -85,10 +84,6 @@ final _solidTextLinkEnd = RegExp(r'(-{2,}[-xo>])');
 final _dottedTextLinkEnd = RegExp(r'(\.+-[xo>]?)');
 final _thickTextLinkEnd = RegExp(r'(={2,}[=xo>]?)');
 final _linkToken = RegExp(r'([<xo])?([-=~.]{2,})([xo>])?');
-final _dottedCore = RegExp(r'^-?\.+-?$');
-final _solidCore = RegExp(r'^-+$');
-final _thickCore = RegExp(r'^=+$');
-final _invisibleCore = RegExp(r'^~+$');
 final _lineBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
 final _legacyIcon = RegExp(r'fa[bklrs]?:fa-[\w-]+');
 final _blanks = RegExp(r'[ \t]+');
@@ -266,15 +261,19 @@ class _FlowParser {
   void _parseStatement(_Statement st) {
     final s = st.text;
     if (s.isEmpty) return;
-    if (_subgraphKeyword.hasMatch(s)) {
+    // Keyword statements are rare: a cheap prefix check skips their patterns
+    // for the node and link chains that make up most statements.
+    if (s.startsWith('subgraph') && _subgraphKeyword.hasMatch(s)) {
       _openSubgraph(s.substring('subgraph'.length).trim(), st.line);
       return;
     }
-    if (_endKeyword.hasMatch(s)) {
+    if (s == 'end') {
       _closeSubgraph(st.line);
       return;
     }
-    final dir = _directionStatement.firstMatch(s);
+    final dir = s.startsWith('direction')
+        ? _directionStatement.firstMatch(s)
+        : null;
     if (dir != null) {
       const dirs = {
         'TB': FlowDirection.tb,
@@ -292,28 +291,28 @@ class _FlowParser {
       }
       return;
     }
-    if (_classDefKeyword.hasMatch(s)) {
+    if (s.startsWith('classDef') && _classDefKeyword.hasMatch(s)) {
       _parseClassDef(s, st.line);
       return;
     }
-    if (_classKeyword.hasMatch(s)) {
+    if (s.startsWith('class') && _classKeyword.hasMatch(s)) {
       _parseClassStatement(s, st.line);
       return;
     }
-    if (_styleKeyword.hasMatch(s)) {
+    if (s.startsWith('style') && _styleKeyword.hasMatch(s)) {
       _parseStyleStatement(s, st.line);
       return;
     }
-    if (_linkStyleKeyword.hasMatch(s)) {
+    if (s.startsWith('linkStyle') && _linkStyleKeyword.hasMatch(s)) {
       _parseLinkStyle(s, st.line);
       return;
     }
-    if (_clickKeyword.hasMatch(s)) {
+    if (s.startsWith('click') && _clickKeyword.hasMatch(s)) {
       _parseClick(s, st.line);
       return;
     }
     // Accessibility statements are parsed and discarded for now.
-    if (_accessibility.hasMatch(s)) return;
+    if (s.startsWith('acc') && _accessibility.hasMatch(s)) return;
     _parseChain(st);
   }
 
@@ -959,11 +958,33 @@ class _FlowParser {
 
   bool _validEdgeCore(String core) {
     // Dotted cores may be a single `.` (from `-. text .-`).
-    if (_dottedCore.hasMatch(core)) return true;
+    if (_isDottedCore(core)) return true;
     if (core.length < 2) return false;
-    if (_solidCore.hasMatch(core)) return true;
-    if (_thickCore.hasMatch(core)) return true;
-    return _invisibleCore.hasMatch(core);
+    return _repeats(core, 0x2d) || // -
+        _repeats(core, 0x3d) || // =
+        _repeats(core, 0x7e); // ~
+  }
+
+  /// Matches `^-?\.+-?$`.
+  static bool _isDottedCore(String core) {
+    var start = 0;
+    var end = core.length;
+    if (end > 0 && core.codeUnitAt(0) == 0x2d) start++;
+    if (end > start && core.codeUnitAt(end - 1) == 0x2d) end--;
+    if (start == end) return false;
+    for (var i = start; i < end; i++) {
+      if (core.codeUnitAt(i) != 0x2e) return false;
+    }
+    return true;
+  }
+
+  /// Whether [core] is one or more [char]s.
+  static bool _repeats(String core, int char) {
+    if (core.isEmpty) return false;
+    for (var i = 0; i < core.length; i++) {
+      if (core.codeUnitAt(i) != char) return false;
+    }
+    return true;
   }
 
   _EdgeSpec _withStartHead(
@@ -1010,7 +1031,8 @@ class _FlowParser {
     if (s.length >= 2 && s.startsWith('`') && s.endsWith('`')) {
       s = s.substring(1, s.length - 1);
     }
-    s = s.replaceAll(_lineBreak, '\n');
+    if (s.contains('<')) s = s.replaceAll(_lineBreak, '\n');
+    if (!s.contains('fa')) return s.trim();
     final withoutLegacyIcons = s.replaceAll(
       _legacyIcon,
       '',
