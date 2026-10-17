@@ -6,6 +6,8 @@
   directives are parsed once per render; regexes are hoisted or replaced by
   scanners; SVG is written into a reused byte buffer.
 - Fix a crash on a class diagram self relation (`C1 --> C1`).
+- Fix a crash on flowchart edges to or from an empty subgraph, and draw empty
+  subgraphs as mermaid.js does (a zero-height rect with the title below).
 
 ## 0.3.0
 
