@@ -6,13 +6,17 @@
 /// points that a layout leaves implicit are not available to this backend.
 library;
 
+import 'dart:math' as math;
+import 'dart:typed_data';
+
 import '../color.dart';
+import '../geometry.dart';
 import '../ir/scene.dart';
 import '../math/katex_fonts.dart';
 import '../text/text_style.dart';
 
 String renderSceneToSvg(RenderScene scene) {
-  final b = StringBuffer()
+  final b = _SvgWriter()
     ..write('<svg xmlns="http://www.w3.org/2000/svg" ')
     ..write('width="${_num(scene.size.width)}" ')
     ..write('height="${_num(scene.size.height)}" ')
@@ -21,17 +25,7 @@ String renderSceneToSvg(RenderScene scene) {
     );
   // Self-contained KaTeX math fonts: embed @font-face only when used.
   if (_usesKatex(scene.nodes)) {
-    b
-      ..write('<defs><style>')
-      ..write(
-        '@font-face{font-family:"KaTeX_Main";src:url(data:font/ttf;'
-        'base64,$katexMainRegularTtfBase64) format("truetype");}',
-      )
-      ..write(
-        '@font-face{font-family:"KaTeX_Math";src:url(data:font/ttf;'
-        'base64,$katexMathItalicTtfBase64) format("truetype");}',
-      )
-      ..write('</style></defs>');
+    b.write(_katexFontFaces);
   }
   final bg = scene.background;
   if (bg != null && bg.alpha > 0) {
@@ -45,12 +39,81 @@ String renderSceneToSvg(RenderScene scene) {
   return b.toString();
 }
 
+/// The embedded KaTeX fonts, built once: the base64 bodies are large.
+const _katexFontFaces =
+    '<defs><style>'
+    '@font-face{font-family:"KaTeX_Main";src:url(data:font/ttf;'
+    'base64,$katexMainRegularTtfBase64) format("truetype");}'
+    '@font-face{font-family:"KaTeX_Math";src:url(data:font/ttf;'
+    'base64,$katexMathItalicTtfBase64) format("truetype");}'
+    '</style></defs>';
+
+/// The output builder. [StringBuffer] costs a call per character code and a
+/// part per short string, and a string built from a [Uint16List] costs a scan
+/// per character; this appends Latin-1 code units to one [Uint8List], which
+/// becomes a string with one copy.
+class _SvgWriter {
+  _SvgWriter([int capacity = 4096]) : _buf = Uint8List(capacity);
+
+  Uint8List _buf;
+  int _len = 0;
+
+  /// Earlier output, set once a long string (the embedded fonts) or a string
+  /// outside Latin-1 was added as its own part instead of being copied.
+  List<String>? _parts;
+
+  static const _longString = 1024;
+
+  void write(String s) {
+    final n = s.length;
+    if (n > _longString) return _addPart(s);
+    if (_len + n > _buf.length) _grow(n);
+    final buf = _buf;
+    var len = _len;
+    for (var i = 0; i < n; i++) {
+      final c = s.codeUnitAt(i);
+      if (c > 0xff) return _addPart(s);
+      buf[len++] = c;
+    }
+    _len = len;
+  }
+
+  /// Appends one Latin-1 character code.
+  void writeCharCode(int c) {
+    if (_len == _buf.length) _grow(1);
+    _buf[_len++] = c;
+  }
+
+  void _grow(int extra) {
+    final next = Uint8List(math.max(_buf.length * 2, _len + extra));
+    next.setRange(0, _len, _buf);
+    _buf = next;
+  }
+
+  void _addPart(String s) {
+    _flush();
+    _parts!.add(s);
+  }
+
+  void _flush() {
+    (_parts ??= []).add(String.fromCharCodes(_buf, 0, _len));
+    _len = 0;
+  }
+
+  @override
+  String toString() {
+    if (_parts == null) return String.fromCharCodes(_buf, 0, _len);
+    _flush();
+    return _parts!.join();
+  }
+}
+
 class _IdGen {
   int _n = 0;
   String next() => 'g${_n++}';
 }
 
-void _writeNode(StringBuffer b, SceneNode node, _IdGen ids) {
+void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
   switch (node) {
     case SceneGroup(
       :final id,
@@ -85,114 +148,88 @@ void _writeNode(StringBuffer b, SceneNode node, _IdGen ids) {
       :final stroke,
       :final blendMode,
     ):
-      final paint = StringBuffer();
-      final gradient = fill?.gradient;
-      if (gradient != null) {
-        final gid = ids.next();
-        b
-          ..write('<linearGradient id="$gid" gradientUnits="userSpaceOnUse" ')
-          ..write(
-            'x1="${_num(gradient.from.x)}" y1="${_num(gradient.from.y)}" ',
-          )
-          ..write('x2="${_num(gradient.to.x)}" y2="${_num(gradient.to.y)}">');
-        for (var i = 0; i < gradient.colors.length; i++) {
-          final c = gradient.colors[i];
-          final off = gradient.colors.length == 1
-              ? 0.0
-              : i / (gradient.colors.length - 1);
-          b.write('<stop offset="${_num(off)}" stop-color="${_color(c)}"');
-          if (c.alpha < 255) b.write(' stop-opacity="${_num(c.alpha / 255)}"');
-          b.write('/>');
-        }
-        b.write('</linearGradient>');
-        paint.write(' fill="url(#$gid)"');
-      } else {
-        paint.write(' fill="${fill != null ? _color(fill.color) : 'none'}"');
-        if (fill != null && fill.color.alpha < 255 && fill.color.alpha > 0) {
-          paint.write(' fill-opacity="${_num(fill.color.alpha / 255)}"');
-        }
-      }
-      if (stroke != null) {
-        final strokeGradient = stroke.gradient;
-        if (strokeGradient != null) {
-          final gid = ids.next();
-          b
-            ..write('<linearGradient id="$gid" gradientUnits="userSpaceOnUse" ')
-            ..write('x1="${_num(strokeGradient.from.x)}" ')
-            ..write('y1="${_num(strokeGradient.from.y)}" ')
-            ..write('x2="${_num(strokeGradient.to.x)}" ')
-            ..write('y2="${_num(strokeGradient.to.y)}">');
-          for (var i = 0; i < strokeGradient.colors.length; i++) {
-            final c = strokeGradient.colors[i];
-            final off = strokeGradient.colors.length == 1
-                ? 0.0
-                : i / (strokeGradient.colors.length - 1);
-            b.write('<stop offset="${_num(off)}" stop-color="${_color(c)}"');
-            if (c.alpha < 255) {
-              b.write(' stop-opacity="${_num(c.alpha / 255)}"');
-            }
-            b.write('/>');
-          }
-          b.write('</linearGradient>');
-          paint.write(' stroke="url(#$gid)"');
-        } else {
-          paint.write(' stroke="${_color(stroke.color)}"');
-          if (stroke.color.alpha < 255 && stroke.color.alpha > 0) {
-            paint.write(' stroke-opacity="${_num(stroke.color.alpha / 255)}"');
-          }
-        }
-        paint.write(' stroke-width="${_num(stroke.width)}"');
-        final dash = stroke.dash;
-        if (dash != null && dash.isNotEmpty) {
-          paint.write(' stroke-dasharray="${dash.map(_num).join(',')}"');
-        }
-      }
-      if (blendMode == SceneBlendMode.multiply) {
-        paint.write(' style="mix-blend-mode:multiply"');
-      }
+      // Gradients are defined just before the shape that paints with them.
+      final fillGradient = fill?.gradient;
+      final fillId = fillGradient == null
+          ? null
+          : _writeGradient(b, fillGradient, ids);
+      final strokeGradient = stroke?.gradient;
+      final strokeId = strokeGradient == null
+          ? null
+          : _writeGradient(b, strokeGradient, ids);
       switch (geometry) {
         case RectGeometry(:final rect, :final rx):
-          b.write(
-            '<rect x="${_num(rect.left)}" y="${_num(rect.top)}" '
-            'width="${_num(rect.width)}" height="${_num(rect.height)}"',
-          );
-          if (rx > 0) b.write(' rx="${_num(rx)}"');
-          b.write('$paint/>');
+          b.write('<rect x="');
+          _writeNum(b, rect.left);
+          b.write('" y="');
+          _writeNum(b, rect.top);
+          b.write('" width="');
+          _writeNum(b, rect.width);
+          b.write('" height="');
+          _writeNum(b, rect.height);
+          b.writeCharCode(_quote);
+          if (rx > 0) {
+            b.write(' rx="');
+            _writeNum(b, rx);
+            b.writeCharCode(_quote);
+          }
         case CircleGeometry(:final center, :final radius):
-          b.write(
-            '<circle cx="${_num(center.x)}" cy="${_num(center.y)}" '
-            'r="${_num(radius)}"$paint/>',
-          );
+          b.write('<circle cx="');
+          _writeNum(b, center.x);
+          b.write('" cy="');
+          _writeNum(b, center.y);
+          b.write('" r="');
+          _writeNum(b, radius);
+          b.writeCharCode(_quote);
         case EllipseGeometry(:final center, :final rx, :final ry):
-          b.write(
-            '<ellipse cx="${_num(center.x)}" cy="${_num(center.y)}" '
-            'rx="${_num(rx)}" ry="${_num(ry)}"$paint/>',
-          );
+          b.write('<ellipse cx="');
+          _writeNum(b, center.x);
+          b.write('" cy="');
+          _writeNum(b, center.y);
+          b.write('" rx="');
+          _writeNum(b, rx);
+          b.write('" ry="');
+          _writeNum(b, ry);
+          b.writeCharCode(_quote);
         case PolygonGeometry(:final points):
           b.write('<polygon points="');
-          b.write(points.map((p) => '${_num(p.x)},${_num(p.y)}').join(' '));
-          b.write('"$paint/>');
+          for (var i = 0; i < points.length; i++) {
+            if (i > 0) b.writeCharCode(_space);
+            _writeNum(b, points[i].x);
+            b.writeCharCode(_comma);
+            _writeNum(b, points[i].y);
+          }
+          b.writeCharCode(_quote);
         case PathGeometry(:final commands):
           b.write('<path d="');
           for (final c in commands) {
             switch (c) {
               case MoveTo(:final p):
-                b.write('M${_num(p.x)} ${_num(p.y)}');
+                b.writeCharCode(0x4d); // M
+                _writePoint(b, p);
               case LineTo(:final p):
-                b.write('L${_num(p.x)} ${_num(p.y)}');
+                b.writeCharCode(0x4c); // L
+                _writePoint(b, p);
               case QuadTo(:final c, :final p):
-                b.write('Q${_num(c.x)} ${_num(c.y)} ${_num(p.x)} ${_num(p.y)}');
+                b.writeCharCode(0x51); // Q
+                _writePoint(b, c);
+                b.writeCharCode(_space);
+                _writePoint(b, p);
               case CubicTo(:final c1, :final c2, :final p):
-                b.write(
-                  'C${_num(c1.x)} ${_num(c1.y)} '
-                  '${_num(c2.x)} ${_num(c2.y)} ${_num(p.x)} ${_num(p.y)}',
-                );
+                b.writeCharCode(0x43); // C
+                _writePoint(b, c1);
+                b.writeCharCode(_space);
+                _writePoint(b, c2);
+                b.writeCharCode(_space);
+                _writePoint(b, p);
               case ClosePath():
-                b.write('Z');
+                b.writeCharCode(0x5a); // Z
             }
           }
-          b.write('"$paint/>');
+          b.writeCharCode(_quote);
       }
+      _writePaint(b, fill, stroke, fillId, strokeId, blendMode);
+      b.write('/>');
 
     case SceneText(
       :final text,
@@ -211,31 +248,142 @@ void _writeNode(StringBuffer b, SceneNode node, _IdGen ids) {
         TextAlignH.right => ('end', bounds.right),
       };
       if (rotation != 0) {
-        b.write(
-          '<g transform="rotate(${_num(rotation)} '
-          '${_num(bounds.center.x)} ${_num(bounds.center.y)})">',
-        );
+        b.write('<g transform="rotate(');
+        _writeNum(b, rotation);
+        b.writeCharCode(_space);
+        _writePoint(b, bounds.center);
+        b.write(')">');
       }
       b
-        ..write('<text text-anchor="$anchor" ')
-        ..write('font-family="${_escapeAttr(_svgFontFamily(style))}" ')
-        ..write('font-size="${_num(style.fontSize)}"');
+        ..write('<text text-anchor="')
+        ..write(anchor)
+        ..write('" font-family="')
+        ..write(_escapeAttr(_svgFontFamily(style)))
+        ..write('" font-size="');
+      _writeNum(b, style.fontSize);
+      b.writeCharCode(_quote);
       if (style.fontWeight != 400) {
         b.write(' font-weight="${style.fontWeight}"');
       }
       if (style.italic) b.write(' font-style="italic"');
       if (underline) b.write(' text-decoration="underline"');
-      b.write(' fill="${_color(color)}">');
+      b.write(' fill="');
+      _writeColor(b, color);
+      b.write('">');
       for (var i = 0; i < lines.length; i++) {
         final y = bounds.top + lineHeight * i + lineHeight * 0.78;
+        b.write('<tspan x="');
+        _writeNum(b, x);
+        b.write('" y="');
+        _writeNum(b, y);
         b
-          ..write('<tspan x="${_num(x)}" y="${_num(y)}">')
+          ..write('">')
           ..write(_escapeText(lines[i]))
           ..write('</tspan>');
       }
       b.write('</text>');
       if (rotation != 0) b.write('</g>');
   }
+}
+
+const _quote = 0x22;
+const _space = 0x20;
+const _comma = 0x2c;
+
+/// Writes a `<linearGradient>` definition and returns its id.
+String _writeGradient(_SvgWriter b, SceneGradient gradient, _IdGen ids) {
+  final gid = ids.next();
+  b
+    ..write('<linearGradient id="')
+    ..write(gid)
+    ..write('" gradientUnits="userSpaceOnUse" x1="');
+  _writeNum(b, gradient.from.x);
+  b.write('" y1="');
+  _writeNum(b, gradient.from.y);
+  b.write('" x2="');
+  _writeNum(b, gradient.to.x);
+  b.write('" y2="');
+  _writeNum(b, gradient.to.y);
+  b.write('">');
+  final colors = gradient.colors;
+  for (var i = 0; i < colors.length; i++) {
+    final c = colors[i];
+    final off = colors.length == 1 ? 0.0 : i / (colors.length - 1);
+    b.write('<stop offset="');
+    _writeNum(b, off);
+    b.write('" stop-color="');
+    _writeColor(b, c);
+    b.writeCharCode(_quote);
+    if (c.alpha < 255) {
+      b.write(' stop-opacity="');
+      _writeNum(b, c.alpha / 255);
+      b.writeCharCode(_quote);
+    }
+    b.write('/>');
+  }
+  b.write('</linearGradient>');
+  return gid;
+}
+
+/// Writes the fill, stroke and blend attributes of a shape.
+void _writePaint(
+  _SvgWriter b,
+  Fill? fill,
+  Stroke? stroke,
+  String? fillId,
+  String? strokeId,
+  SceneBlendMode blendMode,
+) {
+  if (fillId != null) {
+    b.write(' fill="url(#$fillId)"');
+  } else if (fill == null) {
+    b.write(' fill="none"');
+  } else {
+    b.write(' fill="');
+    _writeColor(b, fill.color);
+    b.writeCharCode(_quote);
+    if (fill.color.alpha < 255 && fill.color.alpha > 0) {
+      b.write(' fill-opacity="');
+      _writeNum(b, fill.color.alpha / 255);
+      b.writeCharCode(_quote);
+    }
+  }
+  if (stroke != null) {
+    if (strokeId != null) {
+      b.write(' stroke="url(#$strokeId)"');
+    } else {
+      b.write(' stroke="');
+      _writeColor(b, stroke.color);
+      b.writeCharCode(_quote);
+      if (stroke.color.alpha < 255 && stroke.color.alpha > 0) {
+        b.write(' stroke-opacity="');
+        _writeNum(b, stroke.color.alpha / 255);
+        b.writeCharCode(_quote);
+      }
+    }
+    b.write(' stroke-width="');
+    _writeNum(b, stroke.width);
+    b.writeCharCode(_quote);
+    final dash = stroke.dash;
+    if (dash != null && dash.isNotEmpty) {
+      b.write(' stroke-dasharray="');
+      for (var i = 0; i < dash.length; i++) {
+        if (i > 0) b.writeCharCode(_comma);
+        _writeNum(b, dash[i]);
+      }
+      b.writeCharCode(_quote);
+    }
+  }
+  if (blendMode == SceneBlendMode.multiply) {
+    b.write(' style="mix-blend-mode:multiply"');
+  }
+}
+
+/// Writes `x y` of [p].
+void _writePoint(_SvgWriter b, Point p) {
+  _writeNum(b, p.x);
+  b.writeCharCode(_space);
+  _writeNum(b, p.y);
 }
 
 String _svgFontFamily(TextStyleSpec style) => style.fontFamily;
@@ -250,30 +398,72 @@ bool _usesKatex(List<SceneNode> nodes) => nodes.any(
 );
 
 /// Formats [v] like `toStringAsFixed(2)` with trailing zeros (and a trailing
-/// dot) removed. This runs for every coordinate in the scene, so the common
-/// case works on the integer hundredths and only falls back to the string
-/// path near a rounding tie (where `v * 100` may round differently from the
-/// exact decimal value), for `-0`, and for huge or non-finite values.
+/// dot) removed.
 String _num(double v) {
-  if (v == v.roundToDouble()) return v.round().toString();
-  final scaled = v * 100;
-  if (scaled.abs() < 1e15) {
-    final r = scaled.round();
-    final tie = ((scaled - r).abs() - 0.5).abs() < 1e-6;
-    if (r != 0 && !tie) {
-      final a = r.abs();
-      final whole = '${a ~/ 100}${_fractions[a % 100]}';
-      return r < 0 ? '-$whole' : whole;
-    }
-  }
-  return _numSlow(v);
+  final b = _SvgWriter(16);
+  _writeNum(b, v);
+  return b.toString();
 }
 
-/// `''`, `.01` … `.99` with trailing zeros removed, indexed by hundredths.
-final _fractions = [
-  for (var i = 0; i < 100; i++)
-    i == 0 ? '' : (i % 10 == 0 ? '.${i ~/ 10}' : '.${i < 10 ? '0' : ''}$i'),
-];
+/// Writes [v] in the [_num] format. This runs for every coordinate in the
+/// scene, so the common case writes the digits of the integer hundredths
+/// directly and only falls back to the string path near a rounding tie
+/// (where `v * 100` may round differently from the exact decimal value), for
+/// `-0`, and for huge or non-finite values.
+void _writeNum(_SvgWriter b, double v) {
+  if (v == v.roundToDouble()) {
+    final n = v.round();
+    if (n.abs() < _maxDigitsValue) {
+      _writeInt(b, n);
+    } else {
+      b.write('$n');
+    }
+    return;
+  }
+  final scaled = v * 100;
+  if (scaled < 1e15 && scaled > -1e15) {
+    final r = scaled.round();
+    final diff = scaled - r;
+    final tie =
+        diff > 0.499999 && diff < 0.500001 ||
+        diff < -0.499999 && diff > -0.500001;
+    if (r != 0 && !tie) {
+      final a = r < 0 ? -r : r;
+      if (r < 0) b.writeCharCode(0x2d); // -
+      _writeInt(b, a ~/ 100);
+      final frac = a % 100;
+      if (frac != 0) {
+        b
+          ..writeCharCode(0x2e) // .
+          ..writeCharCode(0x30 + frac ~/ 10);
+        if (frac % 10 != 0) b.writeCharCode(0x30 + frac % 10);
+      }
+      return;
+    }
+  }
+  b.write(_numSlow(v));
+}
+
+const _maxDigitsValue = 1000000000000000000;
+
+/// Writes the decimal digits of [n] (`|n|` below [_maxDigitsValue]).
+void _writeInt(_SvgWriter b, int n) {
+  if (n < 0) {
+    b.writeCharCode(0x2d); // -
+    n = -n;
+  }
+  if (n < 10) {
+    b.writeCharCode(0x30 + n);
+    return;
+  }
+  var d = 10;
+  while (d <= n ~/ 10) {
+    d *= 10;
+  }
+  for (; d > 0; d ~/= 10) {
+    b.writeCharCode(0x30 + n ~/ d % 10);
+  }
+}
 
 final _trailingZeros = RegExp(r'0+$');
 final _trailingDot = RegExp(r'\.$');
@@ -284,12 +474,42 @@ String _numSlow(double v) => v
     .replaceFirst(_trailingDot, '');
 
 String _color(Color c) {
-  final rgb = c.value & 0xffffff;
-  return '#${rgb.toRadixString(16).padLeft(6, '0')}';
+  final b = _SvgWriter(16);
+  _writeColor(b, c);
+  return b.toString();
 }
 
-String _escapeText(String s) =>
-    s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+/// Writes `#rrggbb` (lowercase) for [c], ignoring alpha.
+void _writeColor(_SvgWriter b, Color c) {
+  b.writeCharCode(0x23); // #
+  for (var shift = 20; shift >= 0; shift -= 4) {
+    b.writeCharCode(_hexDigits.codeUnitAt((c.value >> shift) & 0xf));
+  }
+}
 
-String _escapeAttr(String s) =>
-    _escapeText(s).replaceAll('"', '&quot;').replaceAll('\n', ' ');
+const _hexDigits = '0123456789abcdef';
+
+String _escapeText(String s) => !_needsEscape(s, false)
+    ? s
+    : s
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;');
+
+String _escapeAttr(String s) => !_needsEscape(s, true)
+    ? s
+    : _escapeText(s).replaceAll('"', '&quot;').replaceAll('\n', ' ');
+
+/// True if [s] has a character that [_escapeText] (or, for an [attribute],
+/// [_escapeAttr]) replaces. Most labels have none.
+bool _needsEscape(String s, bool attribute) {
+  for (var i = 0; i < s.length; i++) {
+    switch (s.codeUnitAt(i)) {
+      case 0x26 || 0x3c || 0x3e: // & < >
+        return true;
+      case 0x22 || 0x0a when attribute: // " \n
+        return true;
+    }
+  }
+  return false;
+}
