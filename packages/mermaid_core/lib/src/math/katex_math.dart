@@ -27,7 +27,20 @@ const double _padEm = 0.08;
 
 /// Lays out [tex] at [fontSize] px-per-em in [color]. Returns null if katex_dart
 /// can't parse/build it (the caller falls back to its own engine).
+///
+/// Results are cached: diagrams re-render the same labels, and the scene
+/// nodes are immutable and relative to (0,0), so callers can share them.
 KatexMath? buildKatexMath(String tex, double fontSize, Color color) {
+  final key = (tex, fontSize, color.value);
+  if (_cache.containsKey(key)) return _cache[key];
+  if (_cache.length >= _cacheLimit) _cache.clear();
+  return _cache[key] = _build(tex, fontSize, color);
+}
+
+const _cacheLimit = 512;
+final _cache = <(String, double, int), KatexMath?>{};
+
+KatexMath? _build(String tex, double fontSize, Color color) {
   final kx.BoxNode root;
   try {
     root = kx.renderToBox(tex);
@@ -48,7 +61,7 @@ KatexMath? buildKatexMath(String tex, double fontSize, Color color) {
     root.width * fontSize + 2 * pad,
     (root.height + root.depth) * fontSize + 2 * pad,
   );
-  return (size: size, ascent: ascent, nodes: out);
+  return (size: size, ascent: ascent, nodes: List.unmodifiable(out));
 }
 
 /// Emits [node] with its left edge at [penX] and baseline at [baselineY]

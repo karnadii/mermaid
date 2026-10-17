@@ -22,6 +22,8 @@ import 'katex_math.dart';
 
 final _mathRe = RegExp(r'\$\$(.*?)\$\$', dotAll: true);
 
+final _wholeMathRe = RegExp(r'^\$\$(.*)\$\$$', dotAll: true);
+
 /// Whether [text] contains a `$$...$$` math span.
 bool hasMath(String text) => _mathRe.hasMatch(text);
 
@@ -29,7 +31,7 @@ bool hasMath(String text) => _mathRe.hasMatch(text);
 /// otherwise null. (Mixed inline math within a label is not handled yet.)
 String? wholeMath(String label) {
   final t = label.trim();
-  final m = RegExp(r'^\$\$(.*)\$\$$', dotAll: true).firstMatch(t);
+  final m = _wholeMathRe.firstMatch(t);
   return m?.group(1);
 }
 
