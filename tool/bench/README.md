@@ -65,8 +65,9 @@ Chromium and compares it with the native snapshot:
 
 ```console
 $ node js/bench.mjs build/corpus.json build/bench_web.js --verify build/golden
-``` The dagre port has two
-implementations, the string-keyed reference and the indexed pipeline that
+```
+
+The dagre port has two implementations, the string-keyed reference and the indexed pipeline that
 runs by default; `packages/mermaid_core/test/dagre_indexed_equivalence_test.dart`
 renders random diagrams with both and requires identical SVG.
 
