@@ -16,17 +16,12 @@ import 'theme/theme.dart';
 MermaidTheme resolveTheme(String source, MermaidTheme base) {
   var theme = base;
   Map<String, Object?>? themeVariables;
+  final meta = _metadata(source);
 
   // Frontmatter: `config:\n  theme: dark\n  themeVariables:\n    primaryColor: ...`
-  final fm = RegExp(
-    r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n',
-  ).firstMatch(source.replaceAll('\r\n', '\n'));
-  if (fm != null) {
-    final body = fm.group(1)!;
-    final m = RegExp(
-      r'^\s*theme:\s*(\w+)\s*$',
-      multiLine: true,
-    ).firstMatch(body);
+  final body = meta.frontmatter;
+  if (body != null) {
+    final m = _frontmatterTheme.firstMatch(body);
     if (m != null) theme = MermaidTheme.named(m.group(1)!);
     final fmVars = _frontmatterThemeVariables(body);
     if (fmVars.isNotEmpty) themeVariables = {...?themeVariables, ...fmVars};
@@ -35,10 +30,7 @@ MermaidTheme resolveTheme(String source, MermaidTheme base) {
   // Merge ALL `%%{init}%%` directives, not just the first: the website (and
   // users) may have a separate `{'layout': 'elk'}` directive *before* the
   // theme one, so reading only the first would miss `theme: dark`.
-  for (final directive in RegExp(
-    r'%%\{\s*init(?:ialize)?\s*:\s*([\s\S]*?)\s*\}%%',
-  ).allMatches(source)) {
-    final config = _looseJson(directive.group(1)!);
+  for (final config in meta.rawInits) {
     if (config is Map) {
       final name = config['theme'];
       if (name is String) theme = MermaidTheme.named(name);
@@ -58,6 +50,67 @@ MermaidTheme resolveTheme(String source, MermaidTheme base) {
   return theme;
 }
 
+/// A YAML frontmatter block at the top of a source; group 1 is its body.
+final _frontmatterBlock = RegExp(
+  r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n',
+);
+
+/// An `%%{init: ...}%%` directive; group 1 is its loose-JSON config.
+final _initDirective = RegExp(
+  r'%%\{\s*init(?:ialize)?\s*:\s*([\s\S]*?)\s*\}%%',
+);
+
+final _frontmatterTheme = RegExp(r'^\s*theme:\s*(\w+)\s*$', multiLine: true);
+final _frontmatterLook = RegExp(r'^\s*look:\s*(\w+)\s*$', multiLine: true);
+final _frontmatterSeed = RegExp(
+  r'^\s*handDrawnSeed:\s*(\d+)\s*$',
+  multiLine: true,
+);
+final _frontmatterLayout = RegExp(
+  r'^\s*layout:\s*([\w-]+)\s*$',
+  multiLine: true,
+);
+final _flowchartElkKeyword = RegExp(r'(?:^|\n)\s*flowchart-elk\b');
+
+/// The frontmatter body and the decoded `%%{init}%%` configs of one source.
+///
+/// One render resolves the theme, look, layout and diagram config from the
+/// same source, so the metadata of the last source is kept instead of being
+/// scanned again by every resolver. Decoded configs are shared: readers must
+/// not modify them.
+class _Metadata {
+  _Metadata(this.source) : text = source.replaceAll('\r\n', '\n') {
+    frontmatter = _frontmatterBlock.firstMatch(text)?.group(1);
+    inits = [
+      for (final m in _initDirective.allMatches(text)) _looseJson(m.group(1)!),
+    ];
+  }
+
+  final String source;
+
+  /// [source] with CRLF line breaks normalized to LF.
+  final String text;
+  late final String? frontmatter;
+  late final List<Object?> inits;
+
+  /// The init configs read from the unnormalized [source], as the theme
+  /// resolver always did. They differ from [inits] only with CR characters.
+  late final List<Object?> rawInits = !source.contains('\r\n')
+      ? inits
+      : [
+          for (final m in _initDirective.allMatches(source))
+            _looseJson(m.group(1)!),
+        ];
+}
+
+_Metadata? _lastMetadata;
+
+_Metadata _metadata(String source) {
+  final last = _lastMetadata;
+  if (last != null && identical(last.source, source)) return last;
+  return _lastMetadata = _Metadata(source);
+}
+
 /// Rendering options resolved from `%%{init}%%` / frontmatter `config:`
 /// that are not part of the theme: the visual [look] and its sketch seed.
 class LookConfig {
@@ -75,30 +128,18 @@ LookConfig resolveLook(String source) {
   var look = 'classic';
   var seed = 0;
 
-  final text = source.replaceAll('\r\n', '\n');
-  final fm = RegExp(
-    r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n',
-  ).firstMatch(text);
-  if (fm != null) {
-    final body = fm.group(1)!;
-    final lm = RegExp(
-      r'^\s*look:\s*(\w+)\s*$',
-      multiLine: true,
-    ).firstMatch(body);
+  final meta = _metadata(source);
+  final body = meta.frontmatter;
+  if (body != null) {
+    final lm = _frontmatterLook.firstMatch(body);
     if (lm != null) look = lm.group(1)!;
-    final sm = RegExp(
-      r'^\s*handDrawnSeed:\s*(\d+)\s*$',
-      multiLine: true,
-    ).firstMatch(body);
+    final sm = _frontmatterSeed.firstMatch(body);
     if (sm != null) seed = int.tryParse(sm.group(1)!) ?? 0;
   }
 
   // Merge every `%%{init}%%` directive (mermaid.js merges them too), so a
   // look directive is honoured even alongside a separate layout/theme one.
-  for (final m in RegExp(
-    r'%%\{\s*init(?:ialize)?\s*:\s*([\s\S]*?)\s*\}%%',
-  ).allMatches(text)) {
-    final config = _looseJson(m.group(1)!);
+  for (final config in meta.inits) {
     if (config is Map) {
       if (config['look'] is String) look = config['look'] as String;
       final s = config['handDrawnSeed'];
@@ -113,19 +154,14 @@ LookConfig resolveLook(String source) {
 /// merge order.
 Map<String, Object?> resolveDiagramConfig(String source, String diagramKey) {
   final result = <String, Object?>{};
-  final text = source.replaceAll('\r\n', '\n');
+  final meta = _metadata(source);
 
-  final fm = RegExp(
-    r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n',
-  ).firstMatch(text);
-  if (fm != null) {
-    result.addAll(_frontmatterConfigBlock(fm.group(1)!, diagramKey));
+  final body = meta.frontmatter;
+  if (body != null) {
+    result.addAll(_frontmatterConfigBlock(body, diagramKey));
   }
 
-  for (final match in RegExp(
-    r'%%\{\s*init(?:ialize)?\s*:\s*([\s\S]*?)\s*\}%%',
-  ).allMatches(text)) {
-    final config = _looseJson(match.group(1)!);
+  for (final config in meta.inits) {
     if (config is! Map || config[diagramKey] is! Map) continue;
     result.addAll(
       (config[diagramKey] as Map).map((key, value) => MapEntry('$key', value)),
@@ -140,28 +176,23 @@ Map<String, Object?> resolveDiagramConfig(String source, String diagramKey) {
 /// `flowchart-elk` diagram keyword (handled by the caller).
 String resolveLayout(String source, {String defaultLayout = 'dagre'}) {
   var layout = defaultLayout;
-  final text = source.replaceAll('\r\n', '\n');
+  final meta = _metadata(source);
   // The `flowchart-elk` keyword selects the elk engine.
-  if (RegExp(r'(?:^|\n)\s*flowchart-elk\b').hasMatch(text)) layout = 'elk';
-  final fm = RegExp(
-    r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n',
-  ).firstMatch(text);
-  if (fm != null) {
-    final lm = RegExp(
-      r'^\s*layout:\s*([\w-]+)\s*$',
-      multiLine: true,
-    ).firstMatch(fm.group(1)!);
+  if (meta.text.contains('flowchart-elk') &&
+      _flowchartElkKeyword.hasMatch(meta.text)) {
+    layout = 'elk';
+  }
+  final body = meta.frontmatter;
+  if (body != null) {
+    final lm = _frontmatterLayout.firstMatch(body);
     if (lm != null) layout = lm.group(1)!;
     // Only `config.flowchart.defaultRenderer` selects the flowchart engine.
     // Other diagram blocks also use a `defaultRenderer` key.
-    final flow = _frontmatterConfigBlock(fm.group(1)!, 'flowchart');
+    final flow = _frontmatterConfigBlock(body, 'flowchart');
     final renderer = flow['defaultRenderer'];
     if (renderer is String && renderer.toLowerCase() == 'elk') layout = 'elk';
   }
-  for (final m in RegExp(
-    r'%%\{\s*init(?:ialize)?\s*:\s*([\s\S]*?)\s*\}%%',
-  ).allMatches(text)) {
-    final config = _looseJson(m.group(1)!);
+  for (final config in meta.inits) {
     if (config is Map && config['layout'] is String) {
       layout = config['layout'] as String;
     }
@@ -180,7 +211,7 @@ String resolveLayout(String source, {String defaultLayout = 'dagre'}) {
 /// or frontmatter. Unspecified knobs keep ELK's defaults (Brandes–Köpf
 /// placement, `spacing.baseValue` 40 — matching upstream mermaid-layout-elk).
 elk.ElkLayoutOptions resolveElkConfig(String source) {
-  final text = source.replaceAll('\r\n', '\n');
+  final meta = _metadata(source);
   Map<String, dynamic> elkCfg = {};
   void merge(Object? config) {
     if (config is Map && config['elk'] is Map) {
@@ -188,19 +219,13 @@ elk.ElkLayoutOptions resolveElkConfig(String source) {
     }
   }
 
-  final fm = RegExp(
-    r'^\s*---[ \t]*\n([\s\S]*?)\n[ \t]*---[ \t]*\n',
-  ).firstMatch(text);
-  if (fm != null) {
-    final cfg = _looseJson('{${fm.group(1)!}}');
+  final body = meta.frontmatter;
+  if (body != null) {
+    final cfg = _looseJson('{$body}');
     if (cfg is Map && cfg['config'] is Map) merge(cfg['config']);
     merge(cfg);
   }
-  for (final m in RegExp(
-    r'%%\{\s*init(?:ialize)?\s*:\s*([\s\S]*?)\s*\}%%',
-  ).allMatches(text)) {
-    merge(_looseJson(m.group(1)!));
-  }
+  meta.inits.forEach(merge);
 
   return elk.ElkLayoutOptions(
     nodePlacement: _enumByName(
@@ -278,7 +303,7 @@ Map<String, Object?> _frontmatterThemeVariables(String body) {
     final indent = raw.length - raw.trimLeft().length;
     final line = raw.trim();
     if (!inBlock) {
-      if (RegExp(r'^themeVariables:\s*$').hasMatch(line)) {
+      if (_themeVariablesKey.hasMatch(line)) {
         inBlock = true;
         blockIndent = indent;
       }
@@ -286,7 +311,7 @@ Map<String, Object?> _frontmatterThemeVariables(String body) {
     }
     // The block ends at the first line indented at or below `themeVariables:`.
     if (indent <= blockIndent!) break;
-    final m = RegExp(r'^([A-Za-z_]\w*)\s*:\s*(.+)$').firstMatch(line);
+    final m = _themeVariableEntry.firstMatch(line);
     if (m == null) continue;
     var v = m.group(2)!.trim();
     if (v.length >= 2 &&
@@ -298,6 +323,9 @@ Map<String, Object?> _frontmatterThemeVariables(String body) {
   }
   return out;
 }
+
+final _themeVariablesKey = RegExp(r'^themeVariables:\s*$');
+final _themeVariableEntry = RegExp(r'^([A-Za-z_]\w*)\s*:\s*(.+)$');
 
 /// A `key: value` line. Keys may contain hyphens and dots so real-world names
 /// survive (`Bio-conversion` in a sankey `nodeColors:` block, `chart.width`).
@@ -461,16 +489,15 @@ Object? _parseYamlScalar(String raw) {
 Object? _looseJson(String text) {
   var t = text.trim();
   t = t.replaceAll("'", '"');
-  t = t.replaceAllMapped(
-    RegExp(r'([{,]\s*)([A-Za-z_][\w-]*)\s*:'),
-    (m) => '${m[1]}"${m[2]}":',
-  );
+  t = t.replaceAllMapped(_bareJsonKey, (m) => '${m[1]}"${m[2]}":');
   try {
     return jsonDecode(t);
   } catch (_) {
     return null;
   }
 }
+
+final _bareJsonKey = RegExp(r'([{,]\s*)([A-Za-z_][\w-]*)\s*:');
 
 MermaidTheme _applyVariables(MermaidTheme theme, Map<String, Object?> vars) {
   Color? color(String key) {
@@ -487,7 +514,7 @@ MermaidTheme _applyVariables(MermaidTheme theme, Map<String, Object?> vars) {
   final fontSize = fontSizeRaw is num
       ? fontSizeRaw.toDouble()
       : fontSizeRaw is String
-      ? double.tryParse(fontSizeRaw.replaceAll(RegExp(r'px$'), ''))
+      ? double.tryParse(fontSizeRaw.replaceAll(_pxSuffix, ''))
       : null;
 
   return theme.copyWith(
@@ -511,3 +538,5 @@ MermaidTheme _applyVariables(MermaidTheme theme, Map<String, Object?> vars) {
     fontSize: fontSize,
   );
 }
+
+final _pxSuffix = RegExp(r'px$');
