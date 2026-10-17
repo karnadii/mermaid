@@ -22,8 +22,8 @@ String _render(String source, {required bool reference}) {
 
 /// Random flowchart: cycles, self loops, parallel edges, edge labels,
 /// nested subgraphs, edges into subgraphs, and every direction.
-String _randomFlowchart(math.Random rnd) {
-  final n = 3 + rnd.nextInt(40);
+String _randomFlowchart(math.Random rnd, {int minNodes = 3, int spread = 40}) {
+  final n = minNodes + rnd.nextInt(spread);
   final dir = const ['TD', 'LR', 'BT', 'RL'][rnd.nextInt(4)];
   final s = StringBuffer('flowchart $dir\n');
   final shapes = ['[', '(', '{', '(['];
@@ -89,6 +89,12 @@ String _randomClass(math.Random rnd) {
 void main() {
   final cases = <(String, String Function(math.Random), int)>[
     ('flowchart', _randomFlowchart, 1000),
+    // Large graphs take many network simplex pivots.
+    (
+      'large flowchart',
+      (r) => _randomFlowchart(r, minNodes: 80, spread: 120),
+      30,
+    ),
     ('state', _randomState, 200),
     ('class', _randomClass, 200),
   ];

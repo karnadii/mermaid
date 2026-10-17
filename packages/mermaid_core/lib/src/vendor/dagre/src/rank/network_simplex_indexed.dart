@@ -240,22 +240,129 @@ class _IndexedSimplex {
     return best;
   }
 
+  /// Swaps [leave] for [enter] in the tree and updates only what changes.
+  ///
+  /// The reference code renumbers the whole tree, recomputes every cut
+  /// value and every rank. With c the child end of [leave] and x the end of
+  /// [enter] inside c's subtree, only the subtree of the lowest common
+  /// ancestor of c's old parent and the other end y changes shape: the
+  /// path from x up to c turns around and hangs from y. That subtree keeps
+  /// its size, so it is renumbered within its old low..lim range and the
+  /// intervals elsewhere stay valid. Cut values depend only on the tree and
+  /// its root, so recomputing them inside that subtree gives the same
+  /// values as recomputing all of them. Every tree edge is tight, so ranks
+  /// change only in the moved subtree.
   void _exchange(int leave, int enter) {
+    if (!_integral) {
+      _exchangeFull(leave, enter);
+      return;
+    }
+    final c = _childOf(leave);
+    final p = parent[c];
+    final u = src[enter], w = dst[enter];
+    final uInside = _isDescendant(u, c);
+    final x = uInside ? u : w;
+    final y = uInside ? w : u;
+    var lca = p;
+    while (!_isDescendant(y, lca)) {
+      lca = parent[lca];
+    }
+
+    treeEdges.remove(leave);
+    treeAdj[src[leave]].remove(leave);
+    treeAdj[dst[leave]].remove(leave);
+    _addTreeEdge(enter);
+
+    // Turn the path x .. c around so that x hangs from y.
+    var z = x;
+    var newParent = y;
+    var newParentEdge = enter;
+    while (true) {
+      final oldParent = parent[z];
+      final oldParentEdge = parentEdge[z];
+      parent[z] = newParent;
+      parentEdge[z] = newParentEdge;
+      if (z == c) break;
+      newParent = z;
+      newParentEdge = oldParentEdge;
+      z = oldParent;
+    }
+
+    final post = _renumber(lca);
+    for (var i = 0; i < post.length - 1; i++) {
+      cutValue[post[i]] = _calcCutValue(post[i]);
+    }
+
+    // Ranks of the moved subtree, from x down.
+    final stack = <int>[x];
+    while (stack.isNotEmpty) {
+      final v = stack.removeLast();
+      final e = parentEdge[v];
+      // Edge v -> parent: rank(v) = rank(parent) - minLen, else + minLen.
+      rank[v] = src[e] == v
+          ? rank[parent[v]] - minLen[e]
+          : rank[parent[v]] + minLen[e];
+      for (final t in treeAdj[v]) {
+        final child = src[t] == v ? dst[t] : src[t];
+        if (child != parent[v]) stack.add(child);
+      }
+    }
+  }
+
+  /// The reference update: renumber the whole tree, recompute every cut
+  /// value and every rank from the root.
+  void _exchangeFull(int leave, int enter) {
     treeEdges.remove(leave);
     treeAdj[src[leave]].remove(leave);
     treeAdj[dst[leave]].remove(leave);
     _addTreeEdge(enter);
     final post = _initLowLim();
     _initCutValues();
-    // Ranks from the root down: reverse postorder visits parents first.
     for (var i = post.length - 2; i >= 0; i--) {
       final v = post[i];
       final e = parentEdge[v];
-      // Edge v -> parent: rank(v) = rank(parent) - minLen, else + minLen.
       rank[v] = src[e] == v
           ? rank[parent[v]] - minLen[e]
           : rank[parent[v]] + minLen[e];
     }
+  }
+
+  /// Whether ranks and minLen are whole numbers. Then every tree edge is
+  /// exactly tight and rank sums are exact, which the incremental update
+  /// relies on. (tightTree takes any slack in (-1, 1) as tight.)
+  late final bool _integral = [
+    ...rank,
+    ...minLen,
+  ].every((x) => x.isFinite && x == x.roundToDouble());
+
+  /// Postorder numbers for the subtree of [top] from low[top] up, without
+  /// changing [top]'s parent. Returns the subtree in postorder, [top] last.
+  List<int> _renumber(int top) {
+    final post = <int>[];
+    final nodeStack = <int>[top];
+    final iterStack = <int>[0];
+    var nextLim = low[top];
+    while (nodeStack.isNotEmpty) {
+      final last = nodeStack.length - 1;
+      final v = nodeStack[last];
+      final adj = treeAdj[v];
+      final i = iterStack[last];
+      if (i < adj.length) {
+        iterStack[last] = i + 1;
+        final e = adj[i];
+        final child = src[e] == v ? dst[e] : src[e];
+        if (child == parent[v]) continue;
+        low[child] = nextLim;
+        nodeStack.add(child);
+        iterStack.add(0);
+      } else {
+        lim[v] = nextLim++;
+        post.add(v);
+        nodeStack.removeLast();
+        iterStack.removeLast();
+      }
+    }
+    return post;
   }
 }
 
