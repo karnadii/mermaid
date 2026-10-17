@@ -7,7 +7,6 @@ import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 
 import '../graph/graph.dart';
 import '../model/graph_label.dart';
-import '../reference_switch.dart';
 import '../model/props.dart';
 import '../util/util.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util.dart' as util;
@@ -329,13 +328,6 @@ Map<String, double> _balance(Map<GraphAlign, Map<String, double>> xss, GraphAlig
 }
 
 Map<String, double> positionX(Graph g) {
-  if (!useReferenceLayout) {
-    return IndexedBk.fromGraph(g, util.buildLayerMatrix(g)).run();
-  }
-  return _positionXReference(g);
-}
-
-Map<String, double> _positionXReference(Graph g) {
   List<List<String>> layering = util.buildLayerMatrix(g);
   Map<String, Map<String, bool>> conflicts =_mergeMap( _findType1Conflicts(g, layering), _findType2Conflicts(g, layering));
   Map<GraphAlign, Map<String, double>> xss = {};

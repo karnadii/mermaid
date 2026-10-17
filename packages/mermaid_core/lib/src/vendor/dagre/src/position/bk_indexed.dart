@@ -13,7 +13,6 @@ part of 'bk.dart';
 class IndexedBk {
   IndexedBk(
     this.label,
-    this.names,
     this.layers,
     this.order,
     this.width,
@@ -25,44 +24,7 @@ class IndexedBk {
     this.succs,
   );
 
-  /// From the non-compound copy that the reference position() makes.
-  factory IndexedBk.fromGraph(Graph g, List<List<String>> layering) {
-    final index = <String, int>{};
-    final names = <String>[];
-    final layers = <List<int>>[];
-    for (final layer in layering) {
-      final ids = <int>[];
-      for (final v in layer) {
-        index[v] = names.length;
-        ids.add(names.length);
-        names.add(v);
-      }
-      layers.add(ids);
-    }
-    final labels = [for (final v in names) g.node(v)];
-    return IndexedBk(
-      g.label,
-      names,
-      layers,
-      [for (final l in labels) l.getD(orderK)],
-      [for (final l in labels) l.getD(widthK)],
-      [for (final l in labels) l[dummyK] != null],
-      [for (final l in labels) Dummy.border == l[dummyK]],
-      [for (final l in labels) l[labelPosK]],
-      [for (final l in labels) l[borderTypeK]],
-      [
-        for (final v in names)
-          [for (final u in g.predecessors(v) ?? const <String>[]) index[u]!],
-      ],
-      [
-        for (final v in names)
-          [for (final w in g.successors(v) ?? const <String>[]) index[w]!],
-      ],
-    );
-  }
-
   final GraphLabel label;
-  final List<String> names;
   final List<List<int>> layers;
   final List<double> order;
   final List<double> width;
@@ -76,7 +38,7 @@ class IndexedBk {
   /// Conflicting (u, v) pairs, stored as `min * n + max`.
   final Set<int> conflicts = {};
 
-  int get n => names.length;
+  int get n => order.length;
 
   void _addConflict(int u, int v) =>
       conflicts.add(u < v ? u * n + v : v * n + u);
@@ -329,12 +291,7 @@ class IndexedBk {
     return [for (var v = 0; v < n; v++) xs[root[v]]];
   }
 
-  Map<String, double> run() {
-    final xs = runIndexed();
-    return {for (var v = 0; v < n; v++) names[v]: xs[v]};
-  }
-
-  /// Balanced x per node, in [names] order.
+  /// Balanced x per node, in layer order.
   List<double> runIndexed() {
     _findType1Conflicts();
     _findType2Conflicts();
@@ -407,122 +364,4 @@ class IndexedBk {
     }
     return result;
   }
-}
-
-/// [position] without the non-compound copy: the same leaf nodes, layering,
-/// y and x coordinates, computed on indices and written to the same labels.
-/// Predecessors and successors follow the global edge order, which is the
-/// order the copy's adjacency maps get. Returns false when the reference
-/// code must run: an edge ends at a cluster node, a neighbour has no rank,
-/// or a rank is negative.
-bool positionIndexed(Graph g) {
-  final index = <String, int>{};
-  final labels = <Props>[];
-  for (final v in g.nodesIterable) {
-    final children = g.children(v);
-    if (children == null || children.isEmpty) {
-      index[v] = labels.length;
-      labels.add(g.node(v));
-    }
-  }
-  final count = labels.length;
-  if (count == 0) return false;
-  final predsAll = List<List<int>>.generate(count, (_) => []);
-  final succsAll = List<List<int>>.generate(count, (_) => []);
-  for (final e in g.edgesIterable) {
-    final v = index[e.v], w = index[e.w];
-    if (v == null || w == null) return false;
-    if (!predsAll[w].contains(v)) predsAll[w].add(v);
-    if (!succsAll[v].contains(w)) succsAll[v].add(w);
-  }
-
-  // buildLayerMatrix: maxRank over all nodes (no rank counts as
-  // double.minPositive), then per rank the nodes keyed by order.
-  double maxRankValue = labels[0].getD2(rankK) ?? double.minPositive;
-  final rankOf = List<int?>.filled(count, null);
-  for (var i = 0; i < count; i++) {
-    final r = labels[i].getD2(rankK);
-    maxRankValue = math.max(maxRankValue, r ?? double.minPositive);
-    rankOf[i] = labels[i].getI2(rankK);
-  }
-  final byOrder = List<Map<int, int>>.generate(
-    maxRankValue.toInt() + 1,
-    (_) => {},
-  );
-  for (var i = 0; i < count; i++) {
-    final r = rankOf[i];
-    if (r == null) continue;
-    if (r < 0 || r >= byOrder.length) return false;
-    byOrder[r][labels[i].getI(orderK)] = i;
-  }
-
-  // Renumber the layered nodes in layer order, as the BK code expects.
-  final local = List<int>.filled(count, -1);
-  final names = <String>[];
-  final layerLabels = <Props>[];
-  final layers = <List<int>>[];
-  final globalOf = <int>[];
-  for (final m in byOrder) {
-    final ids = <int>[];
-    for (final k in (m.keys.toList()..sort())) {
-      final i = m[k]!;
-      local[i] = globalOf.length;
-      ids.add(globalOf.length);
-      globalOf.add(i);
-      layerLabels.add(labels[i]);
-    }
-    layers.add(ids);
-  }
-  // Names are only used to key the result map of run(); not needed here.
-  names.addAll(List.filled(layerLabels.length, ''));
-  final preds = <List<int>>[];
-  final succs = <List<int>>[];
-  for (final i in globalOf) {
-    final p = <int>[], s = <int>[];
-    for (final u in predsAll[i]) {
-      if (local[u] < 0) return false;
-      p.add(local[u]);
-    }
-    for (final w in succsAll[i]) {
-      if (local[w] < 0) return false;
-      s.add(local[w]);
-    }
-    preds.add(p);
-    succs.add(s);
-  }
-
-  // positionY
-  final rankSep = g.label.rankSep;
-  num prevY = 0;
-  for (final layer in layers) {
-    num? maxHeight;
-    for (final v in layer) {
-      final h = layerLabels[v].getD(heightK);
-      maxHeight = maxHeight == null ? h : math.max(maxHeight, h);
-    }
-    maxHeight ??= 0;
-    for (final v in layer) {
-      layerLabels[v][yK] = prevY + maxHeight / 2;
-    }
-    prevY += maxHeight + rankSep;
-  }
-
-  final bk = IndexedBk(
-    g.label,
-    names,
-    layers,
-    [for (final l in layerLabels) l.getD(orderK)],
-    [for (final l in layerLabels) l.getD(widthK)],
-    [for (final l in layerLabels) l[dummyK] != null],
-    [for (final l in layerLabels) Dummy.border == l[dummyK]],
-    [for (final l in layerLabels) l[labelPosK]],
-    [for (final l in layerLabels) l[borderTypeK]],
-    preds,
-    succs,
-  );
-  final xs = bk.runIndexed();
-  for (var v = 0; v < xs.length; v++) {
-    layerLabels[v][xK] = xs[v];
-  }
-  return true;
 }

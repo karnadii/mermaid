@@ -3,7 +3,6 @@ import 'package:mermaid_core/src/vendor/dagre/src/model/props.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/rank/util.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 import '../graph/graph.dart';
-import '../reference_switch.dart';
 import '../graph/alg/postorder.dart';
 import '../graph/alg/preorder.dart';
 import '../util.dart' as util;
@@ -15,24 +14,6 @@ part 'network_simplex_indexed.dart';
 void networkSimplex(Graph g) {
   g = util.simplify(g);
   longestPath(g);
-  final start = g.nodes.isEmpty ? null : g.nodes[0];
-  // The indexed solver roots every tree walk at the feasible tree's first
-  // node. The reference code roots _updateRanks at the first tree node
-  // without a `parent` label instead; when that is not the first node, keep
-  // the reference code so the pivots stay the same.
-  if (!useReferenceLayout && start != null && g.node(start).get2(parentK) == null) {
-    final simplex = _IndexedSimplex.fromSimplified(g);
-    simplex.run();
-    final names = g.nodes;
-    for (var i = 0; i < names.length; i++) {
-      g.node(names[i])[rankK] = simplex.rank[i];
-    }
-    return;
-  }
-  _networkSimplexReference(g);
-}
-
-void _networkSimplexReference(Graph g) {
   var t = feasibleTree(g);
   _initLowLimValues(t);
   _initCutValues(t, g);
@@ -233,12 +214,4 @@ bool _isTreeEdge(Graph tree, String u, String v) {
 
 bool _isDescendant(Graph tree, Props vLabel, Props rootLabel) {
   return rootLabel.getD(lowK) <= vLabel.getD(limK) && vLabel.getD(limK) <= rootLabel.getD(limK);
-}
-
-/// Ranks the compound layout graph with the indexed network simplex,
-/// without building the non-compound and simplified copies. Returns false
-/// when the reference path must run instead.
-bool networkSimplexCompound(Graph g) {
-  if (useReferenceLayout) return false;
-  return _IndexedSimplex.rankCompound(g) != null;
 }

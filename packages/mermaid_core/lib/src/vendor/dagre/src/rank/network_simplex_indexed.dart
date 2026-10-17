@@ -28,66 +28,6 @@ class _IndexedSimplex {
     }
   }
 
-  /// From the simplified graph that [networkSimplex] builds.
-  factory _IndexedSimplex.fromSimplified(Graph g) {
-    final names = g.nodes;
-    final index = {for (var i = 0; i < names.length; i++) names[i]: i};
-    final src = <int>[], dst = <int>[];
-    final weight = <double>[], minLen = <double>[];
-    for (final e in g.edgesIterable) {
-      final label = g.edge2(e);
-      src.add(index[e.v]!);
-      dst.add(index[e.w]!);
-      weight.add(label.getD(weightK));
-      minLen.add(label.getD(minLenK));
-    }
-    return _IndexedSimplex(
-      [for (final v in names) g.node(v).getD(rankK)],
-      src,
-      dst,
-      weight,
-      minLen,
-    );
-  }
-
-  /// Straight from the compound layout graph: does what
-  /// `networkSimplex(asNonCompoundGraph(g))` does before pivoting, on
-  /// indices. Leaf nodes in node order, parallel edges merged in edge order
-  /// (weights summed, minLen the maximum, as simplify() does), then
-  /// longest-path ranks. Returns null when the reference code must run: an
-  /// edge ends at a cluster node, the graph has a cycle, or the first node
-  /// has a `parent` label.
-  static List<Props>? rankCompound(Graph g) {
-    final labels = <Props>[];
-    final index = <String, int>{};
-    for (final v in g.nodesIterable) {
-      final children = g.children(v);
-      if (children == null || children.isEmpty) {
-        index[v] = labels.length;
-        labels.add(g.node(v));
-      }
-    }
-    final n = labels.length;
-    if (n == 0 || labels[0].get2(parentK) != null) return null;
-    final edgeV = <int>[], edgeW = <int>[];
-    final edgeWeight = <double>[], edgeMinLen = <double>[];
-    for (final e in g.edgesIterable) {
-      final v = index[e.v], w = index[e.w];
-      if (v == null || w == null) return null;
-      final label = g.edge2(e);
-      edgeV.add(v);
-      edgeW.add(w);
-      edgeWeight.add(label.getD(weightK));
-      edgeMinLen.add(label.getD(minLenK));
-    }
-    final rank = networkSimplexRanks(n, edgeV, edgeW, edgeWeight, edgeMinLen);
-    if (rank == null) return null;
-    for (var i = 0; i < n; i++) {
-      labels[i][rankK] = rank[i];
-    }
-    return labels;
-  }
-
   final int n;
 
   final List<double> rank;

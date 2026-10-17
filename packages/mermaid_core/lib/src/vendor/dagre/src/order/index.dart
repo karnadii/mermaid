@@ -11,7 +11,6 @@ import 'add_subgraph_constraints.dart';
 import 'cross_count.dart';
 import 'init_order.dart';
 import 'build_layer_graph.dart';
-import '../reference_switch.dart';
 import 'dart:math' as math;
 
 part 'order_indexed.dart';
@@ -25,10 +24,6 @@ void order(Graph g, DagreConfig config) {
 
   var maxRank = util.maxRank(g)!;
   var byRank = nodesByRank(g);
-  if (!useReferenceLayout) {
-    _orderIndexed(g, config, maxRank, byRank);
-    return;
-  }
   List<Graph> downLayerGraphs = _buildLayerGraphs(g, range(1, maxRank + 1), Relationship.inEdges, byRank);
   List<Graph> upLayerGraphs = _buildLayerGraphs(g, range(maxRank - 1, -1, -1), Relationship.outEdges, byRank);
 
@@ -95,40 +90,4 @@ List<List<String>> _copyList(List<List<String>> list) {
     rl.add(List.from(ele));
   }
   return rl;
-}
-
-/// [order] with the barycenter sweeps on node indices. Builds the layer
-/// graphs first, as the reference code does, so the shared uniqueId counter
-/// advances the same way.
-void _orderIndexed(Graph g, DagreConfig config, int maxRank, Map<int, List<String>> byRank) {
-  final names = g.nodes;
-  final index = {for (var i = 0; i < names.length; i++) names[i]: i};
-  var nextRoot = names.length;
-  IndexedLayerGraph build(int rank, Relationship ship) {
-    createLayerRootName(g);
-    return _buildIndexedLayerGraph(g, index, nextRoot++, rank, ship, byRank[rank] ?? const []);
-  }
-
-  final down = [for (var r in range(1, maxRank + 1)) build(r, Relationship.inEdges)];
-  final up = [for (var r in range(maxRank - 1, -1, -1)) build(r, Relationship.outEdges)];
-
-  List<List<String>> layering = initOrder(g);
-  _assignOrder(g, layering);
-
-  var isCompoundLayout = g.nodes.any((v) {
-    var ch = g.children(v);
-    return ch != null && ch.isNotEmpty;
-  });
-  if (!isCompoundLayout && crossCount(g, layering) == 0) {
-    return;
-  }
-  if (config.disableOptimalOrderHeuristic) {
-    return;
-  }
-  final best = IndexedOrder.fromGraph(g, names, down, up).run(maxRank);
-  for (final layer in best) {
-    for (var i = 0; i < layer.length; i++) {
-      g.node(names[layer[i]])[orderK] = i;
-    }
-  }
 }

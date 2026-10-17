@@ -1073,7 +1073,6 @@ class _Layout {
       ..align = config.align;
     final xs = IndexedBk(
       label,
-      List.filled(layerNodes.length, ''),
       layers,
       [for (final v in layerNodes) n(v).order!],
       [for (final v in layerNodes) n(v).width!],
