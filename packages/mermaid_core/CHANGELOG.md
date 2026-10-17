@@ -1,3 +1,12 @@
+## Unreleased
+
+- Render faster: about 9x on a 500-node flowchart (28.4 ms to 3.1 ms, AOT)
+  and 7x over the comparison-site samples, with byte-identical output. The
+  dagre layout runs on an indexed graph with incremental network simplex;
+  directives are parsed once per render; regexes are hoisted or replaced by
+  scanners; SVG is written into a reused byte buffer.
+- Fix a crash on a class diagram self relation (`C1 --> C1`).
+
 ## 0.3.0
 
 - Honor active per-diagram layout and style configuration through init directives
