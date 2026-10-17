@@ -129,17 +129,25 @@ class _EdgeLabel {
 
 /// Compound multigraph on indices with the iteration orders of `Graph`.
 /// Nodes are never added again after removal, so node order is index order.
+/// Every edge the pipeline sets has a new (v, w, name) key, so unlike
+/// `Graph.setEdge` this one never has to replace the label of an existing
+/// edge.
 class _Graph {
   final List<_NodeLabel> labels = [];
   final List<bool> alive = [];
   final List<int> parent = [];
-  final List<LinkedHashSet<int>> children = [];
+
+  /// Children in the order they were parented; allocated on first use.
+  final List<LinkedHashSet<int>?> _children = [];
   final LinkedHashSet<int> rootChildren = LinkedHashSet<int>();
   final List<List<int>> inEdges = [];
   final List<List<int>> outEdges = [];
 
-  /// Successor -> number of parallel edges, in `Graph._sucs` order.
-  final List<LinkedHashMap<int, int>> sucs = [];
+  /// Successors and their numbers of parallel edges, in the order of
+  /// `Graph._sucs`: a successor is appended when its first edge is set and
+  /// dropped when its last edge is removed.
+  final List<List<int>?> _sucs = [];
+  final List<List<int>?> _sucCounts = [];
   int nodeCount = 0;
 
   final List<int> edgeV = [];
@@ -147,18 +155,18 @@ class _Graph {
   final List<String?> edgeName = [];
   final List<_EdgeLabel> edgeLabels = [];
   final List<bool> edgeAlive = [];
-  final Map<(int, int, String?), int> _edgeByKey = {};
 
   int addNode(_NodeLabel label) {
     final id = labels.length;
     labels.add(label);
     alive.add(true);
     parent.add(-1);
-    children.add(LinkedHashSet<int>());
+    _children.add(null);
     rootChildren.add(id);
     inEdges.add([]);
     outEdges.add([]);
-    sucs.add(LinkedHashMap<int, int>());
+    _sucs.add(null);
+    _sucCounts.add(null);
     nodeCount++;
     return id;
   }
@@ -176,9 +184,13 @@ class _Graph {
   ];
 
   /// Children of [v], or of the graph root for -1.
-  List<int> childrenOf(int v) => (v < 0 ? rootChildren : children[v]).toList();
+  List<int> childrenOf(int v) =>
+      (v < 0 ? rootChildren : _children[v])?.toList() ?? <int>[];
 
-  bool hasChildren(int v) => children[v].isNotEmpty;
+  bool hasChildren(int v) => _children[v]?.isNotEmpty ?? false;
+
+  /// Successors of [v] in `Graph.successors` order.
+  List<int> successors(int v) => _sucs[v] ?? const <int>[];
 
   /// `Graph.setParent`: moves [v] to the end of [p]'s children (-1 is the
   /// graph root) even when [p] is already its parent.
@@ -195,70 +207,94 @@ class _Graph {
       }
     }
     final old = parent[v];
-    (old < 0 ? rootChildren : children[old]).remove(v);
+    (old < 0 ? rootChildren : _children[old])?.remove(v);
     parent[v] = p;
-    (p < 0 ? rootChildren : children[p]).add(v);
+    (p < 0 ? rootChildren : (_children[p] ??= LinkedHashSet<int>())).add(v);
   }
 
   static String? _name(String? name) =>
       name == null || name.isEmpty ? null : name;
 
-  /// `Graph.setEdge2`: replaces the label of an existing edge with the same
-  /// key, otherwise appends a new edge.
   int setEdge(int v, int w, String? name, _EdgeLabel label) {
-    name = _name(name);
-    final key = (v, w, name);
-    final existing = _edgeByKey[key];
-    if (existing != null) {
-      edgeLabels[existing] = label;
-      return existing;
-    }
     final e = edgeV.length;
     edgeV.add(v);
     edgeW.add(w);
-    edgeName.add(name);
+    edgeName.add(_name(name));
     edgeLabels.add(label);
     edgeAlive.add(true);
-    _edgeByKey[key] = e;
     inEdges[w].add(e);
     outEdges[v].add(e);
-    final s = sucs[v];
-    s[w] = (s[w] ?? 0) + 1;
+    final sucs = _sucs[v] ??= [];
+    final counts = _sucCounts[v] ??= [];
+    final at = sucs.indexOf(w);
+    if (at < 0) {
+      sucs.add(w);
+      counts.add(1);
+    } else {
+      counts[at]++;
+    }
     return e;
   }
 
-  int? edgeId(int v, int w, String? name) => _edgeByKey[(v, w, _name(name))];
+  /// The alive edge with key (v, w, name).
+  int edgeId(int v, int w, String? name) {
+    name = _name(name);
+    for (final e in outEdges[v]) {
+      if (edgeW[e] == w && edgeName[e] == name) return e;
+    }
+    throw StateError('no edge $v -> $w ($name)');
+  }
 
   void removeEdge(int e) {
     if (!edgeAlive[e]) return;
     edgeAlive[e] = false;
     final v = edgeV[e], w = edgeW[e];
-    _edgeByKey.remove((v, w, edgeName[e]));
     inEdges[w].remove(e);
     outEdges[v].remove(e);
-    final s = sucs[v];
-    final count = s[w]! - 1;
-    if (count == 0) {
-      s.remove(w);
-    } else {
-      s[w] = count;
+    _dropSuccessor(v, w);
+  }
+
+  void _dropSuccessor(int v, int w) {
+    final sucs = _sucs[v]!, counts = _sucCounts[v]!;
+    final at = sucs.indexOf(w);
+    if (--counts[at] == 0) {
+      sucs.removeAt(at);
+      counts.removeAt(at);
     }
   }
 
+  /// Like removing the node's in-edges, then its out-edges, one by one, but
+  /// the node's own (possibly long) edge lists are cleared once at the end.
   void removeNode(int v) {
     if (!alive[v]) return;
     final p = parent[v];
-    (p < 0 ? rootChildren : children[p]).remove(v);
-    for (final child in children[v].toList()) {
-      setParent(child, -1);
+    (p < 0 ? rootChildren : _children[p])?.remove(v);
+    final children = _children[v];
+    if (children != null) {
+      for (final child in children.toList()) {
+        setParent(child, -1);
+      }
+      children.clear();
     }
-    children[v].clear();
-    for (final e in List<int>.of(inEdges[v])) {
-      removeEdge(e);
+    for (final e in inEdges[v]) {
+      if (!edgeAlive[e]) continue;
+      edgeAlive[e] = false;
+      final u = edgeV[e];
+      if (u != v) {
+        outEdges[u].remove(e);
+        _dropSuccessor(u, v);
+      }
     }
-    for (final e in List<int>.of(outEdges[v])) {
-      removeEdge(e);
+    for (final e in outEdges[v]) {
+      if (!edgeAlive[e]) continue;
+      edgeAlive[e] = false;
+      final w = edgeW[e];
+      if (w != v) inEdges[w].remove(e);
     }
+    inEdges[v].clear();
+    outEdges[v].clear();
+    _sucs[v]?.clear();
+    _sucCounts[v]?.clear();
     alive[v] = false;
     nodeCount--;
   }
@@ -438,7 +474,7 @@ class _Layout {
       final next = <int>[];
       for (final item in level) {
         depths[item] = depth;
-        next.addAll(g.children[item]);
+        next.addAll(g.childrenOf(item));
       }
       level = next;
       depth += 1;
@@ -752,7 +788,7 @@ class _Layout {
           pathV = path[pathIdx];
         }
         g.setParent(v, pathV);
-        v = g.sucs[v].keys.first;
+        v = g.successors(v).first;
       }
     }
   }
@@ -917,7 +953,7 @@ class _Layout {
         if (visited[curr]) continue;
         visited[curr] = true;
         layering[n(curr).rank!.toInt()].add(curr);
-        final succ = g.sucs[curr].keys.toList();
+        final succ = g.successors(curr);
         for (var i = succ.length - 1; i >= 0; i--) {
           stack.add(succ[i]);
         }
@@ -1141,7 +1177,7 @@ class _Layout {
       final edgeObj = node.edgeObj!;
       g.setEdge(edgeObj.v, edgeObj.w, edgeObj.name, origLabel);
       while (node.dummy != null) {
-        final w = g.sucs[v].keys.first;
+        final w = g.successors(v).first;
         g.removeNode(v);
         origLabel.points!.add(GraphPoint(node.x!, node.y!));
         if (node.dummy == Dummy.edgeLabel) {
@@ -1319,7 +1355,7 @@ class _Layout {
       );
     }
     for (final edge in input.edgeMap.values) {
-      final e = g.edgeId(_index[edge.source]!, _index[edge.target]!, edge.id)!;
+      final e = g.edgeId(_index[edge.source]!, _index[edge.target]!, edge.id);
       final label = g.edgeLabels[e];
       edge.points = [
         for (final p in label.points ?? const <GraphPoint>[]) Point(p.x, p.y),

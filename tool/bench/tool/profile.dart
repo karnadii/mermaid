@@ -1,7 +1,10 @@
 /// Samples the Dart VM CPU profiler while one corpus case renders in a loop
 /// and prints the functions with the most self and inclusive time.
 ///
-///   dart --profiler run tool/profile.dart "mesh: 500" [seconds]
+///   dart --profiler run tool/profile.dart "mesh: 500" [seconds] [rows]
+///
+/// Set CALLERS=<function name> to also list which functions call it,
+/// for samples where it is on top of the stack (two frames up).
 library;
 
 import 'dart:developer';
@@ -70,6 +73,21 @@ Future<void> main(List<String> args) async {
   }
 
   table('Self time', self, 30);
+  final callersOf = Platform.environment['CALLERS'];
+  if (callersOf != null) {
+    final callers = <String, int>{};
+    for (final s in samples.samples!) {
+      final stack = s.stack!;
+      if (stack.length < 3 || !name(stack.first).startsWith(callersOf)) continue;
+      final key = '${name(stack[1])}  <-  ${name(stack[2])}';
+      callers.update(key, (v) => v + 1, ifAbsent: () => 1);
+    }
+    stdout.writeln('\nCallers of $callersOf');
+    final top = callers.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    for (final e in top.take(15)) {
+      stdout.writeln('${e.value.toString().padLeft(6)}  ${e.key}');
+    }
+  }
   table('Inclusive time', incl, args.length > 2 ? int.parse(args[2]) : 40);
   await vm.dispose();
   exit(0);
