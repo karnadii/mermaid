@@ -431,18 +431,19 @@ class _Layout {
     final stack = <int>[];
     for (final root in g.nodes) {
       if (visited[root]) continue;
-      // Entries are node ids; ~id marks the post-visit of node id.
+      // Entries are node ids; -id - 1 marks the post-visit of node id. (Not
+      // ~id: on the web, bitwise operators give unsigned 32-bit results.)
       stack.add(root);
       while (stack.isNotEmpty) {
         final entry = stack.removeLast();
         if (entry < 0) {
-          onStack[~entry] = false;
+          onStack[-entry - 1] = false;
           continue;
         }
         if (visited[entry]) continue;
         visited[entry] = true;
         onStack[entry] = true;
-        stack.add(~entry);
+        stack.add(-entry - 1);
         final outs = g.outEdges[entry];
         for (var i = outs.length - 1; i >= 0; i--) {
           final e = outs[i];
