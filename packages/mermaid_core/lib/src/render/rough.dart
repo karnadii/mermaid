@@ -349,16 +349,16 @@ List<(Point, Point)> _hachureLines(
   if (poly.length <= 2) return [];
 
   // Edge table.
-  final edges = <({double ymin, double ymax, double x, double islope})>[];
+  final edges = <_ScanEdge>[];
   for (var i = 0; i < poly.length - 1; i++) {
     final p1 = poly[i], p2 = poly[i + 1];
     if (p1.y != p2.y) {
       final ymin = math.min(p1.y, p2.y);
-      edges.add((
-        ymin: ymin,
-        ymax: math.max(p1.y, p2.y),
-        x: ymin == p1.y ? p1.x : p2.x,
-        islope: (p2.x - p1.x) / (p2.y - p1.y),
+      edges.add(_ScanEdge(
+        ymin,
+        math.max(p1.y, p2.y),
+        ymin == p1.y ? p1.x : p2.x,
+        (p2.x - p1.x) / (p2.y - p1.y),
       ));
     }
   }
@@ -370,43 +370,31 @@ List<(Point, Point)> _hachureLines(
   if (edges.isEmpty) return [];
 
   final lines = <(Point, Point)>[];
-  var active = <({double s, ({double ymin, double ymax, double x, double islope}) edge})>[];
-  // Mutable x for active edges (edge.x advances each scan step).
-  final ax = <int, double>{};
+  // Active edges; `ax` is each edge's x on the current scan line.
+  final active = <_ScanEdge>[];
   var y = edges.first.ymin;
   var c = 0;
-  final remaining = [...edges];
-  while (active.isNotEmpty || remaining.isNotEmpty) {
-    if (remaining.isNotEmpty) {
-      var t = -1;
-      for (var i = 0; i < remaining.length && !(remaining[i].ymin > y); i++) {
-        t = i;
-      }
-      final added = remaining.sublist(0, t + 1);
-      remaining.removeRange(0, t + 1);
-      for (final e in added) {
-        active.add((s: y, edge: e));
-        ax[identityHashCode(e)] = e.x;
-      }
+  var next = 0; // first edge of `edges` not yet active
+  while (active.isNotEmpty || next < edges.length) {
+    while (next < edges.length && !(edges[next].ymin > y)) {
+      final e = edges[next++];
+      e.ax = e.x;
+      active.add(e);
     }
-    active = active.where((a) => !(a.edge.ymax <= y)).toList();
-    active.sort((a, b) {
-      final xa = ax[identityHashCode(a.edge)]!, xb = ax[identityHashCode(b.edge)]!;
-      return xa == xb ? 0 : (xa < xb ? -1 : 1);
-    });
+    active.removeWhere((e) => e.ymax <= y);
+    active.sort((a, b) => a.ax == b.ax ? 0 : (a.ax < b.ax ? -1 : 1));
     // Scan steps by `gap`; `skipOffset` (only > 1 when roughness ≥ 1) thins
     // the lines by drawing every skipOffset-th row.
     if ((skipOffset <= 1 || c % skipOffset == 0) && active.length > 1) {
       for (var i = 0; i + 1 < active.length; i += 2) {
-        final x1 = ax[identityHashCode(active[i].edge)]!;
-        final x2 = ax[identityHashCode(active[i + 1].edge)]!;
+        final x1 = active[i].ax;
+        final x2 = active[i + 1].ax;
         lines.add((Point(x1.roundToDouble(), y), Point(x2.roundToDouble(), y)));
       }
     }
     y += gap;
-    for (final a in active) {
-      ax[identityHashCode(a.edge)] =
-          ax[identityHashCode(a.edge)]! + gap * a.edge.islope;
+    for (final e in active) {
+      e.ax = e.ax + gap * e.islope;
     }
     c++;
   }
@@ -417,6 +405,19 @@ List<(Point, Point)> _hachureLines(
     out.add((r[0], r[1]));
   }
   return out;
+}
+
+/// A polygon edge in the hachure scan-line fill.
+class _ScanEdge {
+  _ScanEdge(this.ymin, this.ymax, this.x, this.islope);
+
+  final double ymin;
+  final double ymax;
+  final double x;
+  final double islope;
+
+  /// The x of this edge on the current scan line.
+  double ax = 0;
 }
 
 // ---------------------------------------------------------------------------
