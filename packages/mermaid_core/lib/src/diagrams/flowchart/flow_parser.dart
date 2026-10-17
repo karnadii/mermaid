@@ -6,6 +6,8 @@
 /// `flow-*.spec.js` suites.
 library;
 
+import 'dart:typed_data';
+
 import '../../detect.dart';
 import '../../directives.dart';
 import '../../parse_error.dart';
@@ -179,6 +181,16 @@ class _FlowParser {
     return rest.substring(m.end).trim();
   }
 
+  /// The ASCII characters that [_splitStatements] acts on:
+  /// `\n " % [ ( { ] ) } ;`.
+  static final _splitSpecial = () {
+    final table = Uint8List(0x80);
+    for (final c in '\n"%[({])};'.codeUnits) {
+      table[c] = 1;
+    }
+    return table;
+  }();
+
   /// Splits the source into statements at newlines and top-level `;`,
   /// respecting quotes and bracket nesting, dropping inline `%%` comments,
   /// and keeping `accDescr { ... }` blocks together.
@@ -211,8 +223,12 @@ class _FlowParser {
     }
 
     final n = text.length;
+    final special = _splitSpecial;
     for (var i = 0; i < n; i++) {
       final c = text.codeUnitAt(i);
+      // Only the characters in [_splitSpecial] change the state; all others
+      // stay in the current range.
+      if (c >= 0x80 || special[c] == 0) continue;
       if (c == 0x0a) {
         // \n
         line++;
@@ -296,13 +312,26 @@ class _FlowParser {
     if (s.isEmpty) return;
     // Keyword statements are rare: a cheap prefix check skips their patterns
     // for the node and link chains that make up most statements.
+    switch (s.codeUnitAt(0)) {
+      // The first letters of `subgraph`, `end`, `direction`, `classDef`,
+      // `class`, `click`, `style`, `linkStyle` and `acc...`.
+      case 0x73 || 0x65 || 0x64 || 0x63 || 0x6c || 0x61:
+        if (_parseKeywordStatement(st)) return;
+    }
+    _parseChain(st);
+  }
+
+  /// Parses [st] when it is a keyword statement; returns false for a node
+  /// and link chain.
+  bool _parseKeywordStatement(_Statement st) {
+    final s = st.text;
     if (s.startsWith('subgraph') && _subgraphKeyword.hasMatch(s)) {
       _openSubgraph(s.substring('subgraph'.length).trim(), st.line);
-      return;
+      return true;
     }
     if (s == 'end') {
       _closeSubgraph(st.line);
-      return;
+      return true;
     }
     final dir = s.startsWith('direction')
         ? _directionStatement.firstMatch(s)
@@ -322,31 +351,30 @@ class _FlowParser {
       } else {
         direction = dirs[dir.group(1)]!;
       }
-      return;
+      return true;
     }
     if (s.startsWith('classDef') && _classDefKeyword.hasMatch(s)) {
       _parseClassDef(s, st.line);
-      return;
+      return true;
     }
     if (s.startsWith('class') && _classKeyword.hasMatch(s)) {
       _parseClassStatement(s, st.line);
-      return;
+      return true;
     }
     if (s.startsWith('style') && _styleKeyword.hasMatch(s)) {
       _parseStyleStatement(s, st.line);
-      return;
+      return true;
     }
     if (s.startsWith('linkStyle') && _linkStyleKeyword.hasMatch(s)) {
       _parseLinkStyle(s, st.line);
-      return;
+      return true;
     }
     if (s.startsWith('click') && _clickKeyword.hasMatch(s)) {
       _parseClick(s, st.line);
-      return;
+      return true;
     }
     // Accessibility statements are parsed and discarded for now.
-    if (s.startsWith('acc') && _accessibility.hasMatch(s)) return;
-    _parseChain(st);
+    return s.startsWith('acc') && _accessibility.hasMatch(s);
   }
 
   // --- subgraphs ------------------------------------------------------------
@@ -1233,13 +1261,14 @@ class _Scanner {
     return (u >= 0x61 && u <= 0x7a) || // a-z
         (u >= 0x41 && u <= 0x5a) || // A-Z
         (u >= 0x30 && u <= 0x39) || // 0-9
-        _asciiIdPunctuation.contains(u);
+        _isAsciiIdPunctuation(u);
   }
 
   /// The ASCII punctuation in [_idChar]: `_ ! # $ % & * + . ? \ / '`.
-  static const _asciiIdPunctuation = {
-    0x5f, 0x21, 0x23, 0x24, 0x25, 0x26, 0x2a, 0x2b, 0x2e, 0x3f, 0x5c, 0x2f, //
-    0x27,
+  static bool _isAsciiIdPunctuation(int u) => switch (u) {
+    0x5f || 0x21 || 0x23 || 0x24 || 0x25 || 0x26 || 0x2a || 0x2b => true,
+    0x2e || 0x3f || 0x5c || 0x2f || 0x27 => true,
+    _ => false,
   };
 
   /// Mirrors upstream NODE_STRING: `-` only when not followed by `>`, `-` or
@@ -1279,6 +1308,9 @@ class _Scanner {
   /// The content is every character between the start and the closer, so it
   /// is one substring of [text].
   (String, String) readUntil(List<String> closers) {
+    if (closers.length == 1 && closers[0].length == 1) {
+      return _readUntilUnit(closers[0]);
+    }
     final sorted = closers.length == 1
         ? closers
         : ([...closers]..sort((a, b) => b.length.compareTo(a.length)));
@@ -1305,6 +1337,32 @@ class _Scanner {
     }
     throw MermaidParseException(
       'unterminated "${closers.first}" label in "$text"',
+      line: line,
+    );
+  }
+
+  /// [readUntil] for a single one-character [closer].
+  (String, String) _readUntilUnit(String closer) {
+    final unit = closer.codeUnitAt(0);
+    final start = pos;
+    final n = text.length;
+    var inQuote = false;
+    while (pos < n) {
+      final c = text.codeUnitAt(pos);
+      if (inQuote) {
+        if (c == 0x22) inQuote = false;
+      } else if (c == unit) {
+        // The closer wins over a quote-start, as in [readUntil].
+        final content = text.substring(start, pos);
+        pos++;
+        return (closer, content);
+      } else if (c == 0x22) {
+        inQuote = true;
+      }
+      pos++;
+    }
+    throw MermaidParseException(
+      'unterminated "$closer" label in "$text"',
       line: line,
     );
   }
