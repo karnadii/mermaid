@@ -28,6 +28,58 @@ const _arrowTokens = <(String, SeqArrow)>[
   ('->', SeqArrow.solidOpen),
 ];
 
+const _blockKeywords = [
+  'loop',
+  'opt',
+  'alt',
+  'par',
+  'critical',
+  'break',
+  'rect',
+];
+const _dividerKeywords = ['else', 'and', 'option'];
+const _metadataKeywords = ['link', 'properties', 'details'];
+
+/// Whether [s] has a character that ends a participant name: one of
+/// `+ - > : < , ;` (upstream ACTOR token).
+bool _hasActorTerminator(String s) {
+  for (var i = 0; i < s.length; i++) {
+    switch (s.codeUnitAt(i)) {
+      case 0x2b || 0x2d || 0x3e || 0x3a || 0x3c || 0x2c || 0x3b:
+        return true;
+    }
+  }
+  return false;
+}
+
+bool _startsWithAny(String line, List<String> prefixes) {
+  for (final p in prefixes) {
+    if (line.startsWith(p)) return true;
+  }
+  return false;
+}
+
+// Statement patterns, compiled once.
+final _header = RegExp(r'^sequenceDiagram\b');
+final _participantDecl = RegExp(r'^(participant|actor)\s+(.+)$');
+final _anyArrow = RegExp(r'(<<-->>|<<->>|-->>|->>|--[x)>]|-[x)>])');
+final _createDecl = RegExp(r'^create\s+(participant|actor)\s+(.+)$');
+final _destroyDecl = RegExp(r'^destroy\s+(.+)$');
+final _activationDecl = RegExp(r'^(de)?activate\s+(.+)$');
+final _noteDecl = RegExp(r'^[Nn]ote\s+(right of|left of|over)\s+([^:]+):\s*(.*)$');
+final _blockStart = RegExp(r'^(loop|opt|alt|par|critical|break|rect)\b\s*(.*)$');
+final _blockDivider = RegExp(r'^(else|and|option)\b\s*(.*)$');
+final _boxStart = RegExp(r'^box\b\s*(.*)$');
+final _boxColor = RegExp(r'^(rgba?\([^)]*\)|#[0-9a-fA-F]+|transparent|[Aa]qua|[Ll]ightgreen|[Ll]ightblue|[Ll]ightyellow)\s+');
+final _autonumber = RegExp(r'^autonumber\b\s*(.*)$');
+final _number = RegExp(r'\d+');
+final _titleDecl = RegExp(r'^title\s*:?\s+(.*)$');
+final _accessibility = RegExp(r'^acc(Title|Descr)\s*[:{]');
+final _linkMetadata = RegExp(r'^(links?|properties|details)\s+');
+final _alias = RegExp(r'^(.+?)\s+as\s+(.+)$');
+final _lineBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
+final _wrapDirective = RegExp(r'^:?(wrap|nowrap):');
+
 class _SequenceParser {
   _SequenceParser(this.text, this.frontTitle);
 
@@ -64,7 +116,7 @@ class _SequenceParser {
       if (line.endsWith(';')) line = line.substring(0, line.length - 1).trim();
       if (line.isEmpty) continue;
       if (!seenHeader) {
-        if (!RegExp(r'^sequenceDiagram\b').hasMatch(line)) {
+        if (!_header.hasMatch(line)) {
           throw MermaidParseException('expected "sequenceDiagram" header',
               line: i + 1);
         }
@@ -91,15 +143,19 @@ class _SequenceParser {
   void _parseStatement(String line, int n) {
     Match? m;
 
-    m = RegExp(r'^(participant|actor)\s+(.+)$').firstMatch(line);
-    if (m != null && !line.contains(RegExp(r'(<<-->>|<<->>|-->>|->>|--[x)>]|-[x)>])'))) {
+    // Every statement pattern starts with a keyword, so a cheap prefix check
+    // skips the patterns that cannot match (most lines are messages).
+    m = line.startsWith('participant') || line.startsWith('actor')
+        ? _participantDecl.firstMatch(line)
+        : null;
+    if (m != null && !line.contains(_anyArrow)) {
       _declareParticipant(m.group(2)!.trim(), isActor: m.group(1) == 'actor');
       return;
     }
 
     // `create participant X` / `create actor X`: declare + mark the lifeline
     // to begin at this point.
-    m = RegExp(r'^create\s+(participant|actor)\s+(.+)$').firstMatch(line);
+    m = line.startsWith('create') ? _createDecl.firstMatch(line) : null;
     if (m != null) {
       final id =
           _declareParticipant(m.group(2)!.trim(), isActor: m.group(1) == 'actor');
@@ -107,22 +163,24 @@ class _SequenceParser {
       return;
     }
     // `destroy X`: end the lifeline here with an ✗.
-    m = RegExp(r'^destroy\s+(.+)$').firstMatch(line);
+    m = line.startsWith('destroy') ? _destroyDecl.firstMatch(line) : null;
     if (m != null) {
       final id = _ensureParticipant(m.group(1)!.trim());
       events.add(SeqDestroy(id));
       return;
     }
 
-    m = RegExp(r'^(de)?activate\s+(.+)$').firstMatch(line);
+    m = line.startsWith('activate') || line.startsWith('deactivate')
+        ? _activationDecl.firstMatch(line)
+        : null;
     if (m != null) {
       _activation(m.group(2)!.trim(), active: m.group(1) == null, lineNo: n);
       return;
     }
 
-    m = RegExp(
-      r'^[Nn]ote\s+(right of|left of|over)\s+([^:]+):\s*(.*)$',
-    ).firstMatch(line);
+    m = line.startsWith('Note') || line.startsWith('note')
+        ? _noteDecl.firstMatch(line)
+        : null;
     if (m != null) {
       final placement = switch (m.group(1)!) {
         'right of' => NotePlacement.rightOf,
@@ -149,9 +207,9 @@ class _SequenceParser {
       return;
     }
 
-    m = RegExp(
-      r'^(loop|opt|alt|par|critical|break|rect)\b\s*(.*)$',
-    ).firstMatch(line);
+    m = _startsWithAny(line, _blockKeywords)
+        ? _blockStart.firstMatch(line)
+        : null;
     if (m != null) {
       final kind = switch (m.group(1)!) {
         'loop' => SeqBlockKind.loop,
@@ -170,7 +228,9 @@ class _SequenceParser {
       return;
     }
 
-    m = RegExp(r'^(else|and|option)\b\s*(.*)$').firstMatch(line);
+    m = _startsWithAny(line, _dividerKeywords)
+        ? _blockDivider.firstMatch(line)
+        : null;
     if (m != null) {
       final keyword = m.group(1)!;
       final expected = switch (keyword) {
@@ -186,13 +246,11 @@ class _SequenceParser {
       return;
     }
 
-    m = RegExp(r'^box\b\s*(.*)$').firstMatch(line);
+    m = line.startsWith('box') ? _boxStart.firstMatch(line) : null;
     if (m != null) {
       var rest = m.group(1)!.trim();
       String? color;
-      final cm = RegExp(
-              r'^(rgba?\([^)]*\)|#[0-9a-fA-F]+|transparent|[Aa]qua|[Ll]ightgreen|[Ll]ightblue|[Ll]ightyellow)\s+')
-          .firstMatch(rest);
+      final cm = _boxColor.firstMatch(rest);
       if (cm != null) {
         color = cm.group(1);
         rest = rest.substring(cm.end).trim();
@@ -217,13 +275,13 @@ class _SequenceParser {
       return;
     }
 
-    m = RegExp(r'^autonumber\b\s*(.*)$').firstMatch(line);
+    m = line.startsWith('autonumber') ? _autonumber.firstMatch(line) : null;
     if (m != null) {
       final rest = m.group(1)!.trim();
       if (rest == 'off') {
         events.add(const SeqAutonumber(on: false));
       } else {
-        final nums = RegExp(r'\d+').allMatches(rest).toList();
+        final nums = _number.allMatches(rest).toList();
         events.add(SeqAutonumber(
           on: true,
           start: nums.isNotEmpty ? int.parse(nums[0].group(0)!) : null,
@@ -233,15 +291,18 @@ class _SequenceParser {
       return;
     }
 
-    m = RegExp(r'^title\s*:?\s+(.*)$').firstMatch(line);
+    m = line.startsWith('title') ? _titleDecl.firstMatch(line) : null;
     if (m != null) {
       title = m.group(1)!.trim();
       return;
     }
 
     // Accessibility and link metadata: parsed and discarded.
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(line)) return;
-    if (RegExp(r'^(links?|properties|details)\s+').hasMatch(line)) return;
+    if (line.startsWith('acc') && _accessibility.hasMatch(line)) return;
+    if (_startsWithAny(line, _metadataKeywords) &&
+        _linkMetadata.hasMatch(line)) {
+      return;
+    }
 
     if (_parseMessage(line, n)) return;
 
@@ -255,7 +316,7 @@ class _SequenceParser {
       final idx = line.indexOf(token);
       if (idx <= 0) continue;
       final from = line.substring(0, idx).trim();
-      if (from.isEmpty || from.contains(RegExp(r'[+\->:<,;]'))) continue;
+      if (from.isEmpty || _hasActorTerminator(from)) continue;
       var rest = line.substring(idx + token.length).trim();
 
       String? suffix;
@@ -273,7 +334,7 @@ class _SequenceParser {
         to = rest;
         msg = '';
       }
-      if (to.isEmpty || to.contains(RegExp(r'[+\->:<,;]'))) {
+      if (to.isEmpty || _hasActorTerminator(to)) {
         throw MermaidParseException('expected participant after arrow',
             line: n);
       }
@@ -310,7 +371,7 @@ class _SequenceParser {
   }
 
   String _declareParticipant(String decl, {required bool isActor}) {
-    final asMatch = RegExp(r'^(.+?)\s+as\s+(.+)$').firstMatch(decl);
+    final asMatch = _alias.firstMatch(decl);
     final id = (asMatch != null ? asMatch.group(1)! : decl).trim();
     final label =
         _normalizeText((asMatch != null ? asMatch.group(2)! : decl).trim());
@@ -343,8 +404,9 @@ class _SequenceParser {
     if (out.length >= 2 && out.startsWith('"') && out.endsWith('"')) {
       out = out.substring(1, out.length - 1);
     }
+    if (!out.contains('<')) return out.trim();
     return out
-        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+        .replaceAll(_lineBreak, '\n')
         .trim();
   }
 
@@ -352,7 +414,7 @@ class _SequenceParser {
     String source,
   ) {
     var text = source.trim();
-    final directive = RegExp(r'^:?(wrap|nowrap):').firstMatch(text);
+    final directive = _wrapDirective.firstMatch(text);
     final wrap = directive?.group(1) == 'wrap';
     if (directive != null) text = text.substring(directive.end).trim();
     return (
