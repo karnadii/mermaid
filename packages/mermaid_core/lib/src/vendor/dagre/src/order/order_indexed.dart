@@ -2,23 +2,51 @@ part of 'index.dart';
 
 /// One layer graph of [buildLayerGraph] over node indices.
 ///
-/// Node ids are indices into `g.nodes`; the synthetic root of each layer
-/// graph gets an id past the last node. It keeps exactly what the sweeps read:
-/// - children of each node, in the order buildLayerGraph parents them,
-/// - in-edge sources with summed weights, in insertion order,
+/// Node ids are indices into the layout graph; the synthetic root of each
+/// layer graph gets an id past the last node. It keeps what the sweeps read:
+/// - the members' children, in the order buildLayerGraph parents them,
+/// - the members' merged edge ends with summed weights, in edge order. They
+///   depend only on the sweep direction, so all layer graphs of one
+///   direction share [sources] and [weights],
 /// - the border nodes of clusters at this rank,
 /// - which nodes have their own label (clusters), because order writes to
 ///   those labels do not reach `g`.
 class IndexedLayerGraph {
-  IndexedLayerGraph(this.root);
+  IndexedLayerGraph(this.root, this.sources, this.weights, this._graphParent);
 
   final int root;
-  final Map<int, List<int>> children = {};
-  final Map<int, int> parent = {};
-  final Map<int, List<int>> inSources = {};
-  final Map<int, List<double>> inWeights = {};
+  final List<List<int>> sources;
+  final List<List<double>> weights;
+
+  /// Parent of every node in the layout graph, -1 for the graph root.
+  final List<int> _graphParent;
+  final List<int> rootChildren = [];
+  final Map<int, List<int>> clusterChildren = {};
+
+  /// Members that are parents of other members (clusters).
+  final Set<int> clusterMembers = {};
   final Map<int, (int?, int?)> borders = {};
   final Set<int> ownLabel = {};
+
+  /// Adds member [v] under its layout-graph parent.
+  void addMember(int v) {
+    final p = _graphParent[v];
+    if (p < 0) {
+      rootChildren.add(v);
+    } else {
+      clusterChildren.putIfAbsent(p, () => []).add(v);
+    }
+  }
+
+  List<int>? childrenOf(int v) => v == root ? rootChildren : clusterChildren[v];
+
+  /// The layer graph parent of [v]: null for the root and for nodes that
+  /// are not members, which buildLayerGraph leaves without a parent.
+  int? parentOf(int v, {required bool member}) {
+    if (v == root || !member) return null;
+    final p = _graphParent[v];
+    return p < 0 ? root : p;
+  }
 }
 
 class _Entry {
@@ -103,9 +131,12 @@ class IndexedOrder {
       final prev = <int, int>{};
       int? rootPrev;
       for (final v in sorted.vs) {
-        int? child = lg.parent[v];
+        int? child = lg.parentOf(v, member: true);
         while (child != null) {
-          final parent = lg.parent[child];
+          final parent = lg.parentOf(
+            child,
+            member: lg.clusterMembers.contains(child),
+          );
           int? prevChild;
           if (parent != null) {
             prevChild = prev[parent];
@@ -130,7 +161,7 @@ class IndexedOrder {
     List<(int, int)> cgEdges,
     bool biasRight,
   ) {
-    var movable = lg.children[v] ?? const <int>[];
+    var movable = lg.childrenOf(v) ?? const <int>[];
     final (bl, br) = lg.borders[v] ?? (null, null);
     if (bl != null) {
       movable = [
@@ -142,9 +173,9 @@ class IndexedOrder {
     final barycenters = <_Entry>[];
     for (final w in movable) {
       final entry = _Entry(w);
-      final sources = lg.inSources[w];
-      if (sources != null && sources.isNotEmpty) {
-        final weights = lg.inWeights[w]!;
+      final sources = lg.sources[w];
+      if (sources.isNotEmpty) {
+        final weights = lg.weights[w];
         num sum = 0, weight = 0;
         for (var i = 0; i < sources.length; i++) {
           sum = sum + weights[i] * order[sources[i]];
@@ -158,7 +189,7 @@ class IndexedOrder {
 
     final subgraphs = <int, _Sorted>{};
     for (final entry in barycenters) {
-      final list = lg.children[entry.v];
+      final list = lg.childrenOf(entry.v);
       if (list != null && list.isNotEmpty) {
         final sub = _sortSubgraph(lg, entry.v, cgEdges, biasRight);
         subgraphs[entry.v] = sub;
@@ -193,10 +224,10 @@ class IndexedOrder {
     final result = _sort(entries, biasRight);
     if (bl != null) {
       result.vs = [bl, ...result.vs, br!];
-      final blPreds = lg.inSources[bl] ?? const <int>[];
+      final blPreds = lg.sources[bl];
       if (blPreds.isNotEmpty) {
         final blPred = order[blPreds[0]];
-        final brPred = order[lg.inSources[br]![0]];
+        final brPred = order[lg.sources[br][0]];
         if (result.barycenter == null) {
           result.barycenter = 0;
           result.weight = 0;

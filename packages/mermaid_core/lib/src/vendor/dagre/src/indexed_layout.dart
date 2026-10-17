@@ -907,9 +907,49 @@ class _Layout {
       }
     }
 
-    var nextRoot = g.labels.length;
+    // Merged edge ends per node for each sweep direction: in-edges for
+    // the down sweeps, out-edges for the up sweeps, summed per neighbour.
+    final count = g.labels.length;
+    List<List<int>> mergedSources(
+      bool incoming,
+      List<List<double>> weightsOut,
+    ) {
+      final result = <List<int>>[];
+      for (var v = 0; v < count; v++) {
+        final sources = <int>[];
+        final weights = <double>[];
+        if (g.alive[v]) {
+          for (final e in incoming ? g.inEdges[v] : g.outEdges[v]) {
+            final u = incoming ? g.edgeV[e] : g.edgeW[e];
+            final w = g.edgeLabels[e].weight!;
+            final at = sources.indexOf(u);
+            if (at < 0) {
+              sources.add(u);
+              weights.add(w);
+            } else {
+              weights[at] = w + weights[at];
+            }
+          }
+        }
+        result.add(sources);
+        weightsOut.add(weights);
+      }
+      return result;
+    }
+
+    final downWeights = <List<double>>[], upWeights = <List<double>>[];
+    final downSources = mergedSources(true, downWeights);
+    final upSources = mergedSources(false, upWeights);
+
+    var nextRoot = count;
     IndexedLayerGraph build(int rank, Relationship ship) {
-      final lg = IndexedLayerGraph(nextRoot++);
+      final down = ship == Relationship.inEdges;
+      final lg = IndexedLayerGraph(
+        nextRoot++,
+        down ? downSources : upSources,
+        down ? downWeights : upWeights,
+        g.parent,
+      );
       for (final v in byRank[rank] ?? const <int>[]) {
         final node = n(v);
         if (!(node.rank?.toInt() == rank ||
@@ -917,25 +957,8 @@ class _Layout {
                 rank <= (node.maxRank ?? double.nan))) {
           continue;
         }
-        final parent = g.parent[v] < 0 ? lg.root : g.parent[v];
-        lg.parent[v] = parent;
-        lg.children.putIfAbsent(parent, () => []).add(v);
-        final sources = lg.inSources.putIfAbsent(v, () => []);
-        final weights = lg.inWeights.putIfAbsent(v, () => []);
-        final edges = ship == Relationship.inEdges
-            ? g.inEdges[v]
-            : g.outEdges[v];
-        for (final e in edges) {
-          final u = g.edgeV[e] == v ? g.edgeW[e] : g.edgeV[e];
-          final w = g.edgeLabels[e].weight!;
-          final at = sources.indexOf(u);
-          if (at < 0) {
-            sources.add(u);
-            weights.add(w);
-          } else {
-            weights[at] = w + weights[at];
-          }
-        }
+        lg.addMember(v);
+        if (g.hasChildren(v)) lg.clusterMembers.add(v);
         // Clusters get their own label with this rank's border nodes.
         if (node.minRank != null) {
           lg.ownLabel.add(v);
@@ -995,7 +1018,6 @@ class _Layout {
     }
 
     final isCompoundLayout = nodes.any(g.hasChildren);
-    final count = g.labels.length;
     final outTargets = <List<int>>[];
     final outWeights = <List<num>>[];
     for (var v = 0; v < count; v++) {
