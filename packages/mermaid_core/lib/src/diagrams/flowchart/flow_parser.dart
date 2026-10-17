@@ -200,7 +200,7 @@ class _FlowParser {
     void flush(int end) {
       final String s;
       if (buf.isEmpty) {
-        s = text.substring(start, end).trim();
+        s = _trimmedSubstring(text, start, end);
       } else {
         buf.write(text.substring(start, end));
         s = buf.toString().trim();
@@ -271,6 +271,25 @@ class _FlowParser {
     flush(n);
     return out;
   }
+
+  /// `text.substring(start, end).trim()`, with one allocation when the ends
+  /// are ASCII.
+  static String _trimmedSubstring(String text, int start, int end) {
+    while (start < end && _isAsciiSpace(text.codeUnitAt(start))) {
+      start++;
+    }
+    while (end > start && _isAsciiSpace(text.codeUnitAt(end - 1))) {
+      end--;
+    }
+    final s = text.substring(start, end);
+    if (start < end &&
+        (text.codeUnitAt(start) >= 0x80 || text.codeUnitAt(end - 1) >= 0x80)) {
+      return s.trim();
+    }
+    return s;
+  }
+
+  static bool _isAsciiSpace(int c) => c == 0x20 || (c >= 0x09 && c <= 0x0d);
 
   void _parseStatement(_Statement st) {
     final s = st.text;
@@ -829,42 +848,57 @@ class _FlowParser {
     // (opener, closers): the matched closer can refine the shape
     // (lean vs trapezoid).
     if (sc.atEnd) return null;
-    switch (sc.text.codeUnitAt(sc.pos)) {
+    final first = sc.text.codeUnitAt(sc.pos);
+    switch (first) {
       case 0x28 || 0x5b || 0x7b || 0x3e: // ( [ { >
         break;
       default:
         return null;
     }
+    // The plain rectangle `[label]` is by far the most common shape: take it
+    // when no longer `[` opener can match.
+    if (first == 0x5b) {
+      final at = sc.pos + 1;
+      final second = at < sc.text.length ? sc.text.codeUnitAt(at) : -1;
+      if (second != 0x5b && // [
+          second != 0x28 && // (
+          second != 0x2f && // /
+          second != 0x5c) {
+        // \
+        sc.pos = at;
+        return (FlowNodeShape.rect, sc.readUntil(const [']']).$2);
+      }
+    }
     if (sc.tryConsume('(((')) {
-      return (FlowNodeShape.doubleCircle, sc.readUntil([')))']).$2);
+      return (FlowNodeShape.doubleCircle, sc.readUntil(const [')))']).$2);
     }
     if (sc.tryConsume('((')) {
-      return (FlowNodeShape.circle, sc.readUntil(['))']).$2);
+      return (FlowNodeShape.circle, sc.readUntil(const ['))']).$2);
     }
     if (sc.tryConsume('([')) {
-      return (FlowNodeShape.stadium, sc.readUntil(['])']).$2);
+      return (FlowNodeShape.stadium, sc.readUntil(const ['])']).$2);
     }
     if (sc.tryConsume('(-')) {
-      return (FlowNodeShape.ellipse, sc.readUntil(['-)']).$2);
+      return (FlowNodeShape.ellipse, sc.readUntil(const ['-)']).$2);
     }
     if (sc.tryConsume('(')) {
-      return (FlowNodeShape.rounded, sc.readUntil([')']).$2);
+      return (FlowNodeShape.rounded, sc.readUntil(const [')']).$2);
     }
     if (sc.tryConsume('[[')) {
-      return (FlowNodeShape.subroutine, sc.readUntil([']]']).$2);
+      return (FlowNodeShape.subroutine, sc.readUntil(const [']]']).$2);
     }
     if (sc.tryConsume('[(')) {
-      return (FlowNodeShape.cylinder, sc.readUntil([')]']).$2);
+      return (FlowNodeShape.cylinder, sc.readUntil(const [')]']).$2);
     }
     if (sc.tryConsume('[/')) {
-      final (closer, label) = sc.readUntil(['/]', r'\]']);
+      final (closer, label) = sc.readUntil(const ['/]', r'\]']);
       return (
         closer == '/]' ? FlowNodeShape.leanRight : FlowNodeShape.trapezoid,
         label,
       );
     }
     if (sc.tryConsume(r'[\')) {
-      final (closer, label) = sc.readUntil([r'\]', '/]']);
+      final (closer, label) = sc.readUntil(const [r'\]', '/]']);
       return (
         closer == r'\]' ? FlowNodeShape.leanLeft : FlowNodeShape.invTrapezoid,
         label,
@@ -874,13 +908,13 @@ class _FlowParser {
       return (FlowNodeShape.rect, sc.readUntil(const [']']).$2);
     }
     if (sc.tryConsume('{{')) {
-      return (FlowNodeShape.hexagon, sc.readUntil(['}}']).$2);
+      return (FlowNodeShape.hexagon, sc.readUntil(const ['}}']).$2);
     }
     if (sc.tryConsume('{')) {
-      return (FlowNodeShape.diamond, sc.readUntil(['}']).$2);
+      return (FlowNodeShape.diamond, sc.readUntil(const ['}']).$2);
     }
     if (sc.tryConsume('>')) {
-      return (FlowNodeShape.asymmetric, sc.readUntil([']']).$2);
+      return (FlowNodeShape.asymmetric, sc.readUntil(const [']']).$2);
     }
     return null;
   }
