@@ -614,4 +614,96 @@ flowchart TD
       );
     });
   });
+  group('empty subgraphs', () {
+    // Mermaid draws a subgraph without members as a zero-height rect, title
+    // width + 8 wide, and edges end at it. This crashed with a null check.
+    Rect clusterRect(RenderScene scene, String id) => groupById(scene, id)
+        .children
+        .whereType<SceneShape>()
+        .map((s) => s.geometry)
+        .whereType<RectGeometry>()
+        .single
+        .rect;
+
+    List<Point> edgePoints(RenderScene scene, String id) => [
+      for (final c
+          in groupById(scene, id).children
+              .whereType<SceneShape>()
+              .map((s) => s.geometry)
+              .whereType<PathGeometry>()
+              .single
+              .commands)
+        if (c is! ClosePath) endPointOf(c),
+    ];
+
+    for (final engine in ['dagre', 'elk']) {
+      test('edges to and from one are drawn ($engine)', () {
+        final scene = layout(
+          parseFlowchart('''
+%%{init: {"layout": "$engine"}}%%
+flowchart TD
+  subgraph e[Empty]
+  end
+  A --> e
+  e --> B'''),
+        );
+        final rect = clusterRect(scene, 'e');
+        final into = edgePoints(scene, 'edge_A_e_0');
+        final out = edgePoints(scene, 'edge_e_B_1');
+        // The edges come from above and leave below the cluster.
+        expect(into.first.y, lessThan(rect.top));
+        expect(out.last.y, greaterThan(rect.bottom));
+        expect(groupBounds(groupById(scene, 'A')).bottom, lessThan(rect.top));
+        expect(
+          groupBounds(groupById(scene, 'B')).top,
+          greaterThan(rect.bottom),
+        );
+      });
+    }
+
+    test('is a zero-height rect as wide as its title plus 8', () {
+      final scene = layout(
+        parseFlowchart(
+          'flowchart LR\n  subgraph a\n  end\n  subgraph b\n  end\n  a --> b',
+        ),
+      );
+      for (final id in ['a', 'b']) {
+        final rect = clusterRect(scene, id);
+        final title = groupById(
+          scene,
+          id,
+        ).children.whereType<SceneText>().single;
+        expect(rect.height, 0);
+        expect(rect.width, closeTo(title.bounds.width + 8, 0.001));
+      }
+      expect(
+        clusterRect(scene, 'a').right,
+        lessThan(clusterRect(scene, 'b').left),
+      );
+    });
+
+    test('is enclosed by its parent cluster', () {
+      final scene = layout(
+        parseFlowchart('''
+flowchart TB
+  subgraph outer
+    X
+    subgraph inner
+    end
+  end
+  inner --> X
+  Y --> inner'''),
+      );
+      final outer = clusterRect(scene, 'outer');
+      final inner = clusterRect(scene, 'inner');
+      final innerTitle = groupById(
+        scene,
+        'inner',
+      ).children.whereType<SceneText>().single;
+      expect(outer.top, lessThan(inner.top));
+      expect(outer.bottom, greaterThan(innerTitle.bounds.bottom));
+      expect(outer.left, lessThan(inner.left));
+      expect(outer.right, greaterThan(inner.right));
+    });
+  });
 }

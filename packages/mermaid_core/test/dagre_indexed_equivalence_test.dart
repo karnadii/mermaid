@@ -38,9 +38,6 @@ String _randomFlowchart(math.Random rnd, {int minNodes = 3, int spread = 40}) {
     if (rnd.nextBool()) {
       s.writeln('    direction ${const ['TB', 'LR'][rnd.nextInt(2)]}');
     }
-    // Edges from an empty subgraph crash the flowchart layout (a separate
-    // bug), so every subgraph gets at least one node.
-    s.writeln('    n${rnd.nextInt(n)}');
     for (var i = 0; i < n; i++) {
       if (rnd.nextInt(groups + 3) == 0) s.writeln('    n$i');
     }

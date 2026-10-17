@@ -649,8 +649,9 @@ _Fragment _layoutGraph(
     if (placed.containsKey(id)) return (id, null);
     final sgIndex = subgraphIndexById[id];
     if (sgIndex != null && !removedSubgraphs.contains(sgIndex)) {
-      final rep = representativeOf(sgIndex);
-      if (rep != null) return (rep, id);
+      // An empty subgraph has no member to stand in for it; it is a plain
+      // dagre node itself, so the edge ends there, clipped to its rect.
+      return (representativeOf(sgIndex) ?? id, id);
     }
     return (id, null);
   }
@@ -807,10 +808,30 @@ _Fragment _layoutGraph(
   // nested cluster's title.
   final visibleClusterTops = <String, double>{};
   final visibleClusterBottoms = <String, double>{};
+  // A subgraph without members is a plain zero-size dagre node. Mermaid
+  // draws it as a zero-height rect at that point, title width + 8 wide,
+  // with the title below the line.
+  final emptyClusters = <String>{
+    if (!useElk)
+      for (var i = 0; i < sgs.length; i++)
+        if (!removedSubgraphs.contains(i) &&
+            !placed.values.any((p) => parentOf[p.node.id] == sgs[i].id) &&
+            !Iterable<int>.generate(sgs.length).any(
+              (c) => !removedSubgraphs.contains(c) && sgs[c].parentIndex == i,
+            ))
+          sgs[i].id,
+  };
   if (!useElk) {
+    for (final id in emptyClusters) {
+      final pos = result!.graph.nodeMap[id]?.position;
+      if (pos == null) continue;
+      visibleClusterTops[id] = pos.center.y;
+      visibleClusterBottoms[id] = pos.center.y + clusterTitleSizes[id]!.height;
+    }
     for (var i = sgs.length - 1; i >= 0; i--) {
       if (removedSubgraphs.contains(i)) continue;
       final sg = sgs[i];
+      if (emptyClusters.contains(sg.id)) continue;
       final contentTops = <double>[
         for (final p in placed.values)
           if (parentOf[p.node.id] == sg.id) p.center.y - p.shape.height / 2,
@@ -860,7 +881,14 @@ _Fragment _layoutGraph(
     // For ELK the rect already includes a reserved top band for the title (we
     // passed the title as a node label), so the title sits *inside* the rect.
     // Dagre doesn't reserve it, so the rect is grown upward by the title height.
-    final rect = useElk
+    final rect = emptyClusters.contains(sg.id)
+        ? Rect.fromLTWH(
+            pos.center.x - (titleSize.width + 8) / 2,
+            pos.center.y,
+            titleSize.width + 8,
+            0,
+          )
+        : useElk
         ? Rect.fromLTRB(
             pos.left - _clusterPadding,
             pos.top - _clusterPadding,
