@@ -20,6 +20,8 @@ import 'package:mermaid_core/src/vendor/dagre/src/model/graph_label.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/model/graph_point.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/model/props.dart';
 import 'src/layout.dart' as layer;
+import 'src/indexed_layout.dart';
+import 'src/reference_switch.dart';
 import 'src/graph/graph.dart';
 import 'src/model/enums/acyclicer.dart';
 import 'src/model/enums/align.dart';
@@ -41,6 +43,10 @@ DagreResult layout(DagreGraph inputGraph,
       Props Function(String)? nodeLabelFun,
       Props Function(String, String, String?)? edgeLabelFun,
 }) {
+  if (!useReferenceLayout && nodeLabelFun == null && edgeLabelFun == null) {
+    final result = layoutIndexed(inputGraph, config);
+    if (result != null) return result;
+  }
   Graph layoutGraph = Graph(isCompound: true, isMultiGraph: true);
   nodeLabelFun = nodeLabelFun ?? (String id) => Props();
   layoutGraph.setDefaultNodePropsFun(nodeLabelFun);

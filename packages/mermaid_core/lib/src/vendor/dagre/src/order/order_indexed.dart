@@ -107,7 +107,7 @@ class IndexedOrder {
     for (int i = 0, lastBest = 0; lastBest < 4; ++i, ++lastBest) {
       _sweep((i % 2) != 0 ? down : up, i % 4 >= 2);
       final layering = _layerMatrix(maxRank);
-      final cc = _crossCount(layering);
+      final cc = crossCount(layering);
       if (cc < bestCC) {
         lastBest = 0;
         best = [for (final layer in layering) List<int>.of(layer)];
@@ -366,7 +366,7 @@ class IndexedOrder {
     ];
   }
 
-  int _crossCount(List<List<int>> layering) {
+  int crossCount(List<List<int>> layering) {
     var cc = 0;
     final southPos = List<int>.filled(nodeCount, 0);
     for (var l = 1; l < layering.length; ++l) {
