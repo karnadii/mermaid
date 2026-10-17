@@ -14,6 +14,7 @@ import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/acyclic.dart' as acyclic;
 import 'package:mermaid_core/src/vendor/dagre/src/nesting_graph.dart' as nesting_graph;
 import 'package:mermaid_core/src/vendor/dagre/src/rank/index.dart';
+import 'package:mermaid_core/src/vendor/dagre/src/rank/network_simplex.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/normalize.dart' as normalize;
 import 'package:mermaid_core/src/vendor/dagre/src/coordinate_system.dart' as coordinate_system;
 
@@ -111,7 +112,9 @@ void _runLayout(Graph g, DagreConfig config) {
   _removeSelfEdges(g);
   acyclic.run(g);
   nesting_graph.run(g);
-  rankFun(util.asNonCompoundGraph(g));
+  if (g.label.ranker != Ranker.networkSimplex || !networkSimplexCompound(g)) {
+    rankFun(util.asNonCompoundGraph(g));
+  }
   _injectEdgeLabelProxies(g);
   removeEmptyRanks(g);
   nesting_graph.cleanup(g);

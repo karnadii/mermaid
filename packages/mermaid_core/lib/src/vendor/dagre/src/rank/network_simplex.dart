@@ -7,6 +7,7 @@ import '../reference_switch.dart';
 import '../graph/alg/postorder.dart';
 import '../graph/alg/preorder.dart';
 import '../util.dart' as util;
+import 'dart:math' as math;
 import 'feasible_tree.dart';
 
 part 'network_simplex_indexed.dart';
@@ -20,7 +21,7 @@ void networkSimplex(Graph g) {
   // without a `parent` label instead; when that is not the first node, keep
   // the reference code so the pivots stay the same.
   if (!useReferenceLayout && start != null && g.node(start).get2(parentK) == null) {
-    _IndexedSimplex(g).run();
+    _IndexedSimplex.fromSimplified(g).run();
     return;
   }
   _networkSimplexReference(g);
@@ -227,4 +228,15 @@ bool _isTreeEdge(Graph tree, String u, String v) {
 
 bool _isDescendant(Graph tree, Props vLabel, Props rootLabel) {
   return rootLabel.getD(lowK) <= vLabel.getD(limK) && vLabel.getD(limK) <= rootLabel.getD(limK);
+}
+
+/// Ranks the compound layout graph with the indexed network simplex,
+/// without building the non-compound and simplified copies. Returns false
+/// when the reference path must run instead.
+bool networkSimplexCompound(Graph g) {
+  if (useReferenceLayout) return false;
+  final simplex = _IndexedSimplex.fromCompound(g);
+  if (simplex == null) return false;
+  simplex.run();
+  return true;
 }
