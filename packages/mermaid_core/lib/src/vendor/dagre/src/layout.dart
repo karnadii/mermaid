@@ -363,7 +363,8 @@ void _removeSelfEdges(Graph g) {
   for (var e in g.edges) {
     if (e.v == e.w) {
       var node = g.node(e.v);
-      node.get<List<SelfEdgeData>>(selfEdgesK).add(SelfEdgeData(e, g.edge2(e)));
+      // dagre.js creates the list on first use (`node.selfEdges ??= []`).
+      node.get<List<SelfEdgeData>>(selfEdgesK, <SelfEdgeData>[]).add(SelfEdgeData(e, g.edge2(e)));
       g.removeEdge2(e);
     }
   }

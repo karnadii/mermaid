@@ -1,6 +1,8 @@
 /// Structural tests for the class diagram layout.
 library;
 
+import 'dart:math' as math;
+
 import 'support/scene.dart';
 
 import 'support/fixtures.dart';
@@ -45,6 +47,23 @@ PathGeometry edgePath(SceneGroup edge) => flattenScene(edge.children)
     .first;
 
 void main() {
+  test('self relation renders as a loop outside the class box', () {
+    // dagre crashed on a class self relation: the port read `selfEdges`
+    // without creating it first.
+    final s = layout('C1 --> C1');
+    final box = s.nodeBounds['C1']!;
+    final points = [
+      for (final c in edgePath(relationGroup(s, 'C1', 'C1')).commands)
+        switch (c) {
+          MoveTo(:final p) || LineTo(:final p) || CubicTo(:final p) || QuadTo(:final p) => p,
+          _ => null,
+        },
+    ].nonNulls.toList();
+    expect(points.map((p) => p.x).reduce(math.max), greaterThan(box.right + 10));
+    expect(points.first.x, closeTo(box.right, 1));
+    expect(points.last.x, closeTo(box.right, 1));
+  });
+
   test('box contains name, attributes and methods in order', () {
     final s = layout('class Animal {\n+String name\n+eat() : bool\n}');
     final texts = flattenScene(
