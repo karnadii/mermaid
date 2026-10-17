@@ -9,6 +9,24 @@ import '../../parse_error.dart';
 import '../flowchart/flow_model.dart' show FlowDirection;
 import 'er_model.dart';
 
+// Hoisted so each pattern compiles once instead of on every call.
+final _erHeader = RegExp(r'^erDiagram\b');
+final _directionLine = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$');
+final _accessibilityLine = RegExp(r'^(accTitle|accDescr)\s*[:{]');
+final _titleLine = RegExp(r'^title\s+(.*)$');
+final _classDefLine = RegExp(r'^classDef\s+([\w-]+)\s+(.+)$');
+final _styleLine = RegExp(r'^style\s+([\wÀ-￿-]+)\s+(.+)$');
+final _classAssignLine = RegExp(r'^class\s+([\w,\s-]+?)\s+([\w-]+)\s*$');
+final _entityDecl = RegExp(r'^("([^"]+)"|[\wÀ-￿-]+)\s*(\[([^\]]+)\])?\s*(\{)?\s*$');
+final _relationshipLine = RegExp(
+  r'^("([^"]+)"|[\wÀ-￿-]+)\s*(\S+)\s+("([^"]+)"|[\wÀ-￿-]+)\s*(?::\s*(.*))?$',
+);
+final _relationMiddle = RegExp(r'^(--|\.\.|\.-|-\.)$');
+final _trailingQuoted = RegExp(r'"([^"]*)"\s*$');
+final _whitespaceRun = RegExp(r'\s+');
+final _keyList = RegExp(r'^(PK|FK|UK)(,(PK|FK|UK))*$');
+final _cardTokenChar = RegExp(r'[A-Za-z0-9_(]');
+
 ErDiagram parseErDiagram(String source) {
   final title = frontmatterTitle(source);
   return _ErParser(stripMetadata(source), title).parse();
@@ -53,7 +71,7 @@ class _ErParser {
       if (comment >= 0) line = line.substring(0, comment).trim();
       if (line.isEmpty) continue;
       if (!seenHeader) {
-        if (!RegExp(r'^erDiagram\b').hasMatch(line)) {
+        if (!_erHeader.hasMatch(line)) {
           throw MermaidParseException('expected "erDiagram" header',
               line: i + 1);
         }
@@ -89,7 +107,7 @@ class _ErParser {
 
     Match? m;
 
-    m = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$').firstMatch(line);
+    m = _directionLine.firstMatch(line);
     if (m != null) {
       direction = switch (m.group(1)!) {
         'BT' => FlowDirection.bt,
@@ -100,20 +118,20 @@ class _ErParser {
       return;
     }
 
-    if (RegExp(r'^(accTitle|accDescr)\s*[:{]').hasMatch(line)) return;
-    m = RegExp(r'^title\s+(.*)$').firstMatch(line);
+    if (_accessibilityLine.hasMatch(line)) return;
+    m = _titleLine.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       return;
     }
 
     // Styling directives (erDb.addCssStyles / addClass / setClass).
-    m = RegExp(r'^classDef\s+([\w-]+)\s+(.+)$').firstMatch(line);
+    m = _classDefLine.firstMatch(line);
     if (m != null) {
       classDefs[m.group(1)!] = _splitStyles(m.group(2)!);
       return;
     }
-    m = RegExp(r'^style\s+([\wÀ-￿-]+)\s+(.+)$').firstMatch(line);
+    m = _styleLine.firstMatch(line);
     if (m != null) {
       final id = m.group(1)!;
       final entity = entities[id];
@@ -122,7 +140,7 @@ class _ErParser {
       }
       return;
     }
-    m = RegExp(r'^class\s+([\w,\s-]+?)\s+([\w-]+)\s*$').firstMatch(line);
+    m = _classAssignLine.firstMatch(line);
     if (m != null) {
       final className = m.group(2)!;
       for (final raw in m.group(1)!.split(',')) {
@@ -140,8 +158,7 @@ class _ErParser {
     if (_parseRelationship(line, n)) return;
 
     // Entity declaration: NAME, "QUOTED NAME", alias[Label], with optional `{`.
-    m = RegExp(r'^("([^"]+)"|[\wÀ-￿-]+)\s*(\[([^\]]+)\])?\s*(\{)?\s*$')
-        .firstMatch(line);
+    m = _entityDecl.firstMatch(line);
     if (m != null) {
       final id = m.group(2) ?? m.group(1)!;
       var label = m.group(4)?.trim() ?? id;
@@ -162,9 +179,7 @@ class _ErParser {
   /// `A ||--o{ B : label` plus the word form
   /// `A only one to zero or more B : label`.
   bool _parseRelationship(String line, int n) {
-    var m = RegExp(
-            r'^("([^"]+)"|[\wÀ-￿-]+)\s*(\S+)\s+("([^"]+)"|[\wÀ-￿-]+)\s*(?::\s*(.*))?$')
-        .firstMatch(line);
+    var m = _relationshipLine.firstMatch(line);
     (ErCardinality, bool, ErCardinality)? rel;
     if (m != null) rel = _parseRelToken(m.group(3)!);
     if (rel == null) {
@@ -238,7 +253,7 @@ class _ErParser {
           '..' || '.-' || '-.' => false,
           _ => true,
         };
-        if (!RegExp(r'^(--|\.\.|\.-|-\.)$').hasMatch(mid)) continue;
+        if (!_relationMiddle.hasMatch(mid)) continue;
         return (cardFrom, identifying, cardTo);
       }
     }
@@ -249,19 +264,19 @@ class _ErParser {
   void _parseAttribute(String entityId, String line, int n) {
     var rest = line.trim();
     String? comment;
-    final commentMatch = RegExp(r'"([^"]*)"\s*$').firstMatch(rest);
+    final commentMatch = _trailingQuoted.firstMatch(rest);
     if (commentMatch != null) {
       comment = commentMatch.group(1);
       rest = rest.substring(0, commentMatch.start).trim();
     }
-    final parts = rest.split(RegExp(r'\s+'));
+    final parts = rest.split(_whitespaceRun);
     if (parts.length < 2) {
       throw MermaidParseException(
           'expected "type name" attribute in "$entityId"', line: n);
     }
     final keys = <String>[];
     while (parts.length > 2 &&
-        RegExp(r'^(PK|FK|UK)(,(PK|FK|UK))*$').hasMatch(parts.last)) {
+        _keyList.hasMatch(parts.last)) {
       keys.insertAll(0, parts.removeLast().split(','));
     }
     final type = _convertGenerics(parts.first);
@@ -284,7 +299,7 @@ class _ErParser {
       }
       final next = i + 1 < s.length ? s[i + 1] : '';
       if (next.isNotEmpty && next != '~' &&
-          RegExp(r'[A-Za-z0-9_(]').hasMatch(next)) {
+          _cardTokenChar.hasMatch(next)) {
         out.write('<');
         depth++;
       } else if (depth > 0) {

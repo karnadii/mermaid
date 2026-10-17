@@ -22,6 +22,39 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
+// Hoisted so each pattern compiles once instead of on every call.
+// group id(icon)[Label] [in parent]
+final _archGroupLine = RegExp(
+  r'^group\s+(\w+)\s*(?:\((\w+)\))?\s*(?:\[([^\]]*)\])?\s*(?:in\s+(\w+))?\s*$',
+);
+// service id(("iconText"))[Label] [in group] — blank icon box with centered
+// text (upstream `(("AB"))` form). Checked before the plain icon form.
+final _archServiceIconTextLine = RegExp(
+  r'^service\s+(\w+)\s*\(\(\s*(?:"([^"]*)"|'
+  "'([^']*)'"
+  r'|([^)]*?))\s*\)\)\s*(?:\[([^\]]*)\])?\s*(?:in\s+(\w+))?\s*$',
+);
+// service id(icon)[Label] [in group]
+final _archServiceLine = RegExp(
+  r'^service\s+(\w+)\s*(?:\((\w+)\))?\s*(?:\[([^\]]*)\])?\s*(?:in\s+(\w+))?\s*$',
+);
+final _archJunctionLine = RegExp(r'^junction\s+(\w+)\s*(?:in\s+(\w+))?\s*$');
+// align row|column a b c ... (at least two members)
+final _archAlignLine = RegExp(r'^align\s+(row|column)\s+(\w+(?:\s+\w+)+)\s*$');
+// Edge syntax (mirrors the upstream langium grammar):
+//   lhsId {group}? : Dir  <?  ('--' | '-[label]-')  >?  Dir : rhsId {group}?
+// Examples:
+//   a:R -- L:b      a:R --> L:b       a:R <--> L:b
+//   server{group}:B --> T:subnet{group}
+//   db:R -[uses]- L:server
+final _archEdgeLine = RegExp(
+  r'^(\w+)(\{group\})?:([LRTB])\s*'
+  r'(<?)(?:--|-\[([^\]]*)\]-)(>?)\s*'
+  r'([LRTB]):(\w+)(\{group\})?\s*$',
+);
+final _archHeader = RegExp(r'^architecture(-beta)?\b');
+final _whitespaceRun = RegExp(r'\s+');
+
 class ArchService {
   ArchService(
     this.id,
@@ -118,35 +151,6 @@ ArchitectureDiagram parseArchitecture(String source) {
   final alignments = <ArchAlignment>[];
   var seenHeader = false;
 
-  // group id(icon)[Label] [in parent]
-  final groupRe = RegExp(
-    r'^group\s+(\w+)\s*(?:\((\w+)\))?\s*(?:\[([^\]]*)\])?\s*(?:in\s+(\w+))?\s*$',
-  );
-  // service id(("iconText"))[Label] [in group] — blank icon box with centered
-  // text (upstream `(("AB"))` form). Checked before the plain icon form.
-  final svcIconTextRe = RegExp(
-    r'^service\s+(\w+)\s*\(\(\s*(?:"([^"]*)"|'
-    "'([^']*)'"
-    r'|([^)]*?))\s*\)\)\s*(?:\[([^\]]*)\])?\s*(?:in\s+(\w+))?\s*$',
-  );
-  // service id(icon)[Label] [in group]
-  final svcRe = RegExp(
-    r'^service\s+(\w+)\s*(?:\((\w+)\))?\s*(?:\[([^\]]*)\])?\s*(?:in\s+(\w+))?\s*$',
-  );
-  final junctionRe = RegExp(r'^junction\s+(\w+)\s*(?:in\s+(\w+))?\s*$');
-  // align row|column a b c ... (at least two members)
-  final alignRe = RegExp(r'^align\s+(row|column)\s+(\w+(?:\s+\w+)+)\s*$');
-  // Edge syntax (mirrors the upstream langium grammar):
-  //   lhsId {group}? : Dir  <?  ('--' | '-[label]-')  >?  Dir : rhsId {group}?
-  // Examples:
-  //   a:R -- L:b      a:R --> L:b       a:R <--> L:b
-  //   server{group}:B --> T:subnet{group}
-  //   db:R -[uses]- L:server
-  final edgeRe = RegExp(
-    r'^(\w+)(\{group\})?:([LRTB])\s*'
-    r'(<?)(?:--|-\[([^\]]*)\]-)(>?)\s*'
-    r'([LRTB]):(\w+)(\{group\})?\s*$',
-  );
 
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i].trim();
@@ -154,7 +158,7 @@ ArchitectureDiagram parseArchitecture(String source) {
     if (c >= 0) line = line.substring(0, c).trim();
     if (line.isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^architecture(-beta)?\b').hasMatch(line)) {
+      if (!_archHeader.hasMatch(line)) {
         throw MermaidParseException(
           'expected "architecture" header',
           line: i + 1,
@@ -163,7 +167,7 @@ ArchitectureDiagram parseArchitecture(String source) {
       seenHeader = true;
       continue;
     }
-    var m = groupRe.firstMatch(line);
+    var m = _archGroupLine.firstMatch(line);
     if (m != null) {
       groups.add(
         ArchGroup(
@@ -175,7 +179,7 @@ ArchitectureDiagram parseArchitecture(String source) {
       );
       continue;
     }
-    m = svcIconTextRe.firstMatch(line);
+    m = _archServiceIconTextLine.firstMatch(line);
     if (m != null) {
       final iconText = m.group(2) ?? m.group(3) ?? m.group(4) ?? '';
       services.add(
@@ -190,7 +194,7 @@ ArchitectureDiagram parseArchitecture(String source) {
       );
       continue;
     }
-    m = svcRe.firstMatch(line);
+    m = _archServiceLine.firstMatch(line);
     if (m != null) {
       services.add(
         ArchService(
@@ -203,16 +207,16 @@ ArchitectureDiagram parseArchitecture(String source) {
       );
       continue;
     }
-    m = junctionRe.firstMatch(line);
+    m = _archJunctionLine.firstMatch(line);
     if (m != null) {
       services.add(ArchService(m.group(1)!, null, '', m.group(2), true));
       continue;
     }
-    m = alignRe.firstMatch(line);
+    m = _archAlignLine.firstMatch(line);
     if (m != null) {
       final members = m
           .group(2)!
-          .split(RegExp(r'\s+'))
+          .split(_whitespaceRun)
           .where((s) => s.isNotEmpty)
           .toList();
       if (members.length >= 2) {
@@ -220,7 +224,7 @@ ArchitectureDiagram parseArchitecture(String source) {
       }
       continue;
     }
-    m = edgeRe.firstMatch(line);
+    m = _archEdgeLine.firstMatch(line);
     if (m != null) {
       final arrowFrom = m.group(4) == '<';
       final arrowTo = m.group(6) == '>';

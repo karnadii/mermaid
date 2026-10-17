@@ -22,6 +22,19 @@ import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 import '../flowchart/layout_engines.dart';
 
+// Hoisted so each pattern compiles once instead of on every call.
+final _mindmapHeader = RegExp(r'^\s*mindmap\b');
+final _mindmapClassDef = RegExp(
+  r'^classDef\s+([^\s]+)\s+(.+)$',
+);
+final _iconLine = RegExp(r'^::icon\(\s*(.+?)\s*\)$');
+final _whitespaceRun = RegExp(r'\s+');
+final _htmlBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
+final _nodeShape = RegExp(
+  r'^([\wÀ-￿-]*)\s*'
+  r'(\(\(|\)\)|\(-|\)|\(|\[|\{\{)(.*?)(\)\)|\(\(|-\)|\(|\)|\]|\}\})\s*$',
+);
+
 enum MindmapShape { plain, rect, rounded, circle, bang, cloud, hexagon }
 
 class MindmapNode {
@@ -65,7 +78,7 @@ Mindmap parseMindmap(String source) {
     if (comment >= 0) line = line.substring(0, comment).trimRight();
     if (line.trim().isEmpty) continue;
     if (!seenHeader) {
-      if (!RegExp(r'^\s*mindmap\b').hasMatch(line)) {
+      if (!_mindmapHeader.hasMatch(line)) {
         throw MermaidParseException('expected "mindmap" header', line: i + 1);
       }
       seenHeader = true;
@@ -74,9 +87,7 @@ Mindmap parseMindmap(String source) {
     final indent = line.length - line.trimLeft().length;
     final content = line.trim();
     // `classDef <name[,name...]> prop:val,prop:val` — diagram-level styles.
-    final classDefM = RegExp(
-      r'^classDef\s+([^\s]+)\s+(.+)$',
-    ).firstMatch(content);
+    final classDefM = _mindmapClassDef.firstMatch(content);
     if (classDefM != null) {
       final styles = <String, String>{};
       for (final decl in classDefM.group(2)!.split(',')) {
@@ -91,7 +102,7 @@ Mindmap parseMindmap(String source) {
       continue;
     }
     // Decorations attach to the most-recent node.
-    final iconM = RegExp(r'^::icon\(\s*(.+?)\s*\)$').firstMatch(content);
+    final iconM = _iconLine.firstMatch(content);
     if (iconM != null) {
       if (stack.isNotEmpty) stack.last.$2.icon = iconM.group(1);
       continue;
@@ -99,7 +110,7 @@ Mindmap parseMindmap(String source) {
     if (content.startsWith(':::')) {
       if (stack.isNotEmpty) {
         stack.last.$2.cssClasses.addAll(
-          content.substring(3).trim().split(RegExp(r'\s+')),
+          content.substring(3).trim().split(_whitespaceRun),
         );
       }
       continue;
@@ -146,19 +157,16 @@ Mindmap parseMindmap(String source) {
 String _resolveIconRef(String ref) {
   final trimmed = ref.trim();
   if (trimmed.contains(':')) return trimmed; // already prefix:name
-  final parts = trimmed.split(RegExp(r'\s+'));
+  final parts = trimmed.split(_whitespaceRun);
   if (parts.length < 2) return trimmed;
   return '${parts.first}:${parts.sublist(1).join(' ')}';
 }
 
 (MindmapShape, String) _parseNodeText(String content, int line) {
   String normalize(String s) =>
-      s.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n').trim();
+      s.replaceAll(_htmlBreak, '\n').trim();
   // id((label)) etc — the leading id is optional and unused for layout.
-  final m = RegExp(
-    r'^([\wÀ-￿-]*)\s*'
-    r'(\(\(|\)\)|\(-|\)|\(|\[|\{\{)(.*?)(\)\)|\(\(|-\)|\(|\)|\]|\}\})\s*$',
-  ).firstMatch(content);
+  final m = _nodeShape.firstMatch(content);
   if (m == null) return (MindmapShape.plain, normalize(content));
   final open = m.group(2)!;
   final close = m.group(4)!;

@@ -15,6 +15,10 @@ import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 import 'sequence_model.dart';
 
+// Hoisted so each pattern compiles once instead of on every call.
+final _leadingNumber = RegExp(r'^\s*(\d+(?:\.\d+)?)');
+final _whitespaceRun = RegExp(r'\s+');
+
 /// Layout values resolved from `config.sequence`.
 class SequenceConfig {
   const SequenceConfig({
@@ -139,7 +143,7 @@ class SequenceConfig {
 double? _fontSizeValue(Object? raw) {
   if (raw is num && raw > 0) return raw.toDouble();
   if (raw is String) {
-    final match = RegExp(r'^\s*(\d+(?:\.\d+)?)').firstMatch(raw);
+    final match = _leadingNumber.firstMatch(raw);
     final value = match == null ? null : double.tryParse(match.group(1)!);
     if (value != null && value > 0) return value;
   }
@@ -1213,7 +1217,7 @@ class _SequenceLayout {
     final style = textStyle ?? baseStyle;
     final lines = <String>[];
     for (final hardLine in text.split('\n')) {
-      final words = hardLine.trim().split(RegExp(r'\s+'));
+      final words = hardLine.trim().split(_whitespaceRun);
       var current = '';
       for (final word in words) {
         if (word.isEmpty) continue;

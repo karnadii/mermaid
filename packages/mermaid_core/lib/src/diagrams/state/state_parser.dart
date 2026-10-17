@@ -9,6 +9,22 @@ import '../../parse_error.dart';
 import '../flowchart/flow_model.dart' show FlowDirection;
 import 'state_model.dart';
 
+// Hoisted so each pattern compiles once instead of on every call.
+final _stateHeader = RegExp(r'^stateDiagram(-v2)?\b');
+final _directionLine = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$');
+final _pseudoState = RegExp(r'^state\s+(\S+)\s*(<<(choice|fork|join)>>|\[\[(fork|join)\]\])\s*$');
+final _stateAlias = RegExp(r'^state\s+"([^"]*)"\s+as\s+(\S+?)\s*(\{)?\s*$');
+final _stateDecl = RegExp(r'^state\s+([^\s{]+)\s*(\{)?\s*$');
+final _noteLine = RegExp(r'^[Nn]ote\s+(left|right)\s+of\s+([^\s:]+)\s*(?::\s*(.*))?$');
+final _classDefLine = RegExp(r'^classDef\s+(\S+)\s+(.+)$');
+final _classAssignLine = RegExp(r'^class\s+([\w,\s]+?)\s+(\S+)\s*$');
+final _styleLine = RegExp(r'^style\s+([\w,]+)\s+(.+)$');
+final _ignoredLine = RegExp(r'^(hide empty description|scale\s|click\s|acc(Title|Descr))');
+final _transitionLine = RegExp(r'^(\[\*\]|[^\s-]\S*?)\s*-->\s*(\[\*\]|[^\s:]+)\s*(?::\s*(.*))?$');
+final _stateDescLine = RegExp(r'^([^\s:]+)\s*:\s*(.+)$');
+final _bareStateId = RegExp(r'^[\w.-]+$');
+final _htmlBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
+
 StateDiagram parseStateDiagram(String source) {
   final title = frontmatterTitle(source);
   return _StateParser(stripMetadata(source), title).parse();
@@ -44,7 +60,7 @@ class _StateParser {
       if (comment >= 0) line = line.substring(0, comment).trim();
       if (line.isEmpty) continue;
       if (!seenHeader) {
-        if (!RegExp(r'^stateDiagram(-v2)?\b').hasMatch(line)) {
+        if (!_stateHeader.hasMatch(line)) {
           throw MermaidParseException('expected "stateDiagram" header',
               line: i + 1);
         }
@@ -104,7 +120,7 @@ class _StateParser {
       return;
     }
 
-    m = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$').firstMatch(line);
+    m = _directionLine.firstMatch(line);
     if (m != null) {
       direction = switch (m.group(1)!) {
         'BT' => FlowDirection.bt,
@@ -116,8 +132,7 @@ class _StateParser {
     }
 
     // state <id> <<choice>> / <<fork>> / <<join>>
-    m = RegExp(r'^state\s+(\S+)\s*(<<(choice|fork|join)>>|\[\[(fork|join)\]\])\s*$')
-        .firstMatch(line);
+    m = _pseudoState.firstMatch(line);
     if (m != null) {
       final kind = switch (m.group(3) ?? m.group(4)!) {
         'choice' => StateKind.choice,
@@ -130,7 +145,7 @@ class _StateParser {
     }
 
     // state "description" as id [{]
-    m = RegExp(r'^state\s+"([^"]*)"\s+as\s+(\S+?)\s*(\{)?\s*$').firstMatch(line);
+    m = _stateAlias.firstMatch(line);
     if (m != null) {
       final node = _declare(m.group(2)!);
       states[node.id] = node.copyWith(label: _normalize(m.group(1)!));
@@ -139,7 +154,7 @@ class _StateParser {
     }
 
     // state id [{]
-    m = RegExp(r'^state\s+([^\s{]+)\s*(\{)?\s*$').firstMatch(line);
+    m = _stateDecl.firstMatch(line);
     if (m != null) {
       final node = _declare(m.group(1)!);
       if (m.group(2) != null) _openComposite(node.id);
@@ -147,8 +162,7 @@ class _StateParser {
     }
 
     // note left of X : text  |  note right of X (multiline until `end note`)
-    m = RegExp(r'^[Nn]ote\s+(left|right)\s+of\s+([^\s:]+)\s*(?::\s*(.*))?$')
-        .firstMatch(line);
+    m = _noteLine.firstMatch(line);
     if (m != null) {
       final pos = m.group(1) == 'left'
           ? StateNotePosition.leftOf
@@ -165,7 +179,7 @@ class _StateParser {
       return;
     }
 
-    m = RegExp(r'^classDef\s+(\S+)\s+(.+)$').firstMatch(line);
+    m = _classDefLine.firstMatch(line);
     if (m != null) {
       final styles = _parseStyles(m.group(2)!);
       for (final name in m.group(1)!.split(',')) {
@@ -174,7 +188,7 @@ class _StateParser {
       return;
     }
 
-    m = RegExp(r'^class\s+([\w,\s]+?)\s+(\S+)\s*$').firstMatch(line);
+    m = _classAssignLine.firstMatch(line);
     if (m != null) {
       for (final id in m.group(1)!.split(',')) {
         final node = _ensure(id.trim());
@@ -184,7 +198,7 @@ class _StateParser {
       return;
     }
 
-    m = RegExp(r'^style\s+([\w,]+)\s+(.+)$').firstMatch(line);
+    m = _styleLine.firstMatch(line);
     if (m != null) {
       for (final id in m.group(1)!.split(',')) {
         final node = _ensure(id.trim());
@@ -194,14 +208,12 @@ class _StateParser {
       return;
     }
 
-    if (RegExp(r'^(hide empty description|scale\s|click\s|acc(Title|Descr))')
-        .hasMatch(line)) {
+    if (_ignoredLine.hasMatch(line)) {
       return;
     }
 
     // Transition: A --> B : label
-    m = RegExp(r'^(\[\*\]|[^\s-]\S*?)\s*-->\s*(\[\*\]|[^\s:]+)\s*(?::\s*(.*))?$')
-        .firstMatch(line);
+    m = _transitionLine.firstMatch(line);
     if (m != null) {
       final from = _resolvePseudo(m.group(1)!, isSource: true);
       final to = _resolvePseudo(m.group(2)!, isSource: false);
@@ -214,7 +226,7 @@ class _StateParser {
     }
 
     // `id : description` (appends on repeat, like upstream).
-    m = RegExp(r'^([^\s:]+)\s*:\s*(.+)$').firstMatch(line);
+    m = _stateDescLine.firstMatch(line);
     if (m != null) {
       final node = _declare(m.group(1)!);
       final desc = _normalize(m.group(2)!);
@@ -225,7 +237,7 @@ class _StateParser {
     }
 
     // Bare state mention (word-ish ids only, per upstream ID token).
-    if (RegExp(r'^[\w.-]+$').hasMatch(line)) {
+    if (_bareStateId.hasMatch(line)) {
       _declare(line);
       return;
     }
@@ -350,7 +362,7 @@ class _StateParser {
   }
 
   String _normalize(String s) => s
-      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(_htmlBreak, '\n')
       .trim();
 
   Map<String, String> _parseStyles(String text) {

@@ -10,6 +10,31 @@ import '../../parse_error.dart';
 import '../flowchart/flow_model.dart' show FlowDirection;
 import 'class_model.dart';
 
+// Hoisted so each pattern compiles once instead of on every call.
+final _classHeader = RegExp(r'^classDiagram(-v2)?\b');
+final _annotationLine = RegExp(r'^<<\s*(.+?)\s*>>$');
+final _namespaceOpen = RegExp(r'^namespace\s+([^\s{\[]+)\s*(?:\["([^"]*)"\])?\s*\{$');
+final _classDecl = RegExp(r'^class\s+([^\s{:\[]+)\s*(\["([^"]*)"\])?\s*([^{]*?)\s*(\{)?\s*$');
+final _classCssShorthand = RegExp(r'^class\s+([^\s:]+):::(\S+)\s*$');
+final _directionLine = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$');
+final _annotationFor = RegExp(r'^<<\s*(.+?)\s*>>\s+(\S+)\s*$');
+final _noteForClass = RegExp(r'^note\s+for\s+(\S+)\s+"([^"]*)"\s*$');
+final _noteLine = RegExp(r'^note\s+"([^"]*)"\s*$');
+final _classDefLine = RegExp(r'^classDef\s+(\S+)\s+(.+)$');
+final _cssClassLine = RegExp(r'^cssClass\s+"([^"]*)"\s+(\S+)\s*$');
+final _styleLine = RegExp(r'^style\s+(\S+)\s+(.+)$');
+final _clickLinkLine = RegExp(r'^(click|link)\s+(\S+)\s+(.*)$');
+final _quotedString = RegExp(r'"([^"]*)"');
+final _hrefCallPrefix = RegExp(r'^(href|call)\s+');
+final _callbackPrefix = RegExp(r'^callback\s+');
+final _accessibilityLine = RegExp(r'^acc(Title|Descr)\s*[:{]');
+final _titleLine = RegExp(r'^title\s+(.*)$');
+final _memberLabelLine = RegExp(r'^([^\s:]+)\s*:\s*(.+)$');
+final _annotationText = RegExp(r'^<<.*>>$');
+final _visibilityChar = RegExp(r'[+\-#~]');
+final _identChar = RegExp(r'[A-Za-z0-9_]');
+final _htmlBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
+
 ClassDiagram parseClassDiagram(String source) {
   final title = frontmatterTitle(source);
   return _ClassParser(stripMetadata(source), title).parse();
@@ -46,7 +71,7 @@ class _ClassParser {
       if (comment >= 0) line = line.substring(0, comment).trim();
       if (line.isEmpty) continue;
       if (!seenHeader) {
-        if (!RegExp(r'^classDiagram(-v2)?\b').hasMatch(line)) {
+        if (!_classHeader.hasMatch(line)) {
           throw MermaidParseException('expected "classDiagram" header',
               line: i + 1);
         }
@@ -79,7 +104,7 @@ class _ClassParser {
         _openClass = null;
         return;
       }
-      final annotation = RegExp(r'^<<\s*(.+?)\s*>>$').firstMatch(line);
+      final annotation = _annotationLine.firstMatch(line);
       if (annotation != null) {
         _annotate(_openClass!, annotation.group(1)!);
         return;
@@ -102,15 +127,13 @@ class _ClassParser {
 
     Match? m;
 
-    m = RegExp(r'^namespace\s+([^\s{\[]+)\s*(?:\["([^"]*)"\])?\s*\{$')
-        .firstMatch(line);
+    m = _namespaceOpen.firstMatch(line);
     if (m != null) {
       _namespaceStack.add((m.group(1)!, m.group(2) ?? m.group(1)!, []));
       return;
     }
 
-    m = RegExp(r'^class\s+([^\s{:\[]+)\s*(\["([^"]*)"\])?\s*([^{]*?)\s*(\{)?\s*$')
-        .firstMatch(line);
+    m = _classDecl.firstMatch(line);
     if (m != null && !m.group(4)!.startsWith(':')) {
       final id = _stripGenerics(m.group(1)!);
       final node = _ensure(m.group(1)!);
@@ -129,7 +152,7 @@ class _ClassParser {
     }
 
     // `class X:::cssClass`
-    m = RegExp(r'^class\s+([^\s:]+):::(\S+)\s*$').firstMatch(line);
+    m = _classCssShorthand.firstMatch(line);
     if (m != null) {
       final node = _ensure(m.group(1)!);
       classes[node.id] =
@@ -138,7 +161,7 @@ class _ClassParser {
       return;
     }
 
-    m = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$').firstMatch(line);
+    m = _directionLine.firstMatch(line);
     if (m != null) {
       direction = switch (m.group(1)!) {
         'BT' => FlowDirection.bt,
@@ -149,26 +172,26 @@ class _ClassParser {
       return;
     }
 
-    m = RegExp(r'^<<\s*(.+?)\s*>>\s+(\S+)\s*$').firstMatch(line);
+    m = _annotationFor.firstMatch(line);
     if (m != null) {
       _annotate(_stripGenerics(m.group(2)!), m.group(1)!);
       return;
     }
 
-    m = RegExp(r'^note\s+for\s+(\S+)\s+"([^"]*)"\s*$').firstMatch(line);
+    m = _noteForClass.firstMatch(line);
     if (m != null) {
       notes.add(ClassNote(
           text: _normalize(m.group(2)!),
           forClass: _stripGenerics(m.group(1)!)));
       return;
     }
-    m = RegExp(r'^note\s+"([^"]*)"\s*$').firstMatch(line);
+    m = _noteLine.firstMatch(line);
     if (m != null) {
       notes.add(ClassNote(text: _normalize(m.group(1)!)));
       return;
     }
 
-    m = RegExp(r'^classDef\s+(\S+)\s+(.+)$').firstMatch(line);
+    m = _classDefLine.firstMatch(line);
     if (m != null) {
       final styles = _parseStyles(m.group(2)!);
       for (final name in m.group(1)!.split(',')) {
@@ -177,7 +200,7 @@ class _ClassParser {
       return;
     }
 
-    m = RegExp(r'^cssClass\s+"([^"]*)"\s+(\S+)\s*$').firstMatch(line);
+    m = _cssClassLine.firstMatch(line);
     if (m != null) {
       for (final id in m.group(1)!.split(',')) {
         final node = _ensure(id.trim());
@@ -187,7 +210,7 @@ class _ClassParser {
       return;
     }
 
-    m = RegExp(r'^style\s+(\S+)\s+(.+)$').firstMatch(line);
+    m = _styleLine.firstMatch(line);
     if (m != null) {
       final node = _ensure(m.group(1)!);
       classes[node.id] = node.copyWith(
@@ -196,21 +219,21 @@ class _ClassParser {
     }
 
     // click/link/callback: keep the URL when present, otherwise discard.
-    m = RegExp(r'^(click|link)\s+(\S+)\s+(.*)$').firstMatch(line);
+    m = _clickLinkLine.firstMatch(line);
     if (m != null) {
       final node = _ensure(m.group(2)!);
-      final url = RegExp(r'"([^"]*)"').firstMatch(
-          m.group(3)!.replaceFirst(RegExp(r'^(href|call)\s+'), ''));
+      final url = _quotedString.firstMatch(
+          m.group(3)!.replaceFirst(_hrefCallPrefix, ''));
       if (url != null && m.group(3)!.contains('href') ||
           m.group(1) == 'link') {
         classes[node.id] = node.copyWith(link: url?.group(1));
       }
       return;
     }
-    if (RegExp(r'^callback\s+').hasMatch(line)) return;
-    if (RegExp(r'^acc(Title|Descr)\s*[:{]').hasMatch(line)) return;
+    if (_callbackPrefix.hasMatch(line)) return;
+    if (_accessibilityLine.hasMatch(line)) return;
 
-    m = RegExp(r'^title\s+(.*)$').firstMatch(line);
+    m = _titleLine.firstMatch(line);
     if (m != null) {
       title = m.group(1)!.trim();
       return;
@@ -219,7 +242,7 @@ class _ClassParser {
     if (_parseRelation(line, n)) return;
 
     // `X : +member` colon syntax.
-    m = RegExp(r'^([^\s:]+)\s*:\s*(.+)$').firstMatch(line);
+    m = _memberLabelLine.firstMatch(line);
     if (m != null) {
       _addMember(_stripGenerics(m.group(1)!), m.group(2)!);
       if (_namespaceStack.isNotEmpty) {
@@ -284,7 +307,7 @@ class _ClassParser {
     final id = _stripGenerics(rawId);
     final node = _ensure(rawId);
     var text = raw.trim();
-    if (RegExp(r'^<<.*>>$').hasMatch(text)) {
+    if (_annotationText.hasMatch(text)) {
       _annotate(id, text.substring(2, text.length - 2).trim());
       return;
     }
@@ -301,7 +324,7 @@ class _ClassParser {
     // package-visibility marker is not mistaken for a generic bracket.
     var visibility = '';
     var body = text.trim();
-    if (body.isNotEmpty && RegExp(r'[+\-#~]').hasMatch(body[0])) {
+    if (body.isNotEmpty && _visibilityChar.hasMatch(body[0])) {
       visibility = body[0];
       body = body.substring(1);
     }
@@ -361,7 +384,7 @@ class _ClassParser {
       }
       final next = i + 1 < s.length ? s[i + 1] : '';
       final opens = depth == 0 ||
-          RegExp(r'[A-Za-z0-9_]').hasMatch(next);
+          _identChar.hasMatch(next);
       if (opens && next != '~' && next.isNotEmpty) {
         out.write('<');
         depth++;
@@ -376,7 +399,7 @@ class _ClassParser {
   }
 
   String _normalize(String s) => s
-      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(_htmlBreak, '\n')
       .trim();
 
   Map<String, String> _parseStyles(String text) {
