@@ -11,8 +11,22 @@ import '../ir/scene.dart';
 
 /// Converts an SVG path data string to [PathCommand]s. Returns an empty list
 /// if [d] is null/blank or fails to parse.
+///
+/// The same path strings (KaTeX glyph outlines, icon bodies) come back on
+/// every render, so results are cached. The returned list is unmodifiable.
 List<PathCommand> parseSvgPath(String? d) {
-  if (d == null || d.trim().isEmpty) return const [];
+  if (d == null) return const [];
+  final cached = _cache[d];
+  if (cached != null) return cached;
+  if (_cache.length >= _cacheLimit) _cache.clear();
+  return _cache[d] = List.unmodifiable(_parse(d));
+}
+
+const _cacheLimit = 4096;
+final _cache = <String, List<PathCommand>>{};
+
+List<PathCommand> _parse(String d) {
+  if (d.trim().isEmpty) return const [];
   final proxy = _CommandProxy();
   try {
     writeSvgPathDataToPath(d, proxy);
