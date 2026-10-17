@@ -36,15 +36,22 @@ class IndexedBk {
   final List<List<int>> succs;
 
   /// Conflicting (u, v) pairs, stored as `min * n + max`.
-  final Set<int> conflicts = {};
+  late final List<List<int>?> _conflicts = List.filled(n, null);
 
   int get n => order.length;
 
-  void _addConflict(int u, int v) =>
-      conflicts.add(u < v ? u * n + v : v * n + u);
+  /// Conflicts as an unordered pair set: each pair is kept once, under its
+  /// smaller node.
+  void _addConflict(int u, int v) {
+    final a = u < v ? u : v, b = u < v ? v : u;
+    final list = _conflicts[a] ??= [];
+    if (!list.contains(b)) list.add(b);
+  }
 
-  bool _hasConflict(int u, int v) =>
-      conflicts.contains(u < v ? u * n + v : v * n + u);
+  bool _hasConflict(int u, int v) {
+    final a = u < v ? u : v, b = u < v ? v : u;
+    return _conflicts[a]?.contains(b) ?? false;
+  }
 
   void _findType1Conflicts() {
     for (var l = 1; l < layers.length; l++) {
@@ -212,6 +219,7 @@ class IndexedBk {
     final edgeFrom = <int>[], edgeTo = <int>[];
     final edgeSep = <double>[];
     final edgeOf = <int, int>{};
+    final lastOut = Int32List(n)..fillRange(0, n, -1);
     for (final layer in layering) {
       var u = -1;
       for (final v in layer) {
@@ -223,9 +231,13 @@ class IndexedBk {
         if (u >= 0) {
           final uRoot = root[u];
           final s = _sep(v, u, reverseSep, label.nodeSep, label.edgeSep);
+          // Blocks next to each other in one layer usually are in the next
+          // layer too, so try uRoot's latest block edge before the map.
+          final last = lastOut[uRoot];
           final key = uRoot * n + vRoot;
-          final e = edgeOf[key];
+          final e = last >= 0 && edgeTo[last] == vRoot ? last : edgeOf[key];
           if (e == null) {
+            lastOut[uRoot] = edgeSep.length;
             edgeOf[key] = edgeSep.length;
             edgeFrom.add(uRoot);
             edgeTo.add(vRoot);
