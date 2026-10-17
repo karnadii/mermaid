@@ -1,6 +1,5 @@
 // ignore_for_file: strict_top_level_inference
 import 'package:mermaid_core/src/vendor/dagre/src/model/props.dart';
-import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 
 import '../model/graph_label.dart';
 
@@ -8,6 +7,33 @@ import '../model/graph_label.dart';
 /// the original `v + "\x01" + w + "\x01" + name` key built and hashed a new
 /// string on every edge lookup.
 typedef EdgeKey = (String, String, String);
+
+/// Everything the graph keeps for one node, so one lookup by id reaches the
+/// label and the adjacency. Each map keeps insertion order, which the layout
+/// depends on, exactly as the separate per-node maps of graphlib did.
+class _Node {
+  _Node(this.label);
+
+  Props? label;
+  final Map<EdgeKey, Edge> inEdges = {};
+  final Map<EdgeKey, Edge> outEdges = {};
+
+  /// Predecessor/successor id -> number of parallel edges.
+  final Map<String, int> preds = {};
+  final Map<String, int> sucs = {};
+}
+
+/// An edge and its label. [Edge._entry] points back here, so [Graph.edge2]
+/// on an edge object taken from this graph needs no lookup.
+class _EdgeEntry {
+  _EdgeEntry(this.graph, this.key, this.edge, this.label);
+
+  final Graph graph;
+  final EdgeKey key;
+  final Edge edge;
+  Props? label;
+  bool removed = false;
+}
 
 class Graph {
   static const String _defaultEdgeId = "\x00";
@@ -27,34 +53,14 @@ class Graph {
     _label = newLabel;
   }
 
-  //v->label
-  final Map<String, Props?> _nodes = {};
+  final Map<String, _Node> _nodes = {};
 
-  // v-> edgeObj
-  final Map<String, Map<EdgeKey, Edge>> _in = {};
+  final Map<EdgeKey, _EdgeEntry> _edges = {};
 
-  // u -> v -> Number
-  final Map<String, Map<String, int>> _preds = {};
-
-  // v -> edgeObj
-  final Map<String, Map<EdgeKey, Edge>> _out = {};
-
-  // v -> w -> Number
-  final Map<String, Map<String, int>> _sucs = {};
-
-  // edgeId -> EdgeObj
-  final Map<EdgeKey, Edge> _edgeObjs = {};
-
-  // edgeId -> EdgeValue
-  final Map<EdgeKey, Props?> _edgeLabels = {};
-
-  // nodeId -> edgeObj
+  // nodeId -> parent id
   Map<String, String> _parent = {};
 
   Map<String, Map<String, bool>> _children = {};
-
-  int _nodeCount = 0;
-  int _edgeCount = 0;
 
   Props? Function(String)? _defaultNodeLabelFun;
 
@@ -94,42 +100,38 @@ class Graph {
     return this;
   }
 
-  int get nodeCount => _nodeCount;
+  int get nodeCount => _nodes.length;
 
   List<String> get nodes => _nodes.keys.toList();
 
   Iterable<String> get nodesIterable => _nodes.keys;
 
-  List<String> get sources {
-    return nodes.filter((v) {
-      var t = _in[v];
-      return t == null || t.isEmpty;
-    });
-  }
+  List<String> get sources => [
+        for (final e in _nodes.entries)
+          if (e.value.inEdges.isEmpty) e.key,
+      ];
 
-  List<String> get sinks {
-    return nodes.filter((v) {
-      var vv=_out[v];
-      return vv==null||vv.isEmpty;
-    });
-  }
+  List<String> get sinks => [
+        for (final e in _nodes.entries)
+          if (e.value.outEdges.isEmpty) e.key,
+      ];
 
   Graph setNodes(List<String> vs, [Props? value]) {
-    var self = this;
-    vs.each((v, i) {
-      self.setNode(v, value);
-    });
+    for (var v in vs) {
+      setNode(v, value);
+    }
     return this;
   }
 
   Graph setNode(String v, [Props? value]) {
-    if (_nodes.containsKey(v)) {
+    var node = _nodes[v];
+    if (node != null) {
       if (value != null) {
-        _nodes[v] = value;
+        node.label = value;
       }
       return this;
     }
-    _nodes[v] = value ?? _defaultNodeLabelFun?.call(v);
+    _nodes[v] = _Node(value ?? _defaultNodeLabelFun?.call(v));
     if (isCompound) {
       _parent[v] = _graphNodeId;
       _children[v] = {};
@@ -137,20 +139,15 @@ class Graph {
       _children[_graphNodeId] = m;
       m[v] = true;
     }
-    _in[v] = {};
-    _preds[v] = {};
-    _out[v] = {};
-    _sucs[v] = {};
-    ++_nodeCount;
     return this;
   }
 
   Props node(String nodeId) {
-    return _nodes[nodeId]!;
+    return _nodes[nodeId]!.label!;
   }
 
   Props? nodeNull(String nodeId) {
-    return _nodes[nodeId];
+    return _nodes[nodeId]?.label;
   }
 
   Graph setParent(String id, [String? parent]) {
@@ -194,19 +191,11 @@ class Graph {
   }
 
   List<String>? predecessors(String v) {
-    var predsV = _preds[v];
-    if (predsV != null) {
-      return predsV.keys.toList();
-    }
-    return null;
+    return _nodes[v]?.preds.keys.toList();
   }
 
   List<String>? successors(String v) {
-    var sucsV = _sucs[v];
-    if (sucsV != null) {
-      return sucsV.keys.toList();
-    }
-    return null;
+    return _nodes[v]?.sucs.keys.toList();
   }
 
   bool isLeaf(v) {
@@ -229,33 +218,35 @@ class Graph {
   }
 
   Props? edgeNull(String v, String w, [String? name]) {
-    var e = edgeArgsToId(isDirected, v, w, name);
-    return _edgeLabels[e];
+    return _edges[edgeArgsToId(isDirected, v, w, name)]?.label;
   }
 
+  // Like graphlib's edge(obj): throws when the edge is not in the graph.
   Props? edge2Null(Edge obj) {
+    final entry = obj._entry;
+    if (entry != null && identical(entry.graph, this) && !entry.removed) {
+      return entry.label!;
+    }
     return edge(obj.v, obj.w, obj.id);
   }
 
-  int get edgeCount => _edgeCount;
+  int get edgeCount => _edges.length;
 
   ///返回所有的EdgeObj对象
   List<Edge> get edges {
-    return _edgeObjs.values.toList();
+    return [for (final e in _edges.values) e.edge];
   }
 
   Iterable<Edge> get edgesIterable {
-    return _edgeObjs.values;
+    return _edges.values.map((e) => e.edge);
   }
 
   bool hasEdge(Edge edge) {
-    var e = edgeObjToId(isDirected, edge);
-    return _edgeObjs[e] != null;
+    return _edges.containsKey(edgeObjToId(isDirected, edge));
   }
 
   bool hasEdge2(String v, String w, [String? id]) {
-    var e = edgeArgsToId(isDirected, v, w, id);
-    return _edgeObjs[e] != null;
+    return _edges.containsKey(edgeArgsToId(isDirected, v, w, id));
   }
 
   // Vendored fix: graphlib's inEdges returns undefined only when the node
@@ -266,48 +257,51 @@ class Graph {
   // feasibleTree's tightTree could never expand through the nesting root —
   // an infinite loop on graphs with multiple disconnected components.
   List<Edge>? inEdges(String v, [String? u]) {
-    var inV = _in[v];
-    if (inV != null) {
-      List<Edge> edges = inV.values.toList();
-      if (u == null) {
-        return edges;
-      }
-      return edges.filter((edge) {
-        return edge.v == u;
-      });
+    var node = _nodes[v];
+    if (node == null) {
+      return null;
     }
-    return null;
+    if (u == null) {
+      return node.inEdges.values.toList();
+    }
+    return [
+      for (final edge in node.inEdges.values)
+        if (edge.v == u) edge,
+    ];
   }
 
   List<Edge>? outEdges(String v, [String? w]) {
-    var outV = _out[v];
-    if (outV != null) {
-      List<Edge> edges = outV.values.toList();
-      if (w == null) {
-        return edges;
-      }
-      return edges.filter((edge) {
-        return edge.w == w;
-      });
+    var node = _nodes[v];
+    if (node == null) {
+      return null;
     }
-    return null;
+    if (w == null) {
+      return node.outEdges.values.toList();
+    }
+    return [
+      for (final edge in node.outEdges.values)
+        if (edge.w == w) edge,
+    ];
   }
 
   Graph removeEdge(String v, String w, [String? name]) {
-    var e = edgeArgsToId(isDirected, v, w, name);
-    var edge = _edgeObjs[e];
-    if (edge != null) {
-      v = edge.v;
-      w = edge.w;
-      _edgeLabels.remove(e);
-      _edgeObjs.remove(e);
-      decrementOrRemoveEntry(_preds[w], v);
-      decrementOrRemoveEntry(_sucs[v], w);
-      _in[w]?.remove(e);
-      _out[v]?.remove(e);
-      _edgeCount--;
+    var entry = _edges.remove(edgeArgsToId(isDirected, v, w, name));
+    if (entry != null) {
+      _detachEdge(entry);
     }
     return this;
+  }
+
+  void _detachEdge(_EdgeEntry entry) {
+    entry.removed = true;
+    var v = entry.edge.v;
+    var w = entry.edge.w;
+    var nodeV = _nodes[v];
+    var nodeW = _nodes[w];
+    decrementOrRemoveEntry(nodeW?.preds, v);
+    decrementOrRemoveEntry(nodeV?.sucs, w);
+    nodeW?.inEdges.remove(entry.key);
+    nodeV?.outEdges.remove(entry.key);
   }
 
   Graph removeEdge2(Edge? v) {
@@ -327,9 +321,10 @@ class Graph {
 
   Graph _setEdgeInner(String v, String w, String? name, Props? value) {
     var e = edgeArgsToId(isDirected, v, w, name);
-    if (_edgeLabels.containsKey(e)) {
+    var existing = _edges[e];
+    if (existing != null) {
       if (value != null) {
-        _edgeLabels[e] = value;
+        existing.label = value;
       }
       return this;
     }
@@ -339,22 +334,19 @@ class Graph {
 
     setNode(v);
     setNode(w);
-    _edgeLabels[e] = value ?? _defaultEdgeLabelFun?.call(v, w, name);
+    var label = value ?? _defaultEdgeLabelFun?.call(v, w, name);
     var edgeObj = edgeArgsToObj(isDirected, v, w, name);
     v = edgeObj.v;
     w = edgeObj.w;
-    _edgeObjs[e] = edgeObj;
-    incrementOrInitEntry(_preds[w]!, v);
-    incrementOrInitEntry(_sucs[v]!, w);
-
-    var map = _in[w] ?? {};
-    _in[w] = map;
-    map[e] = edgeObj;
-
-    map = _out[v] ?? {};
-    _out[v] = map;
-    map[e] = edgeObj;
-    _edgeCount++;
+    var entry = _EdgeEntry(this, e, edgeObj, label);
+    edgeObj._entry = entry;
+    _edges[e] = entry;
+    var nodeV = _nodes[v]!;
+    var nodeW = _nodes[w]!;
+    incrementOrInitEntry(nodeW.preds, v);
+    incrementOrInitEntry(nodeV.sucs, w);
+    nodeW.inEdges[e] = edgeObj;
+    nodeV.outEdges[e] = edgeObj;
     return this;
   }
 
@@ -377,20 +369,18 @@ class Graph {
   }
 
   List<String>? neighbors(String v) {
-    var preds = predecessors(v);
-    if (preds != null) {
-      Set<String> ds = Set.from(preds);
-      successors(v)?.forEach((e) {
-        ds.add(e);
-      });
-      return ds.toList();
+    var node = _nodes[v];
+    if (node == null) {
+      return null;
     }
-    return null;
+    Set<String> ds = Set.of(node.preds.keys);
+    ds.addAll(node.sucs.keys);
+    return ds.toList();
   }
 
   Graph removeNode(String v) {
-    if (_nodes.containsKey(v)) {
-      _nodes.remove(v);
+    var node = _nodes[v];
+    if (node != null) {
       if (isCompound) {
         _removeFromParentsChildList(v);
         _parent.remove(v);
@@ -399,21 +389,15 @@ class Graph {
         });
         _children.remove(v);
       }
-
-      List<EdgeKey> kl = (_in[v]?.keys.toList() ?? <EdgeKey>[]);
-      for (var e in kl) {
-        removeEdge2(_edgeObjs[e]);
+      for (var e in node.inEdges.keys.toList()) {
+        var entry = _edges.remove(e);
+        if (entry != null) _detachEdge(entry);
       }
-      _in.remove(v);
-      _preds.remove(v);
-
-      kl = (_out[v]?.keys.toList() ?? <EdgeKey>[]);
-      for (var e in kl) {
-        removeEdge2(_edgeObjs[e]);
+      for (var e in node.outEdges.keys.toList()) {
+        var entry = _edges.remove(e);
+        if (entry != null) _detachEdge(entry);
       }
-      _out.remove(v);
-      _sucs.remove(v);
-      --_nodeCount;
+      _nodes.remove(v);
     }
     return this;
   }
@@ -424,15 +408,16 @@ class Graph {
 
     _nodes.forEach((v, value) {
       if (filter(v)) {
-        copy.setNode(v, value);
+        copy.setNode(v, value.label);
       }
     });
 
-    _edgeObjs.forEach((s, e) {
+    for (var entry in _edges.values) {
+      var e = entry.edge;
       if (copy.hasNode(e.v) && copy.hasNode(e.w)) {
-        copy.setEdge(e, edge(e.v, e.w, e.id));
+        copy.setEdge(e, entry.label!);
       }
-    });
+    }
 
     Map<String, String?> parents = {};
     findParent(v) {
@@ -532,7 +517,10 @@ class Edge {
   final String w;
   final String? id;
 
-  const Edge({required this.v, required this.w, this.id});
+  /// Set on the edge object a graph stores, see [_EdgeEntry].
+  _EdgeEntry? _entry;
+
+  Edge({required this.v, required this.w, this.id});
 
   @override
   String toString() {
