@@ -1,4 +1,4 @@
-// Bridges between the Jaspr page, mermaid.js (CDN) and the embedded
+// Bridges between the Jaspr page, mermaid.js and Pele (CDN) and the embedded
 // Flutter build of mermaid dart.
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 
@@ -23,6 +23,15 @@ try {
   console.warn('mermaid.js ELK layout loader unavailable:', e);
 }
 
+// Pele (https://pele.run), a lightweight Mermaid-to-SVG renderer, as a third
+// reference, pinned to an exact version. Not awaited here: the bridge
+// functions below must exist before the page first renders. A failed import
+// leaves the other panes working.
+const pele = import('https://cdn.jsdelivr.net/npm/pele@1.6.0/dist/pele.js').catch((e) => {
+  console.warn('Pele unavailable:', e);
+  return null;
+});
+
 let seq = 0;
 
 window.renderMermaidJs = async (el, source) => {
@@ -33,6 +42,24 @@ window.renderMermaidJs = async (el, source) => {
     el.innerHTML = `<pre style="color:#b00020;white-space:pre-wrap">${String(e)}</pre>`;
     // mermaid.render leaves a dangling error element behind on failure.
     document.getElementById(`dmmdjs${seq}`)?.remove();
+  }
+};
+
+let peleSeq = 0;
+
+window.renderPele = async (el, source) => {
+  const seq = ++peleSeq;
+  const lib = await pele;
+  // A newer edit may have rendered while the import was pending.
+  if (seq !== peleSeq) return;
+  if (!lib) {
+    el.innerHTML = '<pre style="color:#b00020">Pele failed to load.</pre>';
+    return;
+  }
+  try {
+    el.innerHTML = lib.render(source).svg;
+  } catch (e) {
+    el.innerHTML = `<pre style="color:#b00020;white-space:pre-wrap">${String(e)}</pre>`;
   }
 };
 
@@ -75,3 +102,8 @@ window.mermaidDartToggleFullscreen = () => {
     }
   }
 };
+
+// The bridge functions exist from here on. The page may render before this
+// module has finished loading its imports, so it waits for this signal.
+window.__mermaidBridgeReady = true;
+window.dispatchEvent(new Event('mermaid-bridge-ready'));

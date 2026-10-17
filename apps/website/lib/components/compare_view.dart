@@ -1,5 +1,6 @@
 /// Interactive comparison: the selected sample is rendered by mermaid.js
-/// (left) and by the embedded Flutter build of mermaid dart (right).
+/// (left), by Pele (middle) and by the embedded Flutter build of mermaid
+/// dart (right).
 ///
 /// The Flutter side is mounted by `jaspr_flutter_embed`'s [FlutterEmbedView]
 /// (so `jaspr build` produces the Flutter web build — no separate step). Live
@@ -25,6 +26,16 @@ import 'compare_view.imports.dart';
 // Bridge functions defined in web/embed_bridge.js.
 @JS('renderMermaidJs')
 external void _renderMermaidJs(web.HTMLElement el, JSString source);
+
+@JS('renderPele')
+external void _renderPele(web.HTMLElement el, JSString source);
+
+// Set by web/embed_bridge.js once the functions above exist; it then also
+// fires a `mermaid-bridge-ready` event on window.
+@JS('__mermaidBridgeReady')
+external JSBoolean? get _bridgeReady;
+
+bool get _bridgeIsReady => _bridgeReady?.toDart ?? false;
 
 // Sets window.__mermaidDartInitialSource and calls the embed's render bridge
 // (a no-op until the Flutter view has booted and published it).
@@ -70,6 +81,7 @@ class _CompareViewState extends State<CompareView> {
   String _source = samples[0].source.trim();
   Timer? _debounce;
   final _jsPane = GlobalNodeKey<web.HTMLElement>();
+  final _pelePane = GlobalNodeKey<web.HTMLElement>();
   final _editor = GlobalNodeKey<web.HTMLTextAreaElement>();
 
   Sample get _sample => samples[_selected];
@@ -81,7 +93,14 @@ class _CompareViewState extends State<CompareView> {
   void initState() {
     super.initState();
     if (kIsWeb) {
-      Future.delayed(Duration.zero, _sync);
+      if (_bridgeIsReady) {
+        Future.delayed(Duration.zero, _sync);
+      } else {
+        web.window.addEventListener(
+          'mermaid-bridge-ready',
+          ((web.Event _) => _sync()).toJS,
+        );
+      }
     }
   }
 
@@ -200,10 +219,16 @@ class _CompareViewState extends State<CompareView> {
   }
 
   void _sync() {
+    // Until the bridge module has loaded, the ready event calls this again.
+    if (!_bridgeIsReady) return;
     final src = _source;
     final jsPane = _jsPane.currentNode;
     if (jsPane != null) {
       _renderMermaidJs(jsPane, src.toJS);
+    }
+    final pelePane = _pelePane.currentNode;
+    if (pelePane != null) {
+      _renderPele(pelePane, src.toJS);
     }
     // Sets the initial-source global (read by the embed at boot) and pushes
     // the update to the running Flutter view if it has booted.
@@ -277,6 +302,12 @@ class _CompareViewState extends State<CompareView> {
           div(classes: 'pane-title', [.text('mermaid.js (browser)')]),
           div(key: _jsPane, classes: 'pane-body', id: 'pane-mermaid-js', [
             .text('Loading mermaid.js…'),
+          ]),
+        ]),
+        div(classes: 'pane', [
+          div(classes: 'pane-title', [.text('Pele (browser)')]),
+          div(key: _pelePane, classes: 'pane-body', id: 'pane-pele', [
+            .text('Loading Pele…'),
           ]),
         ]),
         div(classes: 'pane', [

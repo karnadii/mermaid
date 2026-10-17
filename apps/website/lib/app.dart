@@ -242,11 +242,13 @@ class App extends StatelessComponent {
         ),
         css('.panes').styles(
           display: .grid,
-          gridTemplate: GridTemplate(columns: GridTracks([GridTrack(.fr(1)), GridTrack(.fr(1))])),
+          gridTemplate: GridTemplate(
+            columns: GridTracks([GridTrack(.fr(1)), GridTrack(.fr(1)), GridTrack(.fr(1))]),
+          ),
           gap: .all(16.px),
           margin: .only(top: 8.px),
         ),
-        css.media(MediaQuery.screen(maxWidth: 900.px), [
+        css.media(MediaQuery.screen(maxWidth: 1100.px), [
           css('.panes').styles(
             gridTemplate: GridTemplate(columns: GridTracks([GridTrack(.fr(1))])),
           ),
