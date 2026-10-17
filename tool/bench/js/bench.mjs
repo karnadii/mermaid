@@ -4,9 +4,13 @@
 // 300 ms budget (5..2000 samples) and report the median.
 //
 //   node bench.mjs <corpus.json> <dart_bench.js> [--filter text] [--skip-mermaid]
+//   node bench.mjs <corpus.json> <dart_bench.js> --verify <golden dir>
 //
 // Writes JSON results to stdout: { node: { pele: [...] }, browser: { ... } }.
-import { readFileSync } from 'node:fs';
+// --verify instead renders every case with the dart2js build in Chromium and
+// compares the SVG with a snapshot from `bin/bench.dart --snapshot`, so the
+// web build is held to the same output as the native one.
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
 import { render as peleRender } from 'pele';
@@ -58,6 +62,37 @@ async function time(fn, inputs) {
 }
 
 const log = (...a) => console.error(...a);
+
+const verifyAt = process.argv.indexOf('--verify');
+if (verifyAt > 0) {
+  const dir = process.argv[verifyAt + 1];
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await page.setContent('<!doctype html><html><body></body></html>');
+  await page.addScriptTag({ path: dartJsPath });
+  await page.waitForFunction(() => typeof window.mermaidDartRender === 'function');
+  let changed = 0;
+  for (const c of corpus) {
+    const file = `${dir}/${c.name.replace(/[^a-zA-Z0-9]+/g, '_')}.svg`;
+    const svgs = await page.evaluate((inputs) => inputs.map((s) => {
+      try {
+        return window.mermaidDartRender(s);
+      } catch (e) {
+        return null;
+      }
+    }), c.inputs);
+    const expected = existsSync(file) ? readFileSync(file, 'utf8').split('\n') : [];
+    // Errors print differently on the web; compare the rendered ones.
+    const same = svgs.every((svg, i) => svg === null ? expected[i]?.startsWith('error:') : svg === expected[i]);
+    if (!same) {
+      changed++;
+      log(`changed on the web: ${c.name}`);
+    }
+  }
+  await browser.close();
+  log(changed === 0 ? `all ${corpus.length} cases identical on the web` : `${changed} of ${corpus.length} cases changed on the web`);
+  process.exit(changed === 0 ? 0 : 1);
+}
 const results = { node: { pele: [] }, browser: {} };
 
 log('# Node: pele');
