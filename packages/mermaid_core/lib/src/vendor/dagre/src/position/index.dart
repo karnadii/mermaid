@@ -3,8 +3,12 @@ import '../graph/graph.dart';
 import '../util.dart' as util;
 import '../util/list_util.dart';
 import 'bk.dart';
+import '../reference_switch.dart';
 
 void position(Graph g2) {
+  if (!useReferenceLayout && positionIndexed(g2)) {
+    return;
+  }
   Graph g = util.asNonCompoundGraph(g2);
   positionY(g);
   Map<String,double> list = positionX(g);

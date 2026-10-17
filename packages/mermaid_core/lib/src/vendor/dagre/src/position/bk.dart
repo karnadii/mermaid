@@ -5,6 +5,7 @@ import 'package:mermaid_core/src/vendor/dagre/src/model/enums/label_pos.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 
 import '../graph/graph.dart';
+import '../model/graph_label.dart';
 import '../reference_switch.dart';
 import '../model/props.dart';
 import '../util/util.dart';
@@ -328,7 +329,7 @@ Map<String, double> _balance(Map<GraphAlign, Map<String, double>> xss, GraphAlig
 
 Map<String, double> positionX(Graph g) {
   if (!useReferenceLayout) {
-    return _IndexedBk(g, util.buildLayerMatrix(g)).run();
+    return _IndexedBk.fromGraph(g, util.buildLayerMatrix(g)).run();
   }
   return _positionXReference(g);
 }
