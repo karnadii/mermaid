@@ -24,8 +24,23 @@ final _mathRe = RegExp(r'\$\$(.*?)\$\$', dotAll: true);
 
 final _wholeMathRe = RegExp(r'^\$\$(.*)\$\$$', dotAll: true);
 
-/// Whether [text] contains a `$$...$$` math span.
-bool hasMath(String text) => _mathRe.hasMatch(text);
+/// Whether [text] contains a `$$...$$` math span: a `$$` followed by
+/// another `$$` that does not overlap it (what [_mathRe] matches). Most
+/// labels have no `$`, so this scans code units instead of running the
+/// pattern.
+bool hasMath(String text) {
+  final open = _indexOfDoubleDollar(text, 0);
+  return open >= 0 && _indexOfDoubleDollar(text, open + 2) >= 0;
+}
+
+int _indexOfDoubleDollar(String text, int start) {
+  for (var i = start; i < text.length - 1; i++) {
+    if (text.codeUnitAt(i) == 0x24 && text.codeUnitAt(i + 1) == 0x24) {
+      return i;
+    }
+  }
+  return -1;
+}
 
 /// If [label] is wholly a single `$$...$$` span, returns the inner TeX;
 /// otherwise null. (Mixed inline math within a label is not handled yet.)

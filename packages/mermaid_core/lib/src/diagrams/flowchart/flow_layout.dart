@@ -136,6 +136,11 @@ _WrappedLabel _wrapLabel(
   TextMeasurer measurer,
   double wrappingWidth,
 ) {
+  // A single line that fits is its own wrapped form, measured once.
+  if (!text.contains('\n')) {
+    final size = measurer.measure(text, style);
+    if (size.width <= wrappingWidth) return _WrappedLabel(text, size);
+  }
   final lines = <String>[];
   for (final hardLine in text.split('\n')) {
     lines.addAll(_wrapLabelLine(hardLine, style, measurer, wrappingWidth));

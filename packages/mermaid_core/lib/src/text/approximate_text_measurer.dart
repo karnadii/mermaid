@@ -25,6 +25,13 @@ class ApproximateTextMeasurer implements TextMeasurer {
   @override
   Size measure(String text, TextStyleSpec style, {double? maxWidth}) {
     final boldFactor = style.fontWeight >= 600 ? 1.07 : 1.0;
+    // Most labels are one line without a width limit: measure them without
+    // splitting.
+    if (maxWidth == null && !_hasNewline(text)) {
+      final width = math.max(0.0, _lineWidth(text, style) * boldFactor);
+      final height = style.fontSize * lineHeightFactor;
+      return Size(width.ceilToDouble(), height.ceilToDouble());
+    }
     final lines = <String>[];
     for (final hardLine in text.split('\n')) {
       if (maxWidth == null || _lineWidth(hardLine, style) * boldFactor <= maxWidth) {
@@ -68,11 +75,25 @@ class ApproximateTextMeasurer implements TextMeasurer {
             ? katexMainMetrics
             : null;
     var w = 0.0;
-    for (final unit in line.codeUnits) {
-      final m = katex?[unit];
-      w += m != null ? m[0] : _advance(unit);
+    if (katex == null) {
+      for (var i = 0; i < line.length; i++) {
+        w += _advance(line.codeUnitAt(i));
+      }
+    } else {
+      for (var i = 0; i < line.length; i++) {
+        final unit = line.codeUnitAt(i);
+        final m = katex[unit];
+        w += m != null ? m[0] : _advance(unit);
+      }
     }
     return w * style.fontSize;
+  }
+
+  static bool _hasNewline(String text) {
+    for (var i = 0; i < text.length; i++) {
+      if (text.codeUnitAt(i) == 0x0a) return true;
+    }
+    return false;
   }
 
   /// Advance width in em for a code unit. Values derived from Helvetica
