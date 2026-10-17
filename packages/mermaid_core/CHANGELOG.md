@@ -1,4 +1,4 @@
-## Unreleased
+## 0.3.1
 
 - Render faster: about 9x on a 500-node flowchart (28.4 ms to 3.1 ms, AOT)
   and 7x over the comparison-site samples, with byte-identical output. The

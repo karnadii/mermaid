@@ -1,3 +1,9 @@
+## 0.3.1
+
+- Require `mermaid_core` 0.3.1: about 9x faster rendering of large
+  flowcharts, and fixes for crashes on class self relations and on edges to
+  empty subgraphs.
+
 ## 0.3.0
 
 - Expose `MermaidView.onSceneChanged`, including fullscreen views, while retaining
