@@ -1049,8 +1049,23 @@ class _FlowParser {
     if (s.length >= 2 && s.startsWith('`') && s.endsWith('`')) {
       s = s.substring(1, s.length - 1);
     }
-    if (s.contains('<')) s = s.replaceAll(_lineBreak, '\n');
-    if (!s.contains('fa')) return s.trim();
+    // One scan finds whether a `<br>` or a legacy `fa:` icon is possible.
+    var hasLt = false;
+    var hasFa = false;
+    for (var i = 0; i < s.length; i++) {
+      final c = s.codeUnitAt(i);
+      if (c == 0x3c) {
+        hasLt = true;
+      } else if (c == 0x66 && i + 1 < s.length && s.codeUnitAt(i + 1) == 0x61) {
+        hasFa = true;
+      }
+    }
+    if (hasLt) {
+      s = s.replaceAll(_lineBreak, '\n');
+      // Removing `<br>` can join an `f` and an `a`.
+      hasFa = s.contains('fa');
+    }
+    if (!hasFa) return s.trim();
     final withoutLegacyIcons = s.replaceAll(
       _legacyIcon,
       '',
@@ -1084,7 +1099,11 @@ class _Scanner {
   }
 
   bool tryConsume(String s) {
-    if (text.startsWith(s, pos)) {
+    // The first code unit rejects most candidates before the full compare.
+    if (pos >= text.length || text.codeUnitAt(pos) != s.codeUnitAt(0)) {
+      return false;
+    }
+    if (s.length == 1 || text.startsWith(s, pos)) {
       pos += s.length;
       return true;
     }
