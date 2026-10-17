@@ -513,9 +513,18 @@ String _escapeText(String s) => !_needsEscape(s, false)
           .replaceAll('<', '&lt;')
           .replaceAll('>', '&gt;');
 
-String _escapeAttr(String s) => !_needsEscape(s, true)
-    ? s
-    : _escapeText(s).replaceAll('"', '&quot;').replaceAll('\n', ' ');
+String _escapeAttr(String s) {
+  if (!_needsEscape(s, true)) return s;
+  // Font family lists usually hold quoted names: keep their escaped form.
+  final cached = _escapedAttrs[s];
+  if (cached != null) return cached;
+  if (_escapedAttrs.length >= 64) _escapedAttrs.clear();
+  return _escapedAttrs[s] = _escapeText(
+    s,
+  ).replaceAll('"', '&quot;').replaceAll('\n', ' ');
+}
+
+final _escapedAttrs = <String, String>{};
 
 /// True if [s] has a character that [_escapeText] (or, for an [attribute],
 /// [_escapeAttr]) replaces. Most labels have none.
