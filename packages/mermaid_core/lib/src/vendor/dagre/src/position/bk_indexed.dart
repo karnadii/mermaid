@@ -370,19 +370,45 @@ class IndexedBk {
     // _balance
     final fixed = label.align;
     final result = List<double>.filled(n, 0);
-    final four = List<double>.filled(4, 0);
+    final ul = alignments[GraphAlign.utl]!, ur = alignments[GraphAlign.utr]!;
+    final dl = alignments[GraphAlign.dtl]!, dr = alignments[GraphAlign.dtr]!;
     for (var v = 0; v < n; v++) {
-      if (fixed != null) {
-        result[v] = alignments[fixed]![v];
-      } else {
-        four[0] = alignments[GraphAlign.utl]![v];
-        four[1] = alignments[GraphAlign.utr]![v];
-        four[2] = alignments[GraphAlign.dtl]![v];
-        four[3] = alignments[GraphAlign.dtr]![v];
-        four.sort();
-        result[v] = (four[1] + four[2]) / 2;
-      }
+      result[v] = fixed != null
+          ? alignments[fixed]![v]
+          : _median4(ul[v], ur[v], dl[v], dr[v]);
     }
     return result;
+  }
+
+  /// (xs[1] + xs[2]) / 2 of the four values sorted as `List.sort` sorts
+  /// doubles (by compareTo), with a five-comparison sorting network.
+  static double _median4(double a, double b, double c, double d) {
+    double t;
+    if (a.compareTo(b) > 0) {
+      t = a;
+      a = b;
+      b = t;
+    }
+    if (c.compareTo(d) > 0) {
+      t = c;
+      c = d;
+      d = t;
+    }
+    if (a.compareTo(c) > 0) {
+      t = a;
+      a = c;
+      c = t;
+    }
+    if (b.compareTo(d) > 0) {
+      t = b;
+      b = d;
+      d = t;
+    }
+    if (b.compareTo(c) > 0) {
+      t = b;
+      b = c;
+      c = t;
+    }
+    return (b + c) / 2;
   }
 }

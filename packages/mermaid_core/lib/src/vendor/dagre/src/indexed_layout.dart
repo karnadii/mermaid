@@ -14,6 +14,7 @@ library;
 
 import 'dart:collection';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:mermaid_core/src/geometry.dart';
 
@@ -846,9 +847,33 @@ class _Layout {
 
   /// util.buildLayerMatrix: per rank, nodes keyed by order (a later node
   /// with the same order replaces an earlier one), sorted by order.
-  List<List<int>> _layerMatrix() {
-    final byOrder = List<Map<int, int>>.generate(_maxRank() + 1, (_) => {});
-    for (final v in g.nodes) {
+  List<List<int>> _layerMatrix() => _layersByOrder(g.nodes, _maxRank() + 1);
+
+  /// Nodes of [nodes] with a rank, per rank and keyed by order as
+  /// buildLayerMatrix keys them. Orders are usually 0..k-1 per rank, which
+  /// fills a dense list; anything else takes the keyed path.
+  List<List<int>> _layersByOrder(List<int> nodes, int rankCount) {
+    final counts = List<int>.filled(rankCount, 0);
+    for (final v in nodes) {
+      final r = n(v).rank;
+      if (r != null) counts[r.toInt()]++;
+    }
+    final layers = [for (final c in counts) List<int>.filled(c, -1)];
+    var dense = true;
+    for (final v in nodes) {
+      final r = n(v).rank;
+      if (r == null) continue;
+      final layer = layers[r.toInt()];
+      final o = n(v).order!.toInt();
+      if (o < 0 || o >= layer.length || layer[o] >= 0) {
+        dense = false;
+        break;
+      }
+      layer[o] = v;
+    }
+    if (dense) return layers;
+    final byOrder = List<Map<int, int>>.generate(rankCount, (_) => {});
+    for (final v in nodes) {
       final r = n(v).rank;
       if (r != null) byOrder[r.toInt()][n(v).order!.toInt()] = v;
     }
@@ -944,7 +969,11 @@ class _Layout {
     }
     final layering = List<List<int>>.generate(maxSimpleRank + 1, (_) => []);
     final visited = List<bool>.filled(g.labels.length, false);
-    simpleNodes.sort((a, b) => n(a).rank!.compareTo(n(b).rank!));
+    final rankOf = Float64List(g.labels.length);
+    for (final v in simpleNodes) {
+      rankOf[v] = n(v).rank!;
+    }
+    simpleNodes.sort((a, b) => rankOf[a].compareTo(rankOf[b]));
     final stack = <int>[];
     for (final start in simpleNodes) {
       stack.add(start);
@@ -1054,24 +1083,20 @@ class _Layout {
       final r = n(v).rank ?? double.minPositive;
       maxRankValue = maxRankValue == null ? r : math.max(maxRankValue, r);
     }
-    final byOrder = List<Map<int, int>>.generate(
-      maxRankValue!.toInt() + 1,
-      (_) => {},
-    );
+    final rankCount = maxRankValue!.toInt() + 1;
     for (final v in leaves) {
       final r = n(v).rank;
-      if (r == null) continue;
-      final ri = r.toInt();
-      if (ri < 0 || ri >= byOrder.length) throw _Unsupported();
-      byOrder[ri][n(v).order!.toInt()] = v;
+      if (r != null && (r.toInt() < 0 || r.toInt() >= rankCount)) {
+        throw _Unsupported();
+      }
     }
+    final layering = _layersByOrder(leaves, rankCount);
     final local = List<int>.filled(count, -1);
     final layerNodes = <int>[];
     final layers = <List<int>>[];
-    for (final m in byOrder) {
+    for (final layer in layering) {
       final ids = <int>[];
-      for (final k in (m.keys.toList()..sort())) {
-        final v = m[k]!;
+      for (final v in layer) {
         local[v] = layerNodes.length;
         ids.add(layerNodes.length);
         layerNodes.add(v);
