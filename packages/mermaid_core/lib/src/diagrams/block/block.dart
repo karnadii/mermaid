@@ -14,6 +14,8 @@ import '../../geometry.dart';
 import '../../ir/scene.dart';
 import '../../ir/scene_utils.dart';
 import '../../parse_error.dart';
+import '../../text/html_tags.dart';
+import '../../text/markdown_label.dart';
 import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
@@ -302,7 +304,7 @@ BlockNode _parseNode(String spec) {
     if (label.length >= 2 && label.startsWith('"') && label.endsWith('"')) {
       label = label.substring(1, label.length - 1);
     }
-    label = label.replaceAll('&nbsp;', ' ').trim();
+    label = normalizeHtmlLabel(label.replaceAll('&nbsp;', ' ')).trim();
     final dirs = <BlockArrowDir>{};
     for (final d in arrowM.group(3)!.split(',')) {
       switch (d.trim().toLowerCase()) {
@@ -347,6 +349,8 @@ BlockNode _parseNode(String spec) {
   if (label.length >= 2 && label.startsWith('"') && label.endsWith('"')) {
     label = label.substring(1, label.length - 1);
   }
+  // mermaid.js shows block labels as HTML labels.
+  label = normalizeHtmlLabel(label);
   if (label.isEmpty) label = id;
   // Mirror upstream `typeStr2Type` keyed on the open+close delimiter pair.
   final shape = switch (open) {
@@ -436,7 +440,7 @@ void _parseEdges(String line, List<BlockEdge> edges) {
     ops.add((
       to: lastCh == '>' || lastCh == 'o' || lastCh == 'x',
       from: firstCh == '<' || firstCh == 'o' || firstCh == 'x',
-      label: label.replaceAll('&nbsp;', ' ').trim(),
+      label: normalizeHtmlLabel(label.replaceAll('&nbsp;', ' ')).trim(),
       thick: opStr.contains('='),
       dotted: opStr.contains('.'),
       mTo: _markerFor(lastCh),
@@ -533,6 +537,8 @@ RenderScene layoutBlock(
     fontFamily: theme.fontFamily,
     fontSize: theme.fontSize,
   );
+  // Block and edge labels, with `<b>`/`<i>` runs.
+  final labels = RichLabels(measurer);
   final centers = <String, Point>{};
   final sizes = <String, _Sized>{};
 
@@ -549,7 +555,7 @@ RenderScene layoutBlock(
     }
     final n = item as BlockNode;
     if (n.shape == BlockShape.space) return _Sized(item, 60, 40);
-    final ls = measurer.measure(n.label, baseStyle, maxWidth: 200);
+    final ls = labels.measure(n.label, baseStyle, maxWidth: 200);
     if (n.shape == BlockShape.blockArrow) {
       // Reserve room for the arrow head(s) on whichever axis they point.
       final horiz =
@@ -643,7 +649,7 @@ RenderScene layoutBlock(
             Point(cx, cy),
             s.width,
             s.height,
-            measurer,
+            labels,
             baseStyle,
             theme,
           ),
@@ -689,7 +695,7 @@ RenderScene layoutBlock(
     }
     // Edge label at the midpoint, on a small background chip.
     if (e.label.isNotEmpty) {
-      final ls = measurer.measure(e.label, baseStyle, maxWidth: 200);
+      final ls = labels.measure(e.label, baseStyle, maxWidth: 200);
       final mid = Point((from.x + to.x) / 2, (from.y + to.y) / 2);
       const lp = 3.0;
       // Upstream edge-label rect is opacity 0.5.
@@ -701,12 +707,13 @@ RenderScene layoutBlock(
           fill: Fill(theme.edgeLabelBackground.withOpacity(0.5)),
         ),
       );
-      nodes.add(
-        SceneText(
-          text: e.label,
+      nodes.addAll(
+        labels.paint(
+          e.label,
           bounds: Rect.fromCenter(mid, ls.width, ls.height),
           style: baseStyle,
           color: theme.textColor,
+          maxWidth: 200,
         ),
       );
     }
@@ -836,7 +843,7 @@ List<SceneNode> _drawNode(
   Point c,
   double w,
   double h,
-  TextMeasurer measurer,
+  RichLabels labels,
   TextStyleSpec style,
   MermaidTheme theme,
 ) {
@@ -953,18 +960,19 @@ List<SceneNode> _drawNode(
     ],
     _ => [SceneShape(geometry: RectGeometry(rect), fill: f, stroke: st)],
   };
-  final ls = measurer.measure(n.label, style, maxWidth: 200);
+  final ls = labels.measure(n.label, style, maxWidth: 200);
   return [
     SceneGroup(
       id: n.id,
-      semanticLabel: n.label,
+      semanticLabel: stripEmphasisTags(n.label),
       children: [
         ...shapes,
-        SceneText(
-          text: n.label,
+        ...labels.paint(
+          n.label,
           bounds: Rect.fromCenter(c, ls.width, ls.height),
           style: style,
           color: Color.tryParse(n.styles['color'] ?? '') ?? theme.textColor,
+          maxWidth: 200,
         ),
       ],
     ),

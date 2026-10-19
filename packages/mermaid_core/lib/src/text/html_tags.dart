@@ -60,3 +60,10 @@ String normalizeHtmlTags(String s) {
   out.write(s.substring(pos));
   return out.toString();
 }
+
+final _lineBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
+
+/// [normalizeHtmlTags] after `<br>`, `<br/>` and `<br />` became `\n`, for
+/// a label that mermaid.js shows as an HTML label.
+String normalizeHtmlLabel(String s) =>
+    s.contains('<') ? normalizeHtmlTags(s.replaceAll(_lineBreak, '\n')) : s;

@@ -13,6 +13,8 @@ import '../../icons/icon_registry.dart';
 import '../../ir/scene.dart';
 import '../../ir/scene_utils.dart';
 import '../../parse_error.dart';
+import '../../text/html_tags.dart';
+import '../../text/markdown_label.dart';
 import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
@@ -95,7 +97,8 @@ _NodeHead _parseHead(String s) {
   if (label.length >= 2 && label.startsWith('"') && label.endsWith('"')) {
     label = label.substring(1, label.length - 1);
   }
-  label = label.replaceAll(_kanbanLineBreak, '\n');
+  // mermaid.js shows kanban labels as HTML labels.
+  label = normalizeHtmlTags(label.replaceAll(_kanbanLineBreak, '\n'));
   return _NodeHead(id, label);
 }
 
@@ -110,10 +113,7 @@ void _applyMeta(KanbanTask task, String key, String value) {
   switch (key.trim()) {
     case 'label':
     case 'descr':
-      task.title = v.replaceAll(
-        _kanbanLineBreak,
-        '\n',
-      );
+      task.title = normalizeHtmlTags(v.replaceAll(_kanbanLineBreak, '\n'));
       break;
     case 'ticket':
       task.ticket = v;
@@ -122,7 +122,7 @@ void _applyMeta(KanbanTask task, String key, String value) {
       task.priority = _normalizePriority(v);
       break;
     case 'assigned':
-      task.assigned = v;
+      task.assigned = normalizeHtmlLabel(v);
       break;
     case 'icon':
       task.icon = v;
@@ -484,13 +484,19 @@ RenderScene layoutKanban(
   );
   final titleStyle = baseStyle.copyWith(fontWeight: 700);
   final nodes = <SceneNode>[];
+  // Section, card title and assigned labels, with `<b>`/`<i>` runs.
+  final labels = RichLabels(measurer);
+  double titleMaxWidth(bool hasIcon) => math.max(
+    0,
+    cardW - 2 * _labelPadX - (hasIcon ? _iconSize + _iconGap : 0),
+  );
 
   // First pass: measure each section label so all sections share one
   // `maxLabelHeight` (upstream seeds it at 25 and grows it).
   var maxLabelHeight = _minLabelHeight;
   final titleSizes = <Size>[];
   for (final col in board.columns) {
-    final ts = measurer.measure(col.title, titleStyle, maxWidth: width);
+    final ts = labels.measure(col.title, titleStyle, maxWidth: width);
     titleSizes.add(ts);
     maxLabelHeight = math.max(maxLabelHeight, ts.height);
   }
@@ -516,10 +522,10 @@ RenderScene layoutKanban(
       final styles = _taskStyles(board, task);
       final hasIcon = task.icon != null && lookupIcon(task.icon!) != null;
       final titleInset = hasIcon ? _iconSize + _iconGap : 0.0;
-      final measuredTitle = measurer.measure(
+      final measuredTitle = labels.measure(
         task.title,
         baseStyle,
-        maxWidth: math.max(0, cardW - 2 * _labelPadX - titleInset),
+        maxWidth: titleMaxWidth(hasIcon),
       );
       final titleSz = Size(
         measuredTitle.width + titleInset,
@@ -529,7 +535,7 @@ RenderScene layoutKanban(
           ? measurer.measure(task.ticket!, baseStyle, maxWidth: cardW)
           : null;
       final assignedSz = (task.assigned != null && task.assigned!.isNotEmpty)
-          ? measurer.measure(task.assigned!, baseStyle, maxWidth: cardW)
+          ? labels.measure(task.assigned!, baseStyle, maxWidth: cardW)
           : null;
       final metadataHeight = math.max(
         ticketSz?.height ?? 0,
@@ -576,12 +582,13 @@ RenderScene layoutKanban(
     );
     // Section label starts at the section box top and is centered across it.
     final titleSz = titleSizes[ci];
-    nodes.add(
-      SceneText(
-        text: col.title,
+    nodes.addAll(
+      labels.paint(
+        col.title,
         bounds: Rect.fromLTWH(x, 0, width, titleSz.height),
         style: titleStyle,
         color: _sectionTextColor,
+        maxWidth: width,
       ),
     );
 
@@ -639,9 +646,10 @@ RenderScene layoutKanban(
           ),
         );
       }
-      cardChildren.add(
-        SceneText(
-          text: card.task.title,
+      cardChildren.addAll(
+        labels.paint(
+          card.task.title,
+          maxWidth: titleMaxWidth(card.hasIcon),
           bounds: Rect.fromLTWH(
             cardRect.left +
                 _labelPadX +
@@ -690,9 +698,10 @@ RenderScene layoutKanban(
       // Assigned label (right-aligned, on the same row as the ticket).
       if (card.assignedSize != null) {
         final assignedY = titleY + card.titleSize.height + card.metadataGap;
-        cardChildren.add(
-          SceneText(
-            text: card.task.assigned!,
+        cardChildren.addAll(
+          labels.paint(
+            card.task.assigned!,
+            maxWidth: cardW,
             bounds: Rect.fromLTWH(
               cardRect.left + _labelPadX,
               assignedY,
@@ -710,7 +719,7 @@ RenderScene layoutKanban(
           SceneGroup(
             id: card.task.id,
             role: SceneGroupRole.node,
-            semanticLabel: card.task.title,
+            semanticLabel: stripEmphasisTags(card.task.title),
             link: card.task.link,
             tooltip: card.task.tooltip,
             children: cardChildren,

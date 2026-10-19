@@ -14,6 +14,7 @@ import '../../edge_geometry.dart';
 import '../../geometry.dart';
 import '../../ir/scene.dart';
 import '../../ir/scene_utils.dart';
+import '../../text/markdown_label.dart';
 import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
@@ -117,6 +118,9 @@ class _StateLayout {
   final elk.ElkLayoutOptions elkOptions;
   final TextStyleSpec baseStyle;
 
+  /// State, note, title and transition labels, with `<b>`/`<i>` runs.
+  late final labels = RichLabels(measurer);
+
   double get _padding => config.padding;
   double get _nodeSpacing => config.nodeSpacing;
   double get _rankSpacing => config.rankSpacing;
@@ -158,9 +162,9 @@ class _StateLayout {
     final noteBoxes = <int, _Placed>{};
     for (var i = 0; i < diagram.notes.length; i++) {
       final n = diagram.notes[i];
-      final size = measurer.measure(n.text, baseStyle, maxWidth: 200);
+      final size = labels.measure(n.text, baseStyle, maxWidth: 200);
       noteBoxes[i] = _Placed(
-        StateNode(id: '__note$i', label: n.text),
+        StateNode(id: '__note$i', label: stripEmphasisTags(n.text)),
         size.width + 2 * config.noteMargin,
         size.height + 2 * config.noteMargin,
         size,
@@ -211,7 +215,7 @@ class _StateLayout {
       final t = diagram.transitions[i];
       Size? size;
       if (t.label != null && t.label!.isNotEmpty) {
-        size = measurer.measure(t.label!, baseStyle, maxWidth: 200);
+        size = labels.measure(t.label!, baseStyle, maxWidth: 200);
         labelSizes[i] = size;
       }
       final (from, _) = endpoint(t.from);
@@ -299,7 +303,7 @@ class _StateLayout {
       final pos = descendantBounds(id);
       if (pos == null) return null;
       final state = diagram.states[id]!;
-      final titleSize = measurer.measure(state.label, baseStyle);
+      final titleSize = labels.measure(state.label, baseStyle);
       return Rect.fromLTRB(
         math.min(
               pos.left,
@@ -377,7 +381,7 @@ class _StateLayout {
       if (s.kind != StateKind.composite || _isEmptyComposite(s)) continue;
       final rect = compositeBounds(s.id);
       if (rect == null) continue;
-      final titleSize = measurer.measure(s.label, baseStyle);
+      final titleSize = labels.measure(s.label, baseStyle);
       clusterRects[s.id] = rect;
       final titleY = rect.top + 4;
       final dividerY = titleY + titleSize.height + 4;
@@ -385,7 +389,7 @@ class _StateLayout {
         SceneGroup(
           id: s.id,
           role: SceneGroupRole.cluster,
-          semanticLabel: s.label,
+          semanticLabel: stripEmphasisTags(s.label),
           children: [
             // Outer rect uses compositeTitleBackground (= mainBkg) so the title
             // band is tinted; inner region below the divider uses the background.
@@ -401,8 +405,8 @@ class _StateLayout {
               fill: Fill(_compositeBodyColor(s)),
             ),
             // Title band.
-            SceneText(
-              text: s.label,
+            ...labels.paint(
+              s.label,
               bounds: Rect.fromLTWH(
                 rect.center.x - titleSize.width / 2,
                 titleY,
@@ -516,8 +520,8 @@ class _StateLayout {
             fill: Fill(theme.arrowheadColor),
           ),
           if (labelSize != null)
-            SceneText(
-              text: t.label!,
+            ...labels.paint(
+              t.label!,
               bounds: Rect.fromLTWH(
                 anchor.right + ext * 0.78 + 6,
                 anchor.center.y - labelSize.height / 2,
@@ -526,6 +530,7 @@ class _StateLayout {
               ),
               style: baseStyle,
               color: theme.textColor,
+              maxWidth: 200,
               align: TextAlignH.left,
             ),
         ];
@@ -533,7 +538,7 @@ class _StateLayout {
           SceneGroup(
             id: 'trans_${t.from}_${t.to}_$i',
             role: SceneGroupRole.edge,
-            semanticLabel: t.label,
+            semanticLabel: t.label == null ? null : stripEmphasisTags(t.label!),
             children: children,
           ),
         );
@@ -667,7 +672,7 @@ class _StateLayout {
         SceneGroup(
           id: 'trans_${t.from}_${t.to}_$i',
           role: SceneGroupRole.edge,
-          semanticLabel: t.label,
+          semanticLabel: t.label == null ? null : stripEmphasisTags(t.label!),
           children: [
             SceneShape(
               geometry: PathGeometry(
@@ -714,11 +719,12 @@ class _StateLayout {
                 // the edge line doesn't show through the label.
                 fill: Fill(theme.edgeLabelBackground.withOpacity(1)),
               ),
-              SceneText(
-                text: t.label!,
+              ...labels.paint(
+                t.label!,
                 bounds: Rect.fromCenter(c, labelSize.width, labelSize.height),
                 style: baseStyle,
                 color: theme.textColor,
+                maxWidth: 200,
               ),
             ],
           ),
@@ -755,11 +761,12 @@ class _StateLayout {
               fill: Fill(theme.noteBkgColor),
               stroke: Stroke(color: theme.noteBorderColor),
             ),
-            SceneText(
-              text: diagram.notes[i].text,
+            ...labels.paint(
+              diagram.notes[i].text,
               bounds: b.rect.inflate(-_padding),
               style: baseStyle,
               color: theme.noteTextColor,
+              maxWidth: 200,
             ),
           ],
         ),
@@ -873,7 +880,7 @@ class _StateLayout {
       case StateKind.history || StateKind.historyDeep:
         return _Placed(s, 26, 26, Size.zero);
       case StateKind.normal || StateKind.composite:
-        final size = measurer.measure(s.label, baseStyle, maxWidth: 200);
+        final size = labels.measure(s.label, baseStyle, maxWidth: 200);
         return _Placed(
           s,
           size.width + 2 * _padding,
@@ -969,8 +976,8 @@ class _StateLayout {
             fill: Fill(fill),
             stroke: Stroke(color: stroke),
           ),
-          SceneText(
-            text: s.label,
+          ...labels.paint(
+            s.label,
             bounds: Rect.fromCenter(
               p.center,
               p.labelSize.width,
@@ -978,12 +985,13 @@ class _StateLayout {
             ),
             style: baseStyle,
             color: theme.textColor,
+            maxWidth: 200,
           ),
         ]);
     }
     return SceneGroup(
       id: s.id,
-      semanticLabel: s.label.isEmpty ? null : s.label,
+      semanticLabel: s.label.isEmpty ? null : stripEmphasisTags(s.label),
       children: children,
     );
   }

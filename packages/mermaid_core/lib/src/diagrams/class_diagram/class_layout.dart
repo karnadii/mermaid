@@ -12,6 +12,7 @@ import '../../edge_geometry.dart';
 import '../../geometry.dart';
 import '../../ir/scene.dart';
 import '../../ir/scene_utils.dart';
+import '../../text/markdown_label.dart';
 import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
@@ -94,6 +95,7 @@ class _BoxLine {
     this.centered = false,
     this.separatorAbove = false,
     this.underline = false,
+    this.rich = false,
   });
 
   final String text;
@@ -105,6 +107,10 @@ class _BoxLine {
   final bool centered;
   final bool separatorAbove;
   final bool underline;
+
+  /// Whether the line is an HTML label (the class title) that paints
+  /// `<b>`/`<i>` runs. Members and methods show their tags as text.
+  final bool rich;
 }
 
 class _ClassLayout {
@@ -119,6 +125,10 @@ class _ClassLayout {
   final MermaidTheme theme;
   final ClassConfig config;
   final TextStyleSpec baseStyle;
+
+  /// Class titles, notes, relation labels, cardinalities and namespace
+  /// titles, with `<b>`/`<i>` runs.
+  late final labels = RichLabels(measurer);
 
   double get _padding => config.padding;
   double get _nodeSpacing => config.nodeSpacing;
@@ -152,9 +162,9 @@ class _ClassLayout {
     final noteBoxes = <int, _Box>{};
     for (var i = 0; i < diagram.notes.length; i++) {
       final n = diagram.notes[i];
-      final size = measurer.measure(n.text, baseStyle, maxWidth: 200);
+      final size = labels.measure(n.text, baseStyle, maxWidth: 200);
       noteBoxes[i] = _Box(
-        ClassNode(id: '__note$i', label: n.text),
+        ClassNode(id: '__note$i', label: stripEmphasisTags(n.text)),
         size.width + 2 * _padding,
         size.height + 2 * _padding,
         [],
@@ -199,7 +209,7 @@ class _ClassLayout {
       final r = diagram.relations[i];
       Size? size;
       if (r.label != null && r.label!.isNotEmpty) {
-        size = measurer.measure(r.label!, baseStyle, maxWidth: 200);
+        size = labels.measure(r.label!, baseStyle, maxWidth: 200);
         labelSizes[i] = size;
       }
       g.addEdge(
@@ -327,8 +337,8 @@ class _ClassLayout {
               fill: Fill(theme.clusterBkg),
               stroke: Stroke(color: theme.clusterBorder),
             ),
-            SceneText(
-              text: ns.label,
+            ...labels.paint(
+              ns.label,
               bounds: Rect.fromLTWH(
                 rect.center.x - titleSize.width / 2,
                 rect.top + 4,
@@ -422,7 +432,7 @@ class _ClassLayout {
         SceneGroup(
           id: 'rel_${r.from}_${r.to}_$i',
           role: SceneGroupRole.edge,
-          semanticLabel: r.label,
+          semanticLabel: r.label == null ? null : stripEmphasisTags(r.label!),
           children: children,
         ),
       );
@@ -449,11 +459,12 @@ class _ClassLayout {
                 // line does not show through the label.
                 fill: Fill(theme.edgeLabelBackground.withOpacity(1)),
               ),
-              SceneText(
-                text: r.label!,
+              ...labels.paint(
+                r.label!,
                 bounds: Rect.fromCenter(c, labelSize.width, labelSize.height),
                 style: baseStyle,
                 color: theme.textColor,
+                maxWidth: 200,
               ),
             ],
           ),
@@ -462,11 +473,11 @@ class _ClassLayout {
       final cardStyle = baseStyle.copyWith(fontSize: _cardinalityFontSize);
       void cardinality(String? card, Point tip, Point dir) {
         if (card == null || card.isEmpty) return;
-        final size = measurer.measure(card, cardStyle);
+        final size = labels.measure(card, cardStyle);
         final pos = tip - dir * 18 + Point(-dir.y, dir.x) * 12;
-        labelNodes.add(
-          SceneText(
-            text: card,
+        labelNodes.addAll(
+          labels.paint(
+            card,
             bounds: Rect.fromCenter(pos, size.width, size.height),
             style: cardStyle,
             color: Color.black,
@@ -509,12 +520,13 @@ class _ClassLayout {
               fill: Fill(theme.noteBkgColor),
               stroke: Stroke(color: theme.noteBorderColor),
             ),
-            SceneText(
-              text: diagram.notes[i].text,
+            ...labels.paint(
+              diagram.notes[i].text,
               bounds: rect.inflate(-_padding),
               style: baseStyle,
               // Upstream `.noteLabel .nodeLabel { color: noteTextColor }`.
               color: theme.noteTextColor,
+              maxWidth: 200,
             ),
           ],
         ),
@@ -578,8 +590,11 @@ class _ClassLayout {
       bool centered = false,
       bool separator = false,
       bool underline = false,
+      bool rich = false,
     }) {
-      final size = measurer.measure(text, style, maxWidth: 300);
+      final size = rich
+          ? labels.measure(text, style, maxWidth: 300)
+          : measurer.measure(text, style, maxWidth: 300);
       lines.add(
         _BoxLine(
           text,
@@ -589,6 +604,7 @@ class _ClassLayout {
           centered: centered,
           separatorAbove: separator,
           underline: underline,
+          rich: rich,
         ),
       );
       y += size.height + _memberGap;
@@ -600,7 +616,7 @@ class _ClassLayout {
     if (node.annotations.isNotEmpty) {
       add('«${node.annotations.first}»', baseStyle, centered: true);
     }
-    add(node.label, titleStyle, centered: true);
+    add(node.label, titleStyle, centered: true, rich: true);
     y += _padding / 2;
 
     // Upstream `classBox.ts`: with default `hideEmptyMembersBox` (false) and
@@ -695,6 +711,24 @@ class _ClassLayout {
         );
       }
       if (line.text.isEmpty) continue;
+      if (line.rich &&
+          labels.layout(line.text, line.style, maxWidth: 300) != null) {
+        children.addAll(
+          labels.paint(
+            line.text,
+            bounds: Rect.fromLTWH(
+              rect.center.x - line.size.width / 2,
+              rect.top + line.dy,
+              line.size.width,
+              line.size.height,
+            ),
+            style: line.style,
+            color: theme.textColor,
+            maxWidth: 300,
+          ),
+        );
+        continue;
+      }
       children.add(
         SceneText(
           text: line.text,
@@ -720,7 +754,7 @@ class _ClassLayout {
     }
     return SceneGroup(
       id: b.node.id,
-      semanticLabel: b.node.label,
+      semanticLabel: stripEmphasisTags(b.node.label),
       children: children,
     );
   }
@@ -799,7 +833,7 @@ class _ClassLayout {
   /// Measured once per namespace label: the separation sweep and the paint
   /// pass both need it, and the sweep can run several times.
   Size _namespaceTitleSize(String label) =>
-      _namespaceTitleSizes[label] ??= measurer.measure(label, baseStyle);
+      _namespaceTitleSizes[label] ??= labels.measure(label, baseStyle);
 
   /// The cluster rect a namespace occupies given where its members sit right
   /// now. Null when none of [memberIds] has a box.

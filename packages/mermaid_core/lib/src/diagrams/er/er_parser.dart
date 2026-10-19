@@ -6,6 +6,7 @@ library;
 
 import '../../detect.dart';
 import '../../parse_error.dart';
+import '../../text/html_tags.dart';
 import '../flowchart/flow_model.dart' show FlowDirection;
 import 'er_model.dart';
 
@@ -165,6 +166,8 @@ class _ErParser {
       if (label.length >= 2 && label.startsWith('"') && label.endsWith('"')) {
         label = label.substring(1, label.length - 1);
       }
+      // mermaid.js shows the alias as an HTML label.
+      label = normalizeHtmlLabel(label);
       final existing = entities[id];
       entities[id] = (existing ?? ErEntity(id: id, label: id)).copyWith(
         label: m.group(4) != null ? label : existing?.label ?? id,
@@ -215,7 +218,7 @@ class _ErParser {
         cardFrom: words[m.group(3)!]!,
         cardTo: words[m.group(5)!]!,
         identifying: m.group(4) == 'to',
-        label: (m.group(8) ?? '').trim(),
+        label: normalizeHtmlLabel((m.group(8) ?? '').trim()),
       ));
       return true;
     }
@@ -236,7 +239,7 @@ class _ErParser {
       cardFrom: cardFrom,
       cardTo: cardTo,
       identifying: identifying,
-      label: label,
+      label: normalizeHtmlLabel(label),
     ));
     return true;
   }
@@ -266,7 +269,7 @@ class _ErParser {
     String? comment;
     final commentMatch = _trailingQuoted.firstMatch(rest);
     if (commentMatch != null) {
-      comment = commentMatch.group(1);
+      comment = normalizeHtmlLabel(commentMatch.group(1)!);
       rest = rest.substring(0, commentMatch.start).trim();
     }
     final parts = rest.split(_whitespaceRun);

@@ -29,13 +29,23 @@ class MarkdownLabelLayout {
   /// All runs of all lines, in reading order.
   List<MarkdownLabelRun> get runs => [for (final line in lines) ...line.runs];
 
-  /// Scene text nodes for the label centered on [center]. Each line is
-  /// centered horizontally, as mermaid.js centers HTML labels.
-  List<SceneNode> render(Point center, Color color) {
+  /// Scene text nodes for the label block centered on [center]. Each line
+  /// is centered horizontally, as mermaid.js centers HTML labels, or starts
+  /// at the block's left edge or ends at its right edge for [align]
+  /// [TextAlignH.left] or [TextAlignH.right].
+  List<SceneNode> render(
+    Point center,
+    Color color, {
+    TextAlignH align = TextAlignH.center,
+  }) {
     final nodes = <SceneNode>[];
     var y = center.y - size.height / 2;
     for (final line in lines) {
-      var x = center.x - line.size.width / 2;
+      var x = switch (align) {
+        TextAlignH.left => center.x - size.width / 2,
+        TextAlignH.center => center.x - line.size.width / 2,
+        TextAlignH.right => center.x + size.width / 2 - line.size.width,
+      };
       for (final run in line.runs) {
         if (run.paintText.isNotEmpty) {
           nodes.add(
@@ -131,6 +141,25 @@ String stripEmphasisTags(String label) =>
     hasEmphasisTags(label) ? label.replaceAll(_emphasisTag, '') : label;
 
 final _emphasisTag = RegExp(r'</?[bi]>');
+
+/// [layoutMarkdownLabel] for a label that uses the canonical `<b>`/`<i>`
+/// emphasis tags, or null for a label without them, which keeps its plain
+/// text path. [wrappingWidth] has the meaning of `TextMeasurer.measure`'s
+/// `maxWidth`.
+MarkdownLabelLayout? layoutHtmlLabel(
+  String label,
+  TextStyleSpec baseStyle,
+  TextMeasurer measurer, {
+  double? wrappingWidth,
+}) => hasEmphasisTags(label)
+    ? layoutMarkdownLabel(
+        label,
+        baseStyle,
+        measurer,
+        markdown: false,
+        wrappingWidth: wrappingWidth,
+      )
+    : null;
 
 /// Parses and measures a styled label.
 ///
@@ -357,4 +386,66 @@ List<List<_Span>> _wrapSpans(
   }
   if (current.isNotEmpty) out.add(current);
   return out.isEmpty ? [line] : out;
+}
+
+/// Measures and paints diagram labels that may carry the canonical
+/// `<b>`/`<i>` emphasis tags from `normalizeHtmlTags`.
+///
+/// A label without tags keeps the plain path: one [TextMeasurer.measure]
+/// call and one [SceneText]. A label with tags is laid out once with
+/// [layoutMarkdownLabel] and painted as styled runs, so the measured size is
+/// the size of the runs that paint.
+class RichLabels {
+  RichLabels(this.measurer);
+
+  final TextMeasurer measurer;
+  final _cache = <(String, TextStyleSpec, double?), MarkdownLabelLayout?>{};
+
+  /// The styled-run layout of [text], or null when it has no emphasis tags.
+  MarkdownLabelLayout? layout(
+    String text,
+    TextStyleSpec style, {
+    double? maxWidth,
+  }) => _cache.putIfAbsent((
+    text,
+    style,
+    maxWidth,
+  ), () => layoutHtmlLabel(text, style, measurer, wrappingWidth: maxWidth));
+
+  /// The size [paint] fills for [text].
+  Size measure(String text, TextStyleSpec style, {double? maxWidth}) =>
+      layout(text, style, maxWidth: maxWidth)?.size ??
+      measurer.measure(text, style, maxWidth: maxWidth);
+
+  /// Scene nodes for [text] inside [bounds]: the styled runs, aligned in
+  /// [bounds] as [align] says, or one [SceneText] for a plain label.
+  /// [maxWidth] must be the value [measure] used.
+  List<SceneNode> paint(
+    String text, {
+    required Rect bounds,
+    required TextStyleSpec style,
+    required Color color,
+    double? maxWidth,
+    TextAlignH align = TextAlignH.center,
+  }) {
+    final rich = layout(text, style, maxWidth: maxWidth);
+    if (rich == null) {
+      return [
+        SceneText(
+          text: text,
+          bounds: bounds,
+          style: style,
+          color: color,
+          align: align,
+        ),
+      ];
+    }
+    final half = rich.size.width / 2;
+    final x = switch (align) {
+      TextAlignH.left => bounds.left + half,
+      TextAlignH.center => bounds.center.x,
+      TextAlignH.right => bounds.right - half,
+    };
+    return rich.render(Point(x, bounds.center.y), color, align: align);
+  }
 }
