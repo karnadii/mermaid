@@ -1,3 +1,8 @@
+## Unreleased
+
+- Remove the unused vendored copy of dart_dagre from `lib/src/dagre` and its
+  `NOTICE`. The layered engine does not use it.
+
 ## 0.2.0
 
 - Implement distinct INCLUDE_CHILDREN, SEPARATE_CHILDREN, and INHERIT modes,

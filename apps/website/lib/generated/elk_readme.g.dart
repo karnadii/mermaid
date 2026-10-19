@@ -107,6 +107,5 @@ update, regenerate them from the package root with
 <code>node tool/validation/generate_hierarchy_reference.mjs</code>. Ordinary tests never
 regenerate reference data.</p>
 <h2 id="license">License</h2>
-<p>MIT. The package contains a vendored derivative of dart_dagre (Apache-2.0).
-See <code>NOTICE</code> and <code>lib/src/dagre/LICENSE</code>.</p>
+<p>MIT.</p>
 ''';
