@@ -152,3 +152,6 @@ current code:
   (`dir=+1`); `spineY = max(upperLen, SPINE_BASE_LENGTH)`. Identical
   composition to upstream — not mirrored.
 No code change required; `dart analyze` clean.
+
+## HTML markup in labels
+- Upstream splits labels at `<br>` and writes each line with `tspan.text()` (`ishikawaRenderer.ts:439-480`), so other tags show as text. Ours keep them as text too.

@@ -100,3 +100,6 @@ Notes:
   `layoutTimeline`/`drawTasks` so it is always emitted (unchanged geometry: width 2,
   dash [5,5], end Y `taskY + maxTaskHeight + 100 + maxEventLineLength + 100`). Only the
   event-box stacking remains conditional on having events. No constants changed.
+
+## HTML markup in labels
+- Upstream draws the title, sections, periods and events with `.text()` (`timelineRenderer.ts:209-212`, `svgDraw.js:456-521`), so tags show as text. Ours keep them as text too.
