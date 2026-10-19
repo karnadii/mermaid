@@ -260,4 +260,83 @@ kanban
     final scene = _renderer.render('sequenceDiagram\n  A->>B: <b>call</b>\n');
     expect(_text(scene, '<b>call</b>').style.fontWeight, 400);
   });
+
+  group('SVG output', () {
+    /// The `<text>` elements inside the `<g id="[id]" ...>` of [svg].
+    List<String> textElementsOf(String svg, String id) {
+      final start = svg.indexOf('<g id="$id"');
+      expect(start, isNot(-1), reason: id);
+      final end = svg.indexOf('</g>', start);
+      return [
+        for (final m in RegExp(
+          r'<text[^>]*>.*?</text>',
+        ).allMatches(svg.substring(start, end)))
+          m[0]!,
+      ];
+    }
+
+    /// (weight, italic, content) of each `<tspan>` in [text].
+    List<(String?, bool, String)> tspans(String text) => [
+      for (final m in RegExp(r'<tspan([^>]*)>([^<]*)</tspan>').allMatches(text))
+        (
+          RegExp(r'font-weight="(\d+)"').firstMatch(m[1]!)?[1],
+          m[1]!.contains('font-style="italic"'),
+          m[2]!,
+        ),
+    ];
+
+    test('a styled line is one <text> with a tspan per run and its spaces', () {
+      final svg = renderSceneToSvg(
+        _renderer.render(
+          'stateDiagram-v2\n  s1 : <b>Bold</b> state and <i>italic</i>\n',
+        ),
+      );
+      final texts = textElementsOf(svg, 's1');
+      expect(texts, hasLength(1));
+      final text = texts.single;
+      // The browser places the runs: one anchor for the line, spaces kept.
+      expect(text, contains('xml:space="preserve"'));
+      expect(text, contains('text-anchor="middle"'));
+      expect(tspans(text), [
+        ('700', false, 'Bold'),
+        (null, false, ' state and '),
+        (null, true, 'italic'),
+      ]);
+      expect(RegExp(r' x="').allMatches(text), hasLength(1));
+    });
+
+    test('each line of a multi-line styled label is one <text>', () {
+      final svg = renderSceneToSvg(
+        _renderer.render(
+          'flowchart TD\n'
+          '  E["<b>Endpoint</b><br/>Receives <i>external</i> requests"]\n',
+        ),
+      );
+      final texts = textElementsOf(svg, 'E');
+      expect(texts, hasLength(2));
+      expect(tspans(texts[0]), [('700', false, 'Endpoint')]);
+      expect(tspans(texts[1]), [
+        (null, false, 'Receives '),
+        (null, true, 'external'),
+        (null, false, ' requests'),
+      ]);
+    });
+
+    test('a left-aligned styled label anchors its line at the start', () {
+      final svg = renderSceneToSvg(
+        _renderer.render('''
+erDiagram
+  CUSTOMER {
+    string name "<i>full</i> address"
+  }
+'''),
+      );
+      final text = textElementsOf(
+        svg,
+        'CUSTOMER',
+      ).singleWhere((t) => t.contains('xml:space'));
+      expect(text, contains('text-anchor="start"'));
+      expect(tspans(text), [(null, true, 'full'), (null, false, ' address')]);
+    });
+  });
 }

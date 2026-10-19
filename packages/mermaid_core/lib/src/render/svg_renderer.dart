@@ -32,9 +32,7 @@ String renderSceneToSvg(RenderScene scene) {
     b.write('<rect width="100%" height="100%" fill="${_color(bg)}"/>');
   }
   final ids = _IdGen();
-  for (final node in scene.nodes) {
-    _writeNode(b, node, ids);
-  }
+  _writeNodes(b, scene.nodes, ids);
   b.write('</svg>');
   final svg = b.toString();
   b.release();
@@ -310,6 +308,79 @@ class _IdGen {
   String next() => 'g${_n++}';
 }
 
+/// Writes [nodes] in order. The styled runs of one label line (consecutive
+/// texts whose [SceneText.run] numbers them 0 to count - 1) become one
+/// `<text>`, so the browser places the runs with its own glyph widths.
+void _writeNodes(_SvgWriter b, List<SceneNode> nodes, _IdGen ids) {
+  var i = 0;
+  while (i < nodes.length) {
+    final count = _runLineLength(nodes, i);
+    if (count > 0) {
+      _writeRunLine(b, nodes, i, count);
+      i += count;
+    } else {
+      _writeNode(b, nodes[i], ids);
+      i++;
+    }
+  }
+}
+
+/// Number of nodes from [start] that form one line of styled runs, or 0.
+int _runLineLength(List<SceneNode> nodes, int start) {
+  final first = nodes[start];
+  if (first is! SceneText || first.rotation != 0) return 0;
+  final run = first.run;
+  if (run == null || run.index != 0 || start + run.count > nodes.length) {
+    return 0;
+  }
+  for (var k = 1; k < run.count; k++) {
+    final node = nodes[start + k];
+    if (node is! SceneText || node.run?.index != k) return 0;
+  }
+  return run.count;
+}
+
+/// Writes runs `nodes[start, start + count)` as one `<text>` with a
+/// `<tspan>` per run. Spaces between runs are kept (`xml:space`), because
+/// the layout measured them.
+void _writeRunLine(_SvgWriter b, List<SceneNode> nodes, int start, int count) {
+  final first = nodes[start] as SceneText;
+  final run = first.run!;
+  final left = first.bounds.left + run.lineLeft;
+  final (anchor, x) = switch (run.lineAlign) {
+    TextAlignH.left => ('start', left),
+    TextAlignH.center => ('middle', left + run.lineWidth / 2),
+    TextAlignH.right => ('end', left + run.lineWidth),
+  };
+  b
+    ..write('<text xml:space="preserve" text-anchor="')
+    ..write(anchor)
+    ..write('" x="');
+  _writeNum(b, x);
+  b.write('" y="');
+  _writeNum(b, first.bounds.top + first.bounds.height * 0.78);
+  b
+    ..write('" font-family="')
+    ..writeFontFamily(_svgFontFamily(first.style))
+    ..write('" font-size="');
+  _writeNum(b, first.style.fontSize);
+  b.write('" fill="');
+  _writeColor(b, first.color);
+  b.write('">');
+  for (var k = 0; k < count; k++) {
+    final text = nodes[start + k] as SceneText;
+    final style = text.style;
+    b.write('<tspan');
+    if (style.fontWeight != 400) b.write(' font-weight="${style.fontWeight}"');
+    if (style.italic) b.write(' font-style="italic"');
+    b
+      ..write('>')
+      ..writeEscaped(text.run!.text, attribute: false)
+      ..write('</tspan>');
+  }
+  b.write('</text>');
+}
+
 void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
   switch (node) {
     case SceneGroup(
@@ -339,9 +410,7 @@ void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
       if (tooltip != null) {
         b.write('<title>${_escapeText(tooltip)}</title>');
       }
-      for (final c in children) {
-        _writeNode(b, c, ids);
-      }
+      _writeNodes(b, children, ids);
       b.write('</g>');
       if (link != null) b.write('</a>');
 

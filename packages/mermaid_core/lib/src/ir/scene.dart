@@ -186,6 +186,7 @@ class SceneText extends SceneNode {
     this.rotation = 0,
     this.underline = false,
     this.paintRole = ScenePaintRole.none,
+    this.run,
   });
 
   /// May contain `\n`; backends wrap to [bounds].width using the same rules
@@ -209,6 +210,11 @@ class SceneText extends SceneNode {
   /// find it again. See [ScenePaintRole].
   final ScenePaintRole paintRole;
 
+  /// Set when this text is one styled run of a label line (`<b>`/`<i>`
+  /// runs). Backends that place glyphs themselves, such as SVG in a
+  /// browser, can write the runs of one line as one text element.
+  final SceneTextRun? run;
+
   /// A copy of this text with the given fields replaced.
   ///
   /// A null argument keeps the current value. Prefer this over rebuilding the
@@ -223,6 +229,7 @@ class SceneText extends SceneNode {
     double? rotation,
     bool? underline,
     ScenePaintRole? paintRole,
+    SceneTextRun? run,
   }) => SceneText(
     text: text ?? this.text,
     bounds: bounds ?? this.bounds,
@@ -232,7 +239,45 @@ class SceneText extends SceneNode {
     rotation: rotation ?? this.rotation,
     underline: underline ?? this.underline,
     paintRole: paintRole ?? this.paintRole,
+    run: run ?? this.run,
   );
+}
+
+/// The place of a [SceneText] in a line of styled runs.
+///
+/// Each run of a line is its own [SceneText], positioned with the measured
+/// advance of the runs before it, so a painter that uses the layout's text
+/// measurer places it exactly. A browser uses its own glyph widths, so the
+/// SVG backend writes the runs of a line as one `<text>` with a `<tspan>`
+/// per run and lets the browser place them.
+class SceneTextRun {
+  const SceneTextRun({
+    required this.index,
+    required this.count,
+    required this.text,
+    required this.lineLeft,
+    required this.lineWidth,
+    this.lineAlign = TextAlignH.center,
+  });
+
+  /// Position of this run among the painted runs of its line, from 0.
+  final int index;
+
+  /// Number of painted runs in the line.
+  final int count;
+
+  /// The run text with the spaces around it, which [SceneText.text] leaves
+  /// out. Spaces between runs belong to the run before them.
+  final String text;
+
+  /// Start of the line relative to the left edge of [SceneText.bounds].
+  final double lineLeft;
+
+  /// Measured advance width of the whole line, spaces included.
+  final double lineWidth;
+
+  /// How the line sits on its anchor: start, center or end.
+  final TextAlignH lineAlign;
 }
 
 /// Logical paint target retained after flowchart layout, so a later pass can
