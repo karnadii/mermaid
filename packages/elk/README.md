@@ -110,5 +110,4 @@ regenerate reference data.
 
 ## License
 
-MIT. The package contains a vendored derivative of dart_dagre (Apache-2.0).
-See `NOTICE` and `lib/src/dagre/LICENSE`.
+MIT.
