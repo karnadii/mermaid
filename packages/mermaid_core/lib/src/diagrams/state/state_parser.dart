@@ -6,6 +6,7 @@ library;
 
 import '../../detect.dart';
 import '../../parse_error.dart';
+import '../../text/html_tags.dart';
 import '../flowchart/flow_model.dart' show FlowDirection;
 import 'state_model.dart';
 
@@ -90,7 +91,7 @@ class _StateParser {
       if (line == 'end note') {
         final (pos, target, buf) = _openNote!;
         notes.add(StateNote(
-            target: target, text: buf.toString().trim(), position: pos));
+            target: target, text: _normalize(buf.toString()), position: pos));
         _openNote = null;
       } else {
         _openNote!.$3.writeln(line);
@@ -361,9 +362,10 @@ class _StateParser {
     if (groups != null && !groups.last.contains(id)) groups.last.add(id);
   }
 
-  String _normalize(String s) => s
-      .replaceAll(_htmlBreak, '\n')
-      .trim();
+  /// `<br>` becomes a line break and the other tags are reduced to the
+  /// `<b>`/`<i>` emphasis runs that mermaid.js shows in its HTML labels.
+  String _normalize(String s) =>
+      normalizeHtmlTags(s.replaceAll(_htmlBreak, '\n')).trim();
 
   Map<String, String> _parseStyles(String text) {
     final out = <String, String>{};

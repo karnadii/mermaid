@@ -10,6 +10,7 @@ import '../../edge_geometry.dart';
 import '../../geometry.dart';
 import '../../ir/scene.dart';
 import '../../ir/scene_utils.dart';
+import '../../text/markdown_label.dart';
 import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
@@ -144,6 +145,16 @@ class _ErLayout {
 
   final boxes = <String, _EntityBox>{};
 
+  /// Entity names, comments and relationship labels, with `<b>`/`<i>` runs.
+  late final labels = RichLabels(measurer);
+
+  /// Whether column [c] of [e]'s attribute table holds the comment, the one
+  /// attribute cell the parser reduces to emphasis tags. Types keep their
+  /// generic `<T>` as text.
+  bool _isCommentColumn(ErEntity e, int c) =>
+      e.attributes.any((x) => x.comment != null) &&
+      c == _attributeCells(e).first.length - 1;
+
   RenderScene run() {
     for (final e in diagram.entities.values) {
       boxes[e.id] = _measureEntity(e);
@@ -158,7 +169,7 @@ class _ErLayout {
       final r = diagram.relationships[i];
       Size? size;
       if (r.label.isNotEmpty) {
-        size = measurer.measure(r.label, labelStyle, maxWidth: 150);
+        size = labels.measure(r.label, labelStyle, maxWidth: 150);
         labelSizes[i] = size;
       }
       if (r.from == r.to) continue;
@@ -237,7 +248,7 @@ class _ErLayout {
         SceneGroup(
           id: 'rel_${r.from}_${r.to}_$i',
           role: SceneGroupRole.edge,
-          semanticLabel: r.label.isEmpty ? null : r.label,
+          semanticLabel: r.label.isEmpty ? null : stripEmphasisTags(r.label),
           children: [
             SceneShape(
               geometry: PathGeometry(
@@ -278,12 +289,13 @@ class _ErLayout {
                 // `.relationshipLabelBox` = tertiaryColor @ opacity 0.7.
                 fill: Fill(_tertiaryColor.withOpacity(0.7)),
               ),
-              SceneText(
-                text: r.label,
+              ...labels.paint(
+                r.label,
                 bounds: Rect.fromCenter(c, labelSize.width, labelSize.height),
                 style: labelStyle,
                 // `.edgeLabel .label` fill = nodeBorder.
                 color: theme.nodeBorder,
+                maxWidth: 150,
               ),
             ],
           ),
@@ -342,7 +354,7 @@ class _ErLayout {
   ];
 
   _EntityBox _measureEntity(ErEntity e) {
-    final headerSize = measurer.measure(e.label, headerStyle);
+    final headerSize = labels.measure(e.label, headerStyle);
     // erBox: nameBBox.height += TEXT_PADDING.
     final headerHeight = headerSize.height + config.entityPadding;
     final cells = _attributeCells(e);
@@ -365,7 +377,9 @@ class _ErLayout {
     for (final row in cells) {
       var rowH = 0.0;
       for (var c = 0; c < row.length; c++) {
-        final size = measurer.measure(row[c], baseStyle);
+        final size = _isCommentColumn(e, c)
+            ? labels.measure(row[c], baseStyle)
+            : measurer.measure(row[c], baseStyle);
         // erBox adds PADDING once per column, TEXT_PADDING once per row.
         colWidths[c] = math.max(
           colWidths[c],
@@ -403,7 +417,7 @@ class _ErLayout {
     final rect = b.rect;
     final cells = _attributeCells(b.entity);
     final style = _resolveStyle(b.entity);
-    final headerSize = measurer.measure(b.entity.label, headerStyle);
+    final headerSize = labels.measure(b.entity.label, headerStyle);
     final labelBounds = cells.isEmpty
         ? Rect.fromLTWH(
             rect.left,
@@ -423,8 +437,8 @@ class _ErLayout {
         fill: Fill(style.fill ?? theme.mainBkg),
         stroke: Stroke(color: style.stroke ?? theme.nodeBorder, width: 1),
       ),
-      SceneText(
-        text: b.entity.label,
+      ...labels.paint(
+        b.entity.label,
         bounds: labelBounds,
         style: headerStyle,
         color: style.color ?? theme.textColor,
@@ -454,7 +468,23 @@ class _ErLayout {
       var x = rect.left;
       for (var c = 0; c < cells[rIdx].length; c++) {
         final text = cells[rIdx][c];
-        if (text.isNotEmpty) {
+        if (text.isNotEmpty && _isCommentColumn(b.entity, c)) {
+          final size = labels.measure(text, baseStyle);
+          children.addAll(
+            labels.paint(
+              text,
+              bounds: Rect.fromLTWH(
+                x + config.diagramPadding / 2,
+                y + (rowH - size.height) / 2,
+                size.width,
+                size.height,
+              ),
+              style: baseStyle,
+              color: style.color ?? theme.textColor,
+              align: TextAlignH.left,
+            ),
+          );
+        } else if (text.isNotEmpty) {
           final size = measurer.measure(text, baseStyle);
           children.add(
             SceneText(
@@ -492,7 +522,7 @@ class _ErLayout {
     }
     return SceneGroup(
       id: b.entity.id,
-      semanticLabel: b.entity.label,
+      semanticLabel: stripEmphasisTags(b.entity.label),
       children: children,
     );
   }

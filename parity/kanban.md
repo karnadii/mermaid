@@ -98,3 +98,8 @@ Status raised to **full-parity**: matches mermaid.js under the default theme and
 now adapts section colors to non-default themes. Remaining open items (icons,
 per-node style/class overrides) are niche/config, not default-render gaps and
 require shared-IR changes outside this diagram.
+
+## HTML markup in labels
+- Upstream: card titles (`kanbanDb.ts:79-80`, `kanbanItem.ts:36-40` `labelHelper`), the assigned label (`kanbanItem.ts:55-81` `insertLabel`) and section labels (`clusters.js:287-312` `kanbanSection`, `createText` with `getEffectiveHtmlLabels`) are HTML labels, so `<b>` is bold and `<i>` italic. (`kanbanRenderer.ts:18-19` sets `htmlLabels = false` on a copy of the config that `labelHelper` does not read.)
+- Ours: the parser runs `text/html_tags.dart:normalizeHtmlTags` (after `<br>` becomes `\n`), which keeps `<b>`/`<strong>` as `<b>` and `<i>`/`<em>` as `<i>`, removes other tags with their text kept, and removes script-like elements with their content. The layout measures and paints such labels with `text/markdown_label.dart:RichLabels` as bold (700) and italic runs, so the measured size is the size of the painted runs; labels without tags keep the plain path. Semantic labels are the text without tags. Applied to section titles, card titles (also `@{ label: }`) and the assigned label. The ticket label keeps its text as written, because it also builds the ticket link. Our section title is painted bold (700) while mermaid.js paints it at normal weight; that is a separate deviation.
+- Deviations (same as flowchart): other tags that style text in a browser (`<u>`, `<code>`, `<span style>`, ...) show only their text; Markdown `**`/`*` is not parsed; a rich label wraps only at whitespace.

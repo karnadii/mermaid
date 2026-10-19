@@ -13,6 +13,16 @@
   labels and subgraph titles as bold and italic text, as mermaid.js does, and
   stop drawing other HTML tags as literal text (#79). Markdown-string labels
   with line breaks also keep their `**bold**` styling now.
+- Render `<b>`/`<strong>` and `<i>`/`<em>` as bold and italic text, and
+  stop drawing other HTML tags as literal text, in the labels that mermaid.js
+  shows as HTML: state descriptions, notes, composite titles and transition
+  labels; class labels, notes, relation labels, cardinalities and namespace
+  titles (members and methods keep their tags as text, as in mermaid.js);
+  ER entity aliases, attribute comments and relationship labels; requirement
+  names and field values; block and block edge labels; mindmap nodes; and
+  kanban sections, cards and assigned labels. `<br>` now breaks the line in
+  ER, requirement and block labels and in multi-line state notes, and a
+  quoted requirement name is shown without its quotes.
 - Paint state names and composite titles at normal weight, as mermaid.js
   renders them. They were measured at normal weight but painted bold, so the
   last letter wrapped outside the state box.

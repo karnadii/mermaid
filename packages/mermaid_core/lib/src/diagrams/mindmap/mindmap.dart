@@ -17,6 +17,8 @@ import '../../ir/scene.dart';
 import '../../ir/scene_utils.dart';
 import '../../icons/icon_registry.dart';
 import '../../parse_error.dart';
+import '../../text/html_tags.dart';
+import '../../text/markdown_label.dart';
 import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
@@ -163,8 +165,9 @@ String _resolveIconRef(String ref) {
 }
 
 (MindmapShape, String) _parseNodeText(String content, int line) {
+  // mermaid.js shows mindmap node text as an HTML label.
   String normalize(String s) =>
-      s.replaceAll(_htmlBreak, '\n').trim();
+      normalizeHtmlTags(s.replaceAll(_htmlBreak, '\n')).trim();
   // id((label)) etc — the leading id is optional and unused for layout.
   final m = _nodeShape.firstMatch(content);
   if (m == null) return (MindmapShape.plain, normalize(content));
@@ -465,6 +468,8 @@ RenderScene layoutMindmap(
   );
   final nodes = <SceneNode>[];
   final placed = <MindmapNode, _PlacedMind>{};
+  // Node labels, with `<b>`/`<i>` runs.
+  final labels = RichLabels(measurer);
 
   // Merge the classDefs attached to a node (later classes win), returning the
   // resolved fill/stroke/text colors — any of which may be null if unset.
@@ -494,7 +499,7 @@ RenderScene layoutMindmap(
         ? baseStyle.copyWith(fontWeight: 700)
         : baseStyle;
     // Upstream: maxNodeWidth 200, padding 10 (doubled for rect/rounded/hexagon).
-    final labelSize = measurer.measure(
+    final labelSize = labels.measure(
       n.label,
       style,
       maxWidth: config.maxNodeWidth,
@@ -678,7 +683,7 @@ RenderScene layoutMindmap(
     final style = n.depth == 0
         ? baseStyle.copyWith(fontWeight: 700)
         : baseStyle;
-    final labelSize = measurer.measure(
+    final labelSize = labels.measure(
       n.label,
       style,
       maxWidth: config.maxNodeWidth,
@@ -799,15 +804,16 @@ RenderScene layoutMindmap(
           ),
         );
     }
-    children.add(
-      SceneText(
-        text: n.label,
+    children.addAll(
+      labels.paint(
+        n.label,
         bounds: Rect.fromCenter(p.center, labelSize.width, labelSize.height),
         style: style,
         // Default theme: root text white (`gitBranchLabel0`), section text dark
         // `#333` (`cScaleLabel`). A classDef `color:`/`fill:` overrides (see
         // [textColor] above).
         color: textColor,
+        maxWidth: config.maxNodeWidth,
       ),
     );
     // `::icon(...)` glyph above the node, if it resolves in a registered pack.
@@ -822,8 +828,8 @@ RenderScene layoutMindmap(
     }
     nodes.add(
       SceneGroup(
-        id: 'mind_${n.label}',
-        semanticLabel: n.label,
+        id: 'mind_${stripEmphasisTags(n.label)}',
+        semanticLabel: stripEmphasisTags(n.label),
         children: children,
       ),
     );

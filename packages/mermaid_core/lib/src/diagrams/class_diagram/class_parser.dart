@@ -7,6 +7,7 @@ library;
 
 import '../../detect.dart';
 import '../../parse_error.dart';
+import '../../text/html_tags.dart';
 import '../flowchart/flow_model.dart' show FlowDirection;
 import 'class_model.dart';
 
@@ -129,7 +130,8 @@ class _ClassParser {
 
     m = _namespaceOpen.firstMatch(line);
     if (m != null) {
-      _namespaceStack.add((m.group(1)!, m.group(2) ?? m.group(1)!, []));
+      _namespaceStack.add(
+          (m.group(1)!, _normalize(m.group(2) ?? m.group(1)!), []));
       return;
     }
 
@@ -138,7 +140,7 @@ class _ClassParser {
       final id = _stripGenerics(m.group(1)!);
       final node = _ensure(m.group(1)!);
       if (m.group(3) != null) {
-        classes[id] = node.copyWith(label: m.group(3)!);
+        classes[id] = node.copyWith(label: _normalize(m.group(3)!));
       } else if (m.group(4)!.isNotEmpty) {
         // Trailing generic text: `class People List~List~Person~~` displays
         // the full converted text as the label.
@@ -294,8 +296,8 @@ class _ClassParser {
       endFrom: endFrom,
       endTo: endTo,
       dotted: m.group(4) == '..',
-      cardFrom: m.group(2),
-      cardTo: m.group(6),
+      cardFrom: m.group(2) == null ? null : _normalize(m.group(2)!),
+      cardTo: m.group(6) == null ? null : _normalize(m.group(6)!),
       label: m.group(8) == null ? null : _normalize(m.group(8)!),
     ));
     return true;
@@ -398,9 +400,12 @@ class _ClassParser {
     return out.toString();
   }
 
-  String _normalize(String s) => s
-      .replaceAll(_htmlBreak, '\n')
-      .trim();
+  /// Label text as mermaid.js shows it in an HTML label: `<br>` becomes a
+  /// line break and the other tags are reduced to `<b>`/`<i>` emphasis runs.
+  /// Members and methods do not use it: upstream escapes their `<` and `>`,
+  /// so their tags show as text.
+  String _normalize(String s) =>
+      normalizeHtmlTags(s.replaceAll(_htmlBreak, '\n')).trim();
 
   Map<String, String> _parseStyles(String text) {
     final styles = <String, String>{};

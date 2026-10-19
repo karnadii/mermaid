@@ -14,6 +14,8 @@ import '../../geometry.dart';
 import '../../ir/scene.dart';
 import '../../ir/scene_utils.dart';
 import '../../parse_error.dart';
+import '../../text/html_tags.dart';
+import '../../text/markdown_label.dart';
 import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
@@ -269,7 +271,8 @@ RequirementDiagram parseRequirementDiagram(String source) {
         if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
           value = value.substring(1, value.length - 1);
         }
-        open.$3.add((key, value));
+        // mermaid.js shows field values as HTML labels.
+        open.$3.add((key, normalizeHtmlLabel(value)));
         continue;
       }
       throw MermaidParseException('unrecognized field "$line"', line: i + 1);
@@ -478,6 +481,8 @@ RenderScene layoutRequirementDiagram(
   // Measure boxes: «Type» line, bold name, gap, divider, prefixed field rows.
   // The bool flag marks the row after which a gap is inserted (the name row).
   final boxes = <String, (Size, List<(String, TextStyleSpec, Size, bool)>)>{};
+  // Box rows, with `<b>`/`<i>` runs in the name and field values.
+  final labels = RichLabels(measurer);
   for (final n in diagram.nodes.values) {
     final styles = _nodeStyles(diagram, n);
     final nodeStyle = styles['font-weight']?.toLowerCase() == 'bold'
@@ -489,14 +494,14 @@ RenderScene layoutRequirementDiagram(
       lines.add((
         text,
         style,
-        measurer.measure(text, style, maxWidth: 240),
+        labels.measure(text, style, maxWidth: 240),
         gapAfter,
       ));
     }
 
     final display = _kindDisplay[n.kind] ?? n.kind;
     add('«$display»', nodeStyle.copyWith(italic: true));
-    add(n.id, nodeTitleStyle, gapAfter: true);
+    add(_displayName(n.id), nodeTitleStyle, gapAfter: true);
     for (final (k, v) in n.fields) {
       if (v.isEmpty) continue;
       final value = _displayFieldValue(k, v);
@@ -860,14 +865,15 @@ RenderScene layoutRequirementDiagram(
     // also be valid, but mermaid left-aligns the prefixed body rows visually).
     for (var li = 0; li < lines.length; li++) {
       final (text, style, s, gapAfter) = lines[li];
-      children.add(
-        SceneText(
-          text: text,
+      children.addAll(
+        labels.paint(
+          text,
           bounds: li < 2
               ? Rect.fromLTWH(rect.center.x - s.width / 2, y, s.width, s.height)
               : Rect.fromLTWH(rect.left + boxPadding / 2, y, s.width, s.height),
           style: style,
           color: textColor,
+          maxWidth: 240,
           align: li < 2 ? TextAlignH.center : TextAlignH.left,
         ),
       );
@@ -891,7 +897,7 @@ RenderScene layoutRequirementDiagram(
     nodes.add(
       SceneGroup(
         id: id,
-        semanticLabel: n.id,
+        semanticLabel: stripEmphasisTags(_displayName(n.id)),
         link: n.link,
         tooltip: n.tooltip,
         children: children,
@@ -929,6 +935,17 @@ RenderScene layoutRequirementDiagram(
     background: theme.background,
     nodes: [for (final n in nodes) translateSceneNode(n, dx, dy)],
   );
+}
+
+/// The name a requirement box shows. The name stays the node key with its
+/// quotes, so relations find it; mermaid.js strips the quotes of a quoted
+/// name and shows it as an HTML label.
+String _displayName(String name) {
+  var s = name;
+  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+    s = s.substring(1, s.length - 1);
+  }
+  return normalizeHtmlLabel(s);
 }
 
 Point _outsideMarkerCenter(Rect rect, Point border, double radius) {

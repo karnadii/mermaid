@@ -104,3 +104,8 @@ already carried its `0xcc` alpha and remains a live `Color` (now theme-sourced).
 classDef/class/style per-node colorIndex cycling stays deferred (issue 12) — a
 parser/IR feature, not a default-render gap; upstream's default theme has no
 `borderColorArray`, so the common case is unaffected.
+
+## HTML markup in labels
+- Upstream: `requirementBox.ts:addText` (206-226) uses `config.htmlLabels ?? true` and `createText(sanitizeText(decodeEntities(...)))` for the name and every field row, so `<b>` is bold and `<i>` italic. A quoted name is shown without its quotes.
+- Ours: the parser runs `text/html_tags.dart:normalizeHtmlTags` (after `<br>` becomes `\n`), which keeps `<b>`/`<strong>` as `<b>` and `<i>`/`<em>` as `<i>`, removes other tags with their text kept, and removes script-like elements with their content. The layout measures and paints such labels with `text/markdown_label.dart:RichLabels` as bold (700) and italic runs, so the measured size is the size of the painted runs; labels without tags keep the plain path. Semantic labels are the text without tags. Applied to the name and field values. The box shows a quoted name without quotes; the quoted name stays the node key, so relations still find it.
+- Deviations (same as flowchart): other tags that style text in a browser (`<u>`, `<code>`, `<span style>`, ...) show only their text; Markdown `**`/`*` is not parsed; a rich label wraps only at whitespace.

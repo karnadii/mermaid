@@ -121,3 +121,8 @@
 Remaining open items are all non-default-render deviations: layout algorithm
 (#1, deliberate radial vs cose-bilkent) and root centering (#13, cosmetic under
 the deviating layout). Default theme matches and all other themes adapt.
+
+## HTML markup in labels
+- Upstream: `mindmapDb.ts:104` sanitizes the node text and `getData` sets `labelType: 'markdown'` (266-267); every mindmap shape uses `labelHelper` → `createText` in HTML mode, so `<b>` is bold and `<i>` italic.
+- Ours: the parser runs `text/html_tags.dart:normalizeHtmlTags` (after `<br>` becomes `\n`), which keeps `<b>`/`<strong>` as `<b>` and `<i>`/`<em>` as `<i>`, removes other tags with their text kept, and removes script-like elements with their content. The layout measures and paints such labels with `text/markdown_label.dart:RichLabels` as bold (700) and italic runs, so the measured size is the size of the painted runs; labels without tags keep the plain path. Semantic labels are the text without tags. Applied to node text. Our root label is painted bold (700) while mermaid.js paints it at normal weight; that is a separate deviation, so `<b>` in the root does not change its look here.
+- Deviations (same as flowchart): other tags that style text in a browser (`<u>`, `<code>`, `<span style>`, ...) show only their text; Markdown `**`/`*` is not parsed; a rich label wraps only at whitespace.
