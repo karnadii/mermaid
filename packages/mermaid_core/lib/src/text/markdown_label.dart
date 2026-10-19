@@ -1,15 +1,16 @@
-import '../../color.dart';
-import '../../geometry.dart';
-import '../../ir/scene.dart';
-import '../../text/text_measurer.dart';
-import '../../text/text_style.dart';
+import '../color.dart';
+import '../geometry.dart';
+import '../ir/scene.dart';
+import 'text_measurer.dart';
+import 'text_style.dart';
 
-/// A measured flowchart label made of styled inline runs.
+/// A measured label made of styled inline runs.
 ///
 /// Produced for Mermaid Markdown-string labels (`**bold**`) and for labels
-/// that use the HTML emphasis tags `<b>`/`<strong>` and `<i>`/`<em>`. The
-/// flowchart parser canonicalizes those tags to `<b>`/`</b>` and `<i>`/`</i>`
-/// and removes every other tag, so only those four tags reach this layout.
+/// that use the HTML emphasis tags `<b>`/`<strong>` and `<i>`/`<em>`.
+/// `normalizeHtmlTags` (`html_tags.dart`) canonicalizes those tags to
+/// `<b>`/`</b>` and `<i>`/`</i>` and removes every other tag, so only those
+/// four tags reach this layout.
 class MarkdownLabelLayout {
   const MarkdownLabelLayout({
     required this.plainText,
@@ -115,7 +116,7 @@ MarkdownLabelRun _measureRun(
   );
 }
 
-/// Whether [label] (as produced by the flowchart parser) contains an
+/// Whether [label] (after `normalizeHtmlTags`) contains an
 /// emphasis tag that [layoutMarkdownLabel] turns into a styled run.
 bool hasEmphasisTags(String label) =>
     label.contains('<') &&
@@ -131,7 +132,7 @@ String stripEmphasisTags(String label) =>
 
 final _emphasisTag = RegExp(r'</?[bi]>');
 
-/// Parses and measures a styled flowchart label.
+/// Parses and measures a styled label.
 ///
 /// Recognizes `**bold**` spans when [markdown] is true, and the canonical
 /// `<b>`/`<i>` emphasis tags in any label. `\n` starts a new line. When

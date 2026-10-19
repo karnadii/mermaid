@@ -1,4 +1,4 @@
-import 'package:mermaid_core/src/diagrams/flowchart/markdown_label.dart';
+import 'package:mermaid_core/src/text/markdown_label.dart';
 import 'package:mermaid_core/src/geometry.dart';
 import 'package:mermaid_core/src/ir/scene.dart';
 import 'package:mermaid_core/src/render/svg_renderer.dart';
