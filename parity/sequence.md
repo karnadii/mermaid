@@ -103,3 +103,6 @@
   - Frame keyword (`.labelText`) → `theme.labelTextColor` (#000); block title and section/divider labels (`.loopText`) → `theme.loopTextColor` (#000); were `theme.textColor` (#333).
 - Box-grouping title text and arrowhead/sequence-number colors left on the generic theme fields (no dedicated sequence palette field upstream; `sequenceNumberColor` not exposed). These are not default-render gaps.
 - All sequence colors are now theme-driven; no diagram-specific hardcoded color constants remain.
+
+## HTML markup in labels
+- Upstream draws actors, messages, notes and loop labels as SVG text with `.text()` (`sequence/svgDraw.js:141-270`, `:1731`); there is no HTML label path except KaTeX. Tags other than `<br>` show as text, and ours keep them as text too.

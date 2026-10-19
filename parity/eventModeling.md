@@ -77,3 +77,6 @@
 Notes / residual gaps (minor):
 - Upstream renders box content via an HTML `foreignObject` with `<b>`/`<code>` and `wrapLabel`/`calculateTextDimensions`; our port approximates this with two `SceneText` nodes and the shared `TextMeasurer`. Exact wrap points and the upstream `width/3` heuristic for data boxes are not replicated, so box sizes for data-bearing frames may differ slightly.
 - `note`/`gwt`/`entity` are parsed-and-skipped (upstream also does not render notes/gwt visually in `renderer.ts`).
+
+## HTML markup in labels
+- Upstream builds box text as HTML (`eventmodeling/db.ts:324-366`, `renderer.ts:43-48`), but the name is an identifier that cannot hold tags. Tags inside data values would render as HTML upstream; ours show them as text (not changed).
