@@ -28,10 +28,6 @@ const double _markerLen = 18;
 
 // Upstream config.er defaults (config.schema.yaml).
 
-// tertiaryColor for the default theme = adjust(primary,{h:-160}) ≈ #f9ffec.
-// Not exposed as a MermaidTheme palette field, so kept inlined.
-const _tertiaryColor = Color(0xfff9ffec);
-
 /// Layout values resolved from `config.er`.
 class ErConfig {
   const ErConfig({
@@ -286,8 +282,9 @@ class _ErLayout {
                 geometry: RectGeometry(
                   Rect.fromCenter(c, labelSize.width + 4, labelSize.height + 2),
                 ),
-                // `.relationshipLabelBox` = tertiaryColor @ opacity 0.7.
-                fill: Fill(_tertiaryColor.withOpacity(0.7)),
+                // `.relationshipLabelBox` = tertiaryColor @ opacity 0.7; the
+                // color lives on `MermaidTheme.tertiaryColor`.
+                fill: Fill(theme.tertiaryColor.withOpacity(0.7)),
               ),
               ...labels.paint(
                 r.label,
@@ -536,7 +533,9 @@ class _ErLayout {
   /// marker's `refX` lands on the border) and `ly` is the perpendicular axis
   /// about `refY`. `_p(refX, refY, lx, ly)` maps that local frame to world:
   /// along the line via `dir` (which points inward toward the entity) and
-  /// across it via `perp`. Stroke width 1, circle fill white (`.marker`).
+  /// across it via `perp`. Stroke width 1, circle fill white (`.marker`),
+  /// painted with the theme's canvas color
+  /// (`MermaidTheme.canvasColor`) so it knocks out the line behind it.
   List<SceneNode> _crowsFoot(ErCardinality card, Point tip, Point dir) {
     final perp = Point(-dir.y, dir.x);
     final stroke = Stroke(color: theme.lineColor, width: 1);
@@ -556,7 +555,7 @@ class _ErLayout {
     SceneNode circle(double refX, double refY, double cx, double cy) =>
         SceneShape(
           geometry: CircleGeometry(p(refX, refY, cx, cy), 6),
-          fill: const Fill(Color(0xffffffff)),
+          fill: Fill(theme.canvasColor),
           stroke: stroke,
         );
     // Crow's foot: a leaf-shaped pair of quadratic arcs.
@@ -567,7 +566,8 @@ class _ErLayout {
       double lx0,
       double cx,
       double wx,
-    ) => SceneShape(
+    ) =>
+        SceneShape(
       geometry: PathGeometry([
         MoveTo(p(refX, refY, lx0, refY)),
         QuadTo(p(refX, refY, cx, refY - 18), p(refX, refY, wx, refY)),

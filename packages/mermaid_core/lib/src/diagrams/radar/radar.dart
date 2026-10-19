@@ -4,7 +4,6 @@ library;
 
 import 'dart:math' as math;
 
-import '../../color.dart';
 import '../../config_values.dart';
 import '../../detect.dart';
 import '../../directives.dart';
@@ -292,7 +291,8 @@ RenderScene layoutRadar(
     center.y + r * frac * math.sin(angle(i)),
   );
 
-  const graticuleColor = Color(0xffdedede);
+  // Graticule rings are drawn in the theme's radar graticule color.
+  final graticuleColor = theme.radarGraticuleColor;
   final ticks = chart.ticks < 1 ? 1 : chart.ticks;
 
   // Graticule rings: concentric circles (circle) or nested polygons (polygon).
@@ -309,7 +309,7 @@ RenderScene layoutRadar(
               ),
           ]),
           fill: Fill(graticuleColor.withOpacity(0.3)),
-          stroke: const Stroke(color: graticuleColor, width: 1),
+          stroke: Stroke(color: graticuleColor, width: 1),
         ),
       );
     } else {
@@ -317,7 +317,7 @@ RenderScene layoutRadar(
         SceneShape(
           geometry: CircleGeometry(center, rr),
           fill: Fill(graticuleColor.withOpacity(0.3)),
-          stroke: const Stroke(color: graticuleColor, width: 1),
+          stroke: Stroke(color: graticuleColor, width: 1),
         ),
       );
     }

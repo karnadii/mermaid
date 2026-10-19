@@ -98,16 +98,24 @@ class SequenceConfig {
       boxTextMargin: nonNegativeDouble(values, 'boxTextMargin', 5),
       noteMargin: nonNegativeDouble(values, 'noteMargin', 10),
       messageMargin: nonNegativeDouble(values, 'messageMargin', 35),
-      messageAlign: enumValue(values, 'messageAlign', const {
+      messageAlign: enumValue(
+          values,
+          'messageAlign',
+          const {
         'left',
         'center',
         'right',
-      }, 'center'),
-      noteAlign: enumValue(values, 'noteAlign', const {
+          },
+          'center'),
+      noteAlign: enumValue(
+          values,
+          'noteAlign',
+          const {
         'left',
         'center',
         'right',
-      }, 'center'),
+          },
+          'center'),
       mirrorActors: boolValue(values, 'mirrorActors', true),
       showSequenceNumbers: boolValue(values, 'showSequenceNumbers', false),
       wrap: boolValue(values, 'wrap', false),
@@ -318,8 +326,7 @@ class _SequenceLayout {
             ..depth = openFrames.length;
           openFrames.add(frame);
           if (event.kind != SeqBlockKind.rect) {
-            y +=
-                _blockLabelHeight +
+            y += _blockLabelHeight +
                 (event.label.isEmpty
                     ? 0
                     : measurer.measure(event.label, baseStyle).height);
@@ -401,7 +408,7 @@ class _SequenceLayout {
           ),
           fill: Fill(
             (box.color != null ? Color.tryParse(box.color!) : null) ??
-                const Color(0x00000000),
+                Color.transparent,
           ),
         ),
       );
@@ -425,9 +432,8 @@ class _SequenceLayout {
 
     for (final id in order) {
       final col = columns[id]!;
-      final top = createTop[id] != null
-          ? createTop[id]! + _actorHeight
-          : topBoxBottom;
+      final top =
+          createTop[id] != null ? createTop[id]! + _actorHeight : topBoxBottom;
       final bottom = destroyY[id] ?? bottomBoxTop;
       lifelines.add(
         SceneShape(
@@ -956,7 +962,8 @@ class _SequenceLayout {
     double textWidth,
     String alignment, {
     double inset = 4,
-  }) => switch (alignment) {
+  }) =>
+      switch (alignment) {
     'left' => left + inset,
     'right' => right - inset - textWidth,
     _ => (left + right - textWidth) / 2,
@@ -1054,8 +1061,10 @@ class _SequenceLayout {
     );
 
     if (frame.start.kind == SeqBlockKind.rect) {
-      final fill =
-          Color.tryParse(frame.start.color ?? '') ?? const Color(0x11888888);
+      // A `rect` frame with no color of its own takes the theme's alt-frame
+      // fill (`MermaidTheme.sequenceAltFrameColor`).
+      final fill = Color.tryParse(frame.start.color ?? '') ??
+          theme.sequenceAltFrameColor;
       rectBackgrounds.add((
         sourceOrder: frame.sourceOrder,
         node: SceneShape(geometry: RectGeometry(rect), fill: Fill(fill)),

@@ -23,11 +23,17 @@ import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
 final _c4NamedArgPrefix = RegExp(r'^\$\w+\s*=');
-final _c4Header = RegExp(r'^C4(Context|Container|Component|Dynamic|Deployment)\b');
+final _c4Header = RegExp(
+  r'^C4(Context|Container|Component|Dynamic|Deployment)\b',
+);
 final _c4Title = RegExp(r'^title\s+(.+)$');
-final _c4Boundary = RegExp(r'^(Enterprise_Boundary|System_Boundary|Container_Boundary|Boundary|Deployment_Node|Node|Node_L|Node_R)\s*\((.*)\)\s*\{$');
+final _c4Boundary = RegExp(
+  r'^(Enterprise_Boundary|System_Boundary|Container_Boundary|Boundary|Deployment_Node|Node|Node_L|Node_R)\s*\((.*)\)\s*\{$',
+);
 final _c4Element = RegExp(r'^(\w+)\s*\((.*)\)\s*$');
-final _c4Relation = RegExp(r'^(Bi)?Rel(_[UDLR]|_Up|_Down|_Left|_Right|_Back)?$');
+final _c4Relation = RegExp(
+  r'^(Bi)?Rel(_[UDLR]|_Up|_Down|_Left|_Right|_Back)?$',
+);
 final _c4AccDescr = RegExp(r'^acc(Title|Descr)\s*[:{]');
 final _c4CamelBoundary = RegExp(r'(?<=[a-z])(?=[A-Z])');
 final _c4NamedArg = RegExp(r'^\$?(\w+)\s*=\s*(.*)$');
@@ -185,7 +191,8 @@ class C4Rel {
     Color? lineColor,
     double? offsetX,
     double? offsetY,
-  }) => C4Rel(
+  }) =>
+      C4Rel(
     from: from,
     to: to,
     label: label,
@@ -462,9 +469,8 @@ String _c4StyleKey(String functionName) {
   final base = external
       ? functionName.substring(0, functionName.length - 4)
       : functionName;
-  final snake = base
-      .replaceAllMapped(_c4CamelBoundary, (_) => '_')
-      .toLowerCase();
+  final snake =
+      base.replaceAllMapped(_c4CamelBoundary, (_) => '_').toLowerCase();
   return external ? 'external_$snake' : snake;
 }
 
@@ -486,33 +492,66 @@ Map<String, String> _styleArgs(Iterable<String> args) {
 }
 
 // Upstream C4 default colors (config.schema.yaml `c4` block). Each kind has a
-// distinct fill and border; external kinds use distinct grays.
-const _white = Color(0xffffffff);
+// distinct fill and border; external kinds use distinct grays. Those values
+// now live on `MermaidTheme` (`c4PersonFill`/`c4PersonBorder`,
+// `c4PersonExtFill`/`c4PersonExtBorder`, `c4SystemFill`/`c4SystemBorder`,
+// `c4SystemExtFill`/`c4SystemExtBorder`, `c4ContainerFill`/`c4ContainerBorder`,
+// `c4ComponentFill`/`c4ComponentBorder` and the `c4External*` counterparts),
+// while the boundary/relation ink is `c4BoundaryColor`/`c4TextColor` and the
+// white knockout ink is `canvasColor`.
 
-({Color fill, Color border}) _kindColors(C4Node n) {
+({Color fill, Color border}) _kindColors(C4Node n, MermaidTheme theme) {
   if (n.external) {
     return switch (n.kind) {
-      C4Kind.personExt ||
-      C4Kind.person => (fill: Color(0xff686868), border: Color(0xff8a8a8a)),
-      C4Kind.systemExt ||
-      C4Kind.system ||
-      C4Kind.db ||
-      C4Kind.queue => (fill: Color(0xff999999), border: Color(0xff8a8a8a)),
-      C4Kind.container => (fill: Color(0xffb3b3b3), border: Color(0xffa6a6a6)),
-      C4Kind.component => (fill: Color(0xffcccccc), border: Color(0xffbfbfbf)),
+      C4Kind.personExt || C4Kind.person => (
+          fill: theme.c4ExternalPersonFill,
+          border: theme.c4ExternalPersonBorder,
+        ),
+      C4Kind.systemExt || C4Kind.system || C4Kind.db || C4Kind.queue => (
+          fill: theme.c4ExternalSystemFill,
+          border: theme.c4ExternalSystemBorder,
+        ),
+      C4Kind.container => (
+          fill: theme.c4ExternalContainerFill,
+          border: theme.c4ExternalContainerBorder,
+        ),
+      C4Kind.component => (
+          fill: theme.c4ExternalComponentFill,
+          border: theme.c4ExternalComponentBorder,
+        ),
     };
   }
   return switch (n.kind) {
-    C4Kind.person => (fill: Color(0xff08427b), border: Color(0xff073b6f)),
-    C4Kind.personExt => (fill: Color(0xff686868), border: Color(0xff8a8a8a)),
-    C4Kind.systemExt => (fill: Color(0xff999999), border: Color(0xff8a8a8a)),
-    C4Kind.system ||
-    C4Kind.db ||
-    C4Kind.queue => (fill: Color(0xff1168bd), border: Color(0xff3c7fc0)),
-    C4Kind.container => (fill: Color(0xff438dd5), border: Color(0xff3c7fc0)),
-    C4Kind.component => (fill: Color(0xff85bbf0), border: Color(0xff78a8d8)),
+    C4Kind.person => (fill: theme.c4PersonFill, border: theme.c4PersonBorder),
+    C4Kind.personExt => (
+        fill: theme.c4PersonExtFill,
+        border: theme.c4PersonExtBorder,
+      ),
+    C4Kind.systemExt => (
+        fill: theme.c4SystemExtFill,
+        border: theme.c4SystemExtBorder,
+      ),
+    C4Kind.system || C4Kind.db || C4Kind.queue => (
+        fill: theme.c4SystemFill,
+        border: theme.c4SystemBorder
+      ),
+    C4Kind.container => (
+        fill: theme.c4ContainerFill,
+        border: theme.c4ContainerBorder,
+      ),
+    C4Kind.component => (
+        fill: theme.c4ComponentFill,
+        border: theme.c4ComponentBorder,
+      ),
   };
 }
+
+/// Ink that survives the fill it is painted on.
+///
+/// A dark fill takes the light ink, a light fill the dark one. The pair
+/// comes from the theme, so a host can pick its own two inks.
+Color _inkOn(Color fill, MermaidTheme theme) =>
+    fill.luminance < 0.5 ? theme.textOnDarkFill : theme.textOnLightFill;
 
 /// Upstream stereotype keyword drawn as `<<...>>` above the label.
 String _stereotype(C4Node n) {
@@ -609,9 +648,8 @@ class C4Config {
         '${prefix}FontFamily',
         '"Open Sans", sans-serif',
       ),
-      fontSize: parsedSize != null && parsedSize >= 0
-          ? parsedSize
-          : defaultSize,
+      fontSize:
+          parsedSize != null && parsedSize >= 0 ? parsedSize : defaultSize,
       fontWeight: parsedWeight ?? 400,
     );
   }
@@ -652,7 +690,8 @@ RenderScene layoutC4Diagram(
     double sizeDelta = 0,
     int? weight,
     bool italic = false,
-  }) => TextStyleSpec(
+  }) =>
+      TextStyleSpec(
     fontFamily: base.fontFamily,
     fontSize: math.max(0, base.fontSize + sizeDelta),
     fontWeight: weight ?? base.fontWeight,
@@ -682,8 +721,7 @@ RenderScene layoutC4Diagram(
           measurer.measure('[${boundary.type}]', boundaryTypeStyle).height + 2;
     }
     if (boundary.description.isNotEmpty) {
-      height +=
-          measurer
+      height += measurer
               .measure(
                 boundary.description,
                 boundaryTypeStyle,
@@ -725,8 +763,7 @@ RenderScene layoutC4Diagram(
       desc.width,
     ].reduce(math.max);
     final w = math.max(config.width, contentW + config.c4ShapePadding * 2);
-    final contentH =
-        config.c4ShapePadding + // top padding above stereotype
+    final contentH = config.c4ShapePadding + // top padding above stereotype
         stereo.height +
         imageH +
         8 +
@@ -827,8 +864,7 @@ RenderScene layoutC4Diagram(
     final subs = childBoundaries[boundaryId] ?? const [];
     if (subs.isNotEmpty) {
       // Boundaries are laid out c4BoundaryInRow per row, below the shapes.
-      var rowStartY =
-          (acc?.bottom ?? originY) +
+      var rowStartY = (acc?.bottom ?? originY) +
           (shapeRect != null ? config.c4ShapeMargin : 0);
       var x = originX + config.diagramMarginX;
       var rowMaxBottom = rowStartY;
@@ -849,9 +885,8 @@ RenderScene layoutC4Diagram(
           x + _boundaryPadding,
           rowStartY + _boundaryPadding,
         );
-        final width = packed == null
-            ? config.width
-            : packed.width + 2 * _boundaryPadding;
+        final width =
+            packed == null ? config.width : packed.width + 2 * _boundaryPadding;
         final headerHeight = boundaryHeaderHeight(subs[bi], width);
         Rect rect;
         if (packed == null) {
@@ -912,8 +947,8 @@ RenderScene layoutC4Diagram(
         });
   for (final b in orderedBoundaries) {
     final rect = boundaryRects[b.id]!;
-    final borderColor = b.borderColor ?? const Color(0xff444444);
-    final fontColor = b.fontColor ?? const Color(0xff444444);
+    final borderColor = b.borderColor ?? theme.c4BoundaryColor;
+    final fontColor = b.fontColor ?? theme.c4TextColor;
     final children = <SceneNode>[
       SceneShape(
         geometry: RectGeometry(rect, rx: 2.5, ry: 2.5),
@@ -1062,7 +1097,7 @@ RenderScene layoutC4Diagram(
     final tip = end;
     end = tip - dir * 9;
     final perp = Point(-dir.y, dir.x);
-    final lineCol = r.lineColor ?? const Color(0xff444444);
+    final lineCol = r.lineColor ?? theme.c4TextColor;
 
     final children = <SceneNode>[
       SceneShape(
@@ -1108,10 +1143,9 @@ RenderScene layoutC4Diagram(
     );
 
     // Label at the midpoint (no background rect; C4Dynamic auto-numbers).
-    final textColor = r.textColor ?? const Color(0xff444444);
-    final labelText = diagram.subtype == C4Subtype.dynamic
-        ? '${i + 1}: ${r.label}'
-        : r.label;
+    final textColor = r.textColor ?? theme.c4TextColor;
+    final labelText =
+        diagram.subtype == C4Subtype.dynamic ? '${i + 1}: ${r.label}' : r.label;
     var mid = Point((start.x + tip.x) / 2, (start.y + tip.y) / 2);
     if (labelText.isNotEmpty || r.technology.isNotEmpty) {
       final labelSize = labelText.isEmpty
@@ -1167,11 +1201,9 @@ RenderScene layoutC4Diagram(
       final candidates =
           <({Point mid, Rect bounds, double distance, int priority})>[];
       ({Point mid, Rect bounds, double distance, int priority})? fallback;
-      for (
-        var directionIndex = 0;
+      for (var directionIndex = 0;
         directionIndex < directions.length;
-        directionIndex++
-      ) {
+          directionIndex++) {
         final direction = directions[directionIndex];
         final xProjection = math.min(
           direction.x * -annotationWidth / 2,
@@ -1184,11 +1216,9 @@ RenderScene layoutC4Diagram(
         final baseDistance = 4 - xProjection - yProjection;
         var found = false;
         for (var radius = 0; radius < 40 && !found; radius++) {
-          for (
-            var normalPass = 0;
+          for (var normalPass = 0;
             normalPass <= radius && !found;
-            normalPass++
-          ) {
+              normalPass++) {
             final slidePass = radius - normalPass;
             final slideOffsets = slidePass == 0
                 ? const [0.0]
@@ -1222,8 +1252,7 @@ RenderScene layoutC4Diagram(
                   ),
                 ),
               );
-              final insideBoundary =
-                  containingBoundary == null ||
+              final insideBoundary = containingBoundary == null ||
                   rectContainsRect(containingBoundary, candidateBounds);
               if (!crossesStroke &&
                   !overlapsObstruction(candidateBounds) &&
@@ -1289,12 +1318,16 @@ RenderScene layoutC4Diagram(
   diagram.nodes.forEach((id, n) {
     final box = boxes[id]!;
     final rect = placedRects[id]!;
-    final colors = _kindColors(n);
+    final colors = _kindColors(n, theme);
     final prefix = n.styleKey ?? 'person';
     final fill = n.bgColor ?? config.color('${prefix}_bg_color', colors.fill);
     final border =
         n.borderColor ?? config.color('${prefix}_border_color', colors.border);
-    final labelColor = n.fontColor ?? _white;
+    // Ink: the element's text and avatar glyph are painted over the
+    // element's own fill. Upstream paints them in the surface color, which
+    // is unreadable on the lighter element fills (component, container), so
+    // the ink follows the fill it sits on.
+    final labelColor = n.fontColor ?? _inkOn(fill, theme);
     final isPerson = n.kind == C4Kind.person || n.kind == C4Kind.personExt;
     final nodeStyle = config.font(prefix, defaultSize: 14);
     final stereoStyle = derived(nodeStyle, sizeDelta: -2, italic: true);

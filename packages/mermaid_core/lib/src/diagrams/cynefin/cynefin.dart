@@ -26,7 +26,9 @@ final _cynefinHeader = RegExp(r'^\s*cynefin(-beta)?\b');
 final _cynefinTitle = RegExp(r'^title\s+(.+)$');
 final _cynefinAccTitle = RegExp(r'^accTitle\s*:\s*(.+)$');
 final _cynefinAccDescr = RegExp(r'^accDescr\s*:\s*(.+)$');
-final _cynefinDomainName = RegExp(r'^(clear|complicated|complex|chaotic|confusion|disorder)$');
+final _cynefinDomainName = RegExp(
+  r'^(clear|complicated|complex|chaotic|confusion|disorder)$',
+);
 
 /// A transition `from --> to (: "label")?` between two domains.
 class CynefinTransition {
@@ -167,15 +169,6 @@ class CynefinConfig {
     );
   }
 }
-
-// Per-domain background colors (theme-default.js cynefin block).
-const _domainFills = {
-  'complex': Color(0xffE8F5E9),
-  'complicated': Color(0xffE3F2FD),
-  'clear': Color(0xffFFF8E1),
-  'chaotic': Color(0xffFBE9E7),
-  'confusion': Color(0xffF3E5F5),
-};
 
 // Decision model + practice subtitles per domain.
 const _domainMeta = {
@@ -329,8 +322,19 @@ RenderScene layoutCynefin(
   final labelColor = theme.primaryTextColor;
   final textColor = theme.textColor;
   final boundaryColor = theme.lineColor;
-  const cliffColor = Color(0xff8B0000);
+  final cliffColor = theme.cynefinCliffColor;
   final arrowColor = theme.lineColor;
+
+  // Per-domain background colors (theme-default.js cynefin block). They live
+  // in `MermaidTheme.cynefin*Fill` so a host can retheme them; the default
+  // values are the upstream ones.
+  final domainFills = <String, Color>{
+    'complex': theme.cynefinComplexFill,
+    'complicated': theme.cynefinComplicatedFill,
+    'clear': theme.cynefinClearFill,
+    'chaotic': theme.cynefinChaoticFill,
+    'confusion': theme.cynefinConfusionFill,
+  };
 
   const domainFontSize = 16.0;
   const itemFontSize = 12.0;
@@ -374,7 +378,7 @@ RenderScene layoutCynefin(
     nodes.add(
       SceneShape(
         geometry: RectGeometry(Rect.fromLTWH(l.x, l.y, l.w, l.h)),
-        fill: Fill(_domainFills[name]!.withOpacity(0.4)),
+        fill: Fill(domainFills[name]!.withOpacity(0.4)),
       ),
     );
   }
@@ -407,7 +411,7 @@ RenderScene layoutCynefin(
   nodes.add(
     SceneShape(
       geometry: _cliffPath(width, height),
-      stroke: const Stroke(color: cliffColor, width: 4),
+      stroke: Stroke(color: cliffColor, width: 4),
     ),
   );
 
@@ -421,7 +425,7 @@ RenderScene layoutCynefin(
         confusionRx,
         confusionRy,
       ),
-      fill: Fill(_domainFills['confusion']!.withOpacity(0.5)),
+      fill: Fill(domainFills['confusion']!.withOpacity(0.5)),
       stroke: Stroke(color: boundaryColor, width: 1.5, dash: const [4, 2]),
     ),
   );
@@ -554,7 +558,7 @@ RenderScene layoutCynefin(
 
     for (var idx = 0; idx < itemsToRender.length; idx++) {
       final itemY = startY + idx * (itemHeight + 4);
-      addBadge(itemsToRender[idx], l.cx, itemY, _domainFills[name]!, 0.95);
+      addBadge(itemsToRender[idx], l.cx, itemY, domainFills[name]!, 0.95);
     }
 
     if (overflowCount > 0) {
@@ -563,7 +567,7 @@ RenderScene layoutCynefin(
         '+$overflowCount more',
         l.cx,
         overflowY,
-        _domainFills[name]!,
+        domainFills[name]!,
         0.6,
         dash: const [3, 2],
       );

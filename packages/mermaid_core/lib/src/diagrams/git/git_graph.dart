@@ -356,12 +356,10 @@ RenderScene layoutGitGraph(
       : 50.0;
   const commitLabelSize = 10.0;
   const tagLabelSize = 10.0;
-  final horizontal =
-      graph.direction == GitDirection.leftRight ||
+  final horizontal = graph.direction == GitDirection.leftRight ||
       graph.direction == GitDirection.rightLeft;
   final rl = graph.direction == GitDirection.rightLeft;
-  final tb =
-      graph.direction == GitDirection.topBottom ||
+  final tb = graph.direction == GitDirection.topBottom ||
       graph.direction == GitDirection.bottomTop;
   final bt = graph.direction == GitDirection.bottomTop;
 
@@ -416,9 +414,8 @@ RenderScene layoutGitGraph(
         final pt = timeOf[pid];
         if (pt != null && pt > parentMax) parentMax = pt;
       }
-      final fromParent = parentMax.isFinite
-          ? parentMax + commitStep
-          : pos + layoutOffset;
+      final fromParent =
+          parentMax.isFinite ? parentMax + commitStep : pos + layoutOffset;
       final cursor = pos + layoutOffset;
       t = config.parallelCommits
           ? fromParent + layoutOffset
@@ -556,8 +553,8 @@ RenderScene layoutGitGraph(
         );
       case GitCommitType.normal:
         if (c.isCherryPick) {
-          // Cherry glyph: r10 circle + two small white circles (r2.75 at
-          // x±3, y+2) + two white stems up to (x, y−5).
+          // Cherry glyph: r10 circle + two small circles in the merge-ink
+          // color (r2.75 at x±3, y+2) + two matching stems up to (x, y−5).
           children.add(
             SceneShape(
               geometry: CircleGeometry(center, commitR),
@@ -572,7 +569,7 @@ RenderScene layoutGitGraph(
                   Point(center.x + dx, center.y + 2),
                   2.75,
                 ),
-                fill: const Fill(Color(0xffffffff)),
+                fill: Fill(theme.gitMergeInnerColor),
               ),
             );
             children.add(
@@ -581,7 +578,7 @@ RenderScene layoutGitGraph(
                   MoveTo(Point(center.x + dx, center.y + 1)),
                   LineTo(Point(center.x, center.y - 5)),
                 ]),
-                stroke: const Stroke(color: Color(0xffffffff), width: 1),
+                stroke: Stroke(color: theme.gitMergeInnerColor, width: 1),
               ),
             );
           }
@@ -666,12 +663,10 @@ RenderScene layoutGitGraph(
           // sticks out one LAYOUT_OFFSET to the left of the body edge:
           //   notch = cx - w/2 - 12, hole = cx - w/2 - 8, body = cx - w/2 - 4.
           final tagOrigin = cx + (rl ? layoutOffset : -layoutOffset);
-          final notchX = rl
-              ? tagOrigin + w / 2 + px / 2
-              : tagOrigin - w / 2 - px / 2;
-          final holeX = rl
-              ? tagOrigin + w / 2 - px / 2
-              : tagOrigin - w / 2 + px / 2;
+          final notchX =
+              rl ? tagOrigin + w / 2 + px / 2 : tagOrigin - w / 2 - px / 2;
+          final holeX =
+              rl ? tagOrigin + w / 2 - px / 2 : tagOrigin - w / 2 + px / 2;
           final bodyLeft = cx - w / 2 - px;
           final bodyRight = cx + w / 2 + px;
           final h2 = h / 2;

@@ -244,21 +244,13 @@ class EventModelingConfig {
   }
 }
 
-// Entity visual props (upstream `calculateEntityVisualProps`, default theme).
-const _entityFill = {
-  'ui': Color(0xffffffff),
-  'pcr': Color(0xffedb3f6),
-  'rmo': Color(0xffd3f1a2),
-  'cmd': Color(0xffbcd6fe),
-  'evt': Color(0xffffb778),
-};
-const _entityStroke = {
-  'ui': Color(0xffdbdada),
-  'pcr': Color(0xffb88cbf),
-  'rmo': Color(0xffa3b732),
-  'cmd': Color(0xff679ac3),
-  'evt': Color(0xffc19a0f),
-};
+// Entity visual props (upstream `calculateEntityVisualProps`) live on
+// `MermaidTheme` — `emUiFill` / `emUiStroke`, `emProcessorFill` /
+// `emProcessorStroke`, `emReadModelFill` / `emReadModelStroke`,
+// `emCommandFill` / `emCommandStroke` and `emEventFill` / `emEventStroke` —
+// so a host app can theme the frames. The maps below are built from the
+// theme in `layoutEventModeling`; the diagram itself owns no palette, so the
+// dark variant is whichever theme the host selects.
 
 class _Swimlane {
   _Swimlane({
@@ -398,6 +390,22 @@ RenderScene layoutEventModeling(
     fontSize: _emFontSize,
   );
 
+  // Entity visual props, keyed by canonical entity type.
+  final entityFill = <String, Color>{
+    'ui': theme.emUiFill,
+    'pcr': theme.emProcessorFill,
+    'rmo': theme.emReadModelFill,
+    'cmd': theme.emCommandFill,
+    'evt': theme.emEventFill,
+  };
+  final entityStroke = <String, Color>{
+    'ui': theme.emUiStroke,
+    'pcr': theme.emProcessorStroke,
+    'rmo': theme.emReadModelStroke,
+    'cmd': theme.emCommandStroke,
+    'evt': theme.emEventStroke,
+  };
+
   final swimlanes = <int, _Swimlane>{};
   final boxes = <_PositionedBox>[];
   final relations = <_Relation>[];
@@ -479,11 +487,9 @@ RenderScene layoutEventModeling(
     ].reduce((a, c) => a > c ? a : c);
 
     swimlane.r = x + width;
-    swimlane.maxHeight = swimlane.maxHeight > height
-        ? swimlane.maxHeight
-        : height;
-    swimlane.height =
-        (swimlane.maxHeight > minSwimlaneHeight
+    swimlane.maxHeight =
+        swimlane.maxHeight > height ? swimlane.maxHeight : height;
+    swimlane.height = (swimlane.maxHeight > minSwimlaneHeight
             ? swimlane.maxHeight
             : minSwimlaneHeight) +
         2 * _swimlanePadding;
@@ -551,8 +557,10 @@ RenderScene layoutEventModeling(
           rx: 3,
           ry: 3,
         ),
-        fill: const Fill(Color(0xfffafafa)), // rgb(250,250,250)
-        stroke: const Stroke(color: Color(0xfff0f0f0)), // rgb(240,240,240)
+        fill: Fill(theme.emSwimlaneBackgroundOdd), // rgb(250,250,250)
+        stroke: Stroke(
+          color: theme.emSwimlaneBackgroundStroke,
+        ), // rgb(240,240,240)
       ),
     );
     final labelSize = measurer.measure(s.label, nameStyle);
@@ -582,8 +590,11 @@ RenderScene layoutEventModeling(
           rx: 3,
           ry: 3,
         ),
-        fill: Fill(_entityFill[box.block.type] ?? const Color(0xffff0000)),
-        stroke: Stroke(color: _entityStroke[box.block.type] ?? Color.black),
+        // A frame whose type is not one of the five canonical ones is a
+        // diagram bug, so it is painted with a loud marker instead of a
+        // silent default. No theme token owns that role, hence the literal.
+        fill: Fill(entityFill[box.block.type] ?? theme.emUnknownTypeFill),
+        stroke: Stroke(color: entityStroke[box.block.type] ?? Color.black),
       ),
     );
 

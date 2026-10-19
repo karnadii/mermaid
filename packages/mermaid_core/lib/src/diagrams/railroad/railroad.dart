@@ -446,10 +446,9 @@ const _terminalRadius = 10.0;
 //   lineColor/markerFill<- lineColor                      (theme.lineColor)
 //   ruleNameColor       <- titleColor ?? textColor        (theme.titleColor)
 // `specialFill`/`specialStroke` derive from tertiaryColor/tertiaryBorderColor,
-// which the shared theme does not expose, so they stay inlined (diagram-specific
-// fallbacks #F0E0FF / #8800CC from DEFAULT_RAILROAD_CONFIG).
-const _specialFill = Color(0xfff0e0ff);
-const _specialStroke = Color(0xff8800cc);
+// which the shared theme does not expose, so they live on `MermaidTheme` as the
+// diagram-specific tokens `railroadSpecialFill` / `railroadSpecialStroke`
+// (defaults #F0E0FF / #8800CC from DEFAULT_RAILROAD_CONFIG).
 
 Color? _configuredColor(Map<String, Object?> values, String key) {
   final value = values[key];
@@ -640,9 +639,9 @@ class _Layouter {
       nodes: [
         SceneShape(
           geometry: RectGeometry(rect),
-          fill: Fill(config.specialFill ?? _specialFill),
+          fill: Fill(config.specialFill ?? theme.railroadSpecialFill),
           stroke: Stroke(
-            color: config.specialStroke ?? _specialStroke,
+            color: config.specialStroke ?? theme.railroadSpecialStroke,
             width: _strokeWidth,
             dash: [5, 3],
           ),
@@ -697,9 +696,8 @@ class _Layouter {
     if (items.isEmpty) return _stub();
     final frags = [for (final it in items) layout(it)];
     // Baseline: align all fragment entry rails to a common y.
-    final entryAbove = frags
-        .map((f) => f.entryY)
-        .reduce(math.max); // space above baseline
+    final entryAbove =
+        frags.map((f) => f.entryY).reduce(math.max); // space above baseline
     final exitBelow = frags
         .map((f) => f.height - f.entryY)
         .reduce(math.max); // space below baseline
@@ -1089,8 +1087,7 @@ RenderScene layoutRailroad(
 
     // Advance below this rule (upstream: rule height + verticalSeparation).
     final ruleBottom = definitionY + frag.height;
-    y =
-        math.max(
+    y = math.max(
           baselineY + (config.showMarkers ? config.markerRadius : 0),
           ruleBottom,
         ) +

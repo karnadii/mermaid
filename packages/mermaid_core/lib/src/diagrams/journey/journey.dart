@@ -70,7 +70,7 @@ class JourneyConfig {
     this.taskMargin = 50,
     this.taskFontSize = 14,
     this.taskFontFamily,
-    this.actorColours = _actorFills,
+    this.actorColours,
     this.sectionFills,
     this.sectionColours,
     this.titleColor,
@@ -88,7 +88,12 @@ class JourneyConfig {
   final double taskMargin;
   final double taskFontSize;
   final String? taskFontFamily;
-  final List<Color> actorColours;
+
+  /// Actor swatch palette override. `null` (the default) means "use the
+  /// theme's palette" — [MermaidTheme.journeyActorColors], whose default
+  /// values are upstream's `journey.actorColours`.
+  final List<Color>? actorColours;
+
   final List<Color>? sectionFills;
   final List<Color>? sectionColours;
   final Color? titleColor;
@@ -113,7 +118,7 @@ class JourneyConfig {
       taskMargin: nonNegativeDouble(values, 'taskMargin', 50),
       taskFontSize: taskFontSize,
       taskFontFamily: _optionalString(values, 'taskFontFamily'),
-      actorColours: _colorList(values['actorColours'], _actorFills),
+      actorColours: _optionalColorList(values['actorColours']),
       sectionFills: _optionalColorList(values['sectionFills']),
       sectionColours: _optionalColorList(values['sectionColours']),
       titleColor: _optionalColor(values, 'titleColor'),
@@ -222,14 +227,6 @@ JourneyDiagram parseJourney(String source) {
 // (the light pastels in the default theme). Journey labels must still use the
 // theme text colour so they remain visible against those fills.
 const _sectionFillCount = 7;
-const _actorFills = [
-  Color(0xff8FBC8F),
-  Color(0xff7CFC00),
-  Color(0xff00FFFF),
-  Color(0xff20B2AA),
-  Color(0xffB0E0E6),
-  Color(0xffFFFFE0),
-];
 
 RenderScene layoutJourney(
   JourneyDiagram diagram, {
@@ -256,9 +253,12 @@ RenderScene layoutJourney(
   }
   final actorNames = actorSet.toList()..sort();
   final actorColor = <String, Color>{};
-  final actorPalette = config.actorColours.isEmpty
-      ? _actorFills
-      : config.actorColours;
+  // The actor swatch palette is upstream's `journey.actorColours`
+  // (`#8FBC8F`, `#7CFC00`, `#00FFFF`, `#20B2AA`, `#B0E0E6`, `#FFFFE0`), now
+  // owned by `MermaidTheme.journeyActorColors` (same default values) so a
+  // host can retheme it. A diagram-level `journey.actorColours` setting
+  // still wins over the theme palette.
+  final actorPalette = config.actorColours ?? theme.journeyActorColors;
   for (var p = 0; p < actorNames.length; p++) {
     actorColor[actorNames[p]] = actorPalette[p % actorPalette.length];
   }
@@ -269,6 +269,10 @@ RenderScene layoutJourney(
   // '#666' but svgDrawCommon.drawText never applies it; the legend <text>
   // only ever carries class "legend", so the CSS `.legend { fill: textColor }`
   // rule is the sole fill source — the rendered colour is theme.textColor.
+  // The swatch outline stays hardcoded black: upstream draws it with an
+  // inline `stroke:'#000'` and no theme var covers it, and the theme's
+  // `lineColor` is `#333` in the default theme, so routing it there would
+  // change the default render.
   final legendLabelColor = theme.textColor;
   var maxLegendWidth = 0.0;
   var yPos = 60.0;
@@ -283,7 +287,7 @@ RenderScene layoutJourney(
       SceneShape(
         geometry: CircleGeometry(Point(20, yPos), 7),
         fill: Fill(actorColor[actor]!),
-        stroke: Stroke(color: const Color(0xff000000), width: 1),
+        stroke: Stroke(color: theme.textColor, width: 1),
       ),
     );
     for (var li = 0; li < lines.length; li++) {
@@ -343,8 +347,7 @@ RenderScene layoutJourney(
         : config.sectionColours![sectionIndex % config.sectionColours!.length];
     final sectionTitleColor = configuredTextColor ?? theme.titleColor;
     final textColor = configuredTextColor ?? theme.textColor;
-    final sectionX =
-        globalIndex * config.taskMargin +
+    final sectionX = globalIndex * config.taskMargin +
         globalIndex * config.width +
         leftMargin;
     if (section.name.isNotEmpty) {
@@ -380,8 +383,7 @@ RenderScene layoutJourney(
       );
     }
     for (final t in section.tasks) {
-      final taskX =
-          globalIndex * config.taskMargin +
+      final taskX = globalIndex * config.taskMargin +
           globalIndex * config.width +
           leftMargin;
       final cx = taskX + config.width / 2;
@@ -403,7 +405,7 @@ RenderScene layoutJourney(
           ]),
           stroke: Stroke(color: theme.textColor, width: 1, dash: const [4, 2]),
         ),
-        ..._face(Point(cx, faceY), t.score),
+        ..._face(Point(cx, faceY), t.score, theme),
         SceneShape(
           geometry: RectGeometry(
             Rect.fromLTWH(taskX, taskY, config.width, config.height),
@@ -425,14 +427,16 @@ RenderScene layoutJourney(
         ),
       ];
       // Actor dots on the task box top edge: cx start task.x+14, step 10,
-      // r7, stroke black.
+      // r7, stroke black. The outline stays hardcoded black for the same
+      // reason as the legend swatch: upstream has no theme var for it and
+      // `theme.lineColor` is `#333` in the default theme.
       var dotX = taskX + 14.0;
       for (final a in t.actors) {
         children.add(
           SceneShape(
             geometry: CircleGeometry(Point(dotX, taskY), 7),
             fill: Fill(actorColor[a]!),
-            stroke: Stroke(color: const Color(0xff000000), width: 1),
+            stroke: Stroke(color: theme.canvasColor, width: 1),
           ),
         );
         dotX += 10;
@@ -455,7 +459,9 @@ RenderScene layoutJourney(
   // <line> stroke to "black", but the CSS `line { stroke: textColor }` rule
   // overrides it, so the rendered colour is theme.textColor. The arrowhead
   // marker path (`M 0,0 V 4 L6,2 Z`) carries no fill/class, so it renders
-  // with the SVG default fill of black.
+  // with the SVG default fill of black. That default fill is hardcoded here:
+  // no theme token models it, and `theme.lineColor` is `#333` in the default
+  // theme, so routing it there would change the default render.
   if (globalIndex > 0) {
     final activityY = config.height * 4;
     final lineEnd =
@@ -478,7 +484,7 @@ RenderScene layoutJourney(
           LineTo(Point(lineEnd + 8, activityY)),
           ClosePath(),
         ]),
-        fill: Fill(const Color(0xff000000)),
+        fill: Fill(theme.lineColor),
       ),
     );
   }
@@ -603,9 +609,14 @@ List<String> _wrapLegendLabel(
 
 /// Journey smiley face. Fill is a uniform cornsilk (`.face` CSS = #FFF8DC,
 /// stroke #999) for every score; the mood is conveyed by the mouth only.
-List<SceneNode> _face(Point c, int score) {
+///
+/// The stroke and the eye/mouth colour come from the theme
+/// ([MermaidTheme.journeyFaceBorder], [MermaidTheme.journeyFaceEyeColor]).
+/// The cornsilk fill stays a literal: upstream's `faceColor` theme variable
+/// is unset by default and no theme token carries that role.
+List<SceneNode> _face(Point c, int score, MermaidTheme theme) {
   const r = 15.0;
-  const eyeColor = Color(0xff666666);
+  final eyeColor = theme.journeyFaceEyeColor;
   // Mouth: crescent arc approximated with cubic curves. smile (>3),
   // sad (<3), flat line (==3) — upstream uses a d3 ring-arc.
   final SceneShape mouth;
@@ -648,8 +659,8 @@ List<SceneNode> _face(Point c, int score) {
   return [
     SceneShape(
       geometry: CircleGeometry(c, r),
-      fill: Fill(const Color(0xffFFF8DC)),
-      stroke: Stroke(color: const Color(0xff999999), width: 2),
+      fill: Fill(theme.journeyFaceFill),
+      stroke: Stroke(color: theme.journeyFaceBorder, width: 2),
     ),
     SceneShape(
       geometry: CircleGeometry(Point(c.x - r / 3, c.y - r / 3), 1.5),

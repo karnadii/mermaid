@@ -1,3 +1,31 @@
+## Unreleased
+
+- Route every diagram color through `MermaidTheme`. Ninety-three palette
+  entries were added — gantt task and status colors, the sequence alt-frame
+  fill, the git merge ink, the railroad special node, the radar graticule,
+  the packet block, the kanban priority bars, the C4 element palette, the
+  wardley chrome, the event-modeling entity palette, the journey faces and
+  actors, the sankey palette and the cynefin domains — and the renderers
+  that painted those colors from literals now read them from the theme.
+  The defaults keep upstream's values, so the default-theme render is
+  unchanged except where a color was unreadable: the gantt label that
+  overflows its bar was black on a dark canvas, the C4 element label was
+  white on the lighter element fills, and the journey's legend ring, actor
+  dot and axis arrow were black ink on the canvas.
+- `MermaidTheme.copyWith` now reaches every palette entry instead of the
+  base sixteen, and `MermaidTheme.withVariables` applies a mermaid.js-style
+  `themeVariables` map, so a host has the same customization surface
+  mermaid.js offers. Variables mermaid.js nests under a diagram prefix
+  (`gantt.taskBkgColor`) resolve to the port's flat spelling
+  (`ganttTaskBkgColor`).
+- `MaterialMermaidTheme` maps the Material scheme onto the whole palette.
+  Structure follows the scheme, a palette that encodes data (sankey nodes,
+  journey actors, cynefin domains, event-modeling entities, C4 elements)
+  keeps its predefined colors, and a status keeps its identity: a critical
+  gantt task takes the error role, an evolution arrow too.
+- Add `Color.luminance`, the perceived luminance mermaid.js' khroma uses to
+  decide whether a fill reads as dark.
+
 ## 0.3.2
 
 - Keep flowchart nodes inside their subgraph box and sibling subgraph boxes

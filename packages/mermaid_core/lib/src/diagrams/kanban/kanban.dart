@@ -19,7 +19,9 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
-final _kanbanItemSpec = RegExp(r'^([^\s\[\(\{@]+)\s*[\[\(\{]+(.*?)[\]\)\}]+\s*$');
+final _kanbanItemSpec = RegExp(
+  r'^([^\s\[\(\{@]+)\s*[\[\(\{]+(.*?)[\]\)\}]+\s*$',
+);
 final _kanbanBareId = RegExp(r'^(\S+)$');
 final _kanbanLineBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
 final _kanbanHeader = RegExp(r'^\s*kanban\b');
@@ -151,16 +153,18 @@ String? _normalizePriority(String raw) {
 }
 
 /// Priority → left-edge bar color (upstream `kanbanItem.ts:colorFromPriority`).
-Color? _colorFromPriority(String? priority) {
+/// The colors live on `MermaidTheme` as `kanbanPriorityVeryHigh`,
+/// `kanbanPriorityHigh`, `kanbanPriorityLow` and `kanbanPriorityVeryLow`.
+Color? _colorFromPriority(String? priority, MermaidTheme theme) {
   switch (priority) {
     case 'Very High':
-      return const Color(0xffff0000); // red
+      return theme.kanbanPriorityVeryHigh; // red
     case 'High':
-      return const Color(0xffffa500); // orange
+      return theme.kanbanPriorityHigh; // orange
     case 'Low':
-      return const Color(0xff0000ff); // blue
+      return theme.kanbanPriorityLow; // blue
     case 'Very Low':
-      return const Color(0xffadd8e6); // lightblue
+      return theme.kanbanPriorityVeryLow; // lightblue
     case 'Medium':
     default:
       return null; // no stroke
@@ -300,9 +304,8 @@ Map<String, String> _parseStyles(String text) {
     part.clear();
     final colon = value.indexOf(':');
     if (colon > 0) {
-      styles[value.substring(0, colon).trim()] = value
-          .substring(colon + 1)
-          .trim();
+      styles[value.substring(0, colon).trim()] =
+          value.substring(colon + 1).trim();
     }
   }
 
@@ -332,9 +335,7 @@ Map<String, String> _taskStyles(KanbanBoard board, KanbanTask task) {
 
 double? _styleWidth(String? value) {
   if (value == null) return null;
-  return double.tryParse(
-    _kanbanNumber.firstMatch(value)?.group(0) ?? '',
-  );
+  return double.tryParse(_kanbanNumber.firstMatch(value)?.group(0) ?? '');
 }
 
 Color? _styleColor(String? value) =>
@@ -441,12 +442,14 @@ double _hue2rgb(double p, double q, double t) {
   return p;
 }
 
-/// Section title text color. Upstream `.section-${i-1} text { fill:
-/// cScaleLabel${i} }`; for default-theme sections this resolves to
-/// `labelTextColor` = `#333333`. (The shared `theme.cScaleLabel` defaults to
-/// pure black for these indices rather than `#333`, so sourcing it would change
-/// the default render; kept inlined to preserve pixel-identity.)
-const _sectionTextColor = Color(0xff333333);
+// Section title text color. Upstream `.section-${i-1} text { fill:
+// cScaleLabel${i} }`; for default-theme sections this resolves to
+// `labelTextColor` = `#333333`. (The shared `theme.cScaleLabel` defaults to
+// pure black for these indices rather than `#333`, so sourcing it would change
+// the default render.) The color therefore comes from the theme's
+// `textColor`, whose default is `#333333` — the same value the former
+// `_sectionTextColor` constant held — so the default render is unchanged
+// while a themed one follows the host palette.
 
 class KanbanConfig {
   const KanbanConfig({
@@ -563,8 +566,7 @@ RenderScene layoutKanban(
     }
 
     // Section height: max(y - top + 3*padding, 50) + (maxLabelHeight - 25).
-    final boxHeight =
-        math.max(y - labelTop + 3 * padding, 50.0) +
+    final boxHeight = math.max(y - labelTop + 3 * padding, 50.0) +
         (maxLabelHeight - _minLabelHeight);
 
     // Section box: pale theme fill, same color stroke (upstream paints both
@@ -587,7 +589,7 @@ RenderScene layoutKanban(
         col.title,
         bounds: Rect.fromLTWH(x, 0, width, titleSz.height),
         style: titleStyle,
-        color: _sectionTextColor,
+        color: theme.textColor,
         maxWidth: width,
       ),
     );
@@ -616,7 +618,7 @@ RenderScene layoutKanban(
       );
 
       // Priority bar: a 4px vertical line on the left inner edge.
-      final priColor = _colorFromPriority(card.task.priority);
+      final priColor = _colorFromPriority(card.task.priority, theme);
       if (priColor != null) {
         final lineX = cardRect.left + 2;
         final y1 = cardRect.top + (5 ~/ 2); // floor(rx/2), rx = 5

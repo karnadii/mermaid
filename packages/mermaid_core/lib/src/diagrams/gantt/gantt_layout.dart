@@ -63,8 +63,7 @@ class GanttConfig {
     final values = resolveDiagramConfig(source, 'gantt');
     final rawTick = values['tickInterval'];
     final tickInterval =
-        rawTick is String &&
-            _tickIntervalSpec.hasMatch(rawTick)
+        rawTick is String && _tickIntervalSpec.hasMatch(rawTick)
         ? rawTick
         : null;
     return GanttConfig(
@@ -91,7 +90,10 @@ class GanttConfig {
         4,
       ).round(),
       displayMode: enumValue(values, 'displayMode', const {'compact'}, ''),
-      weekday: enumValue(values, 'weekday', const {
+      weekday: enumValue(
+          values,
+          'weekday',
+          const {
         'monday',
         'tuesday',
         'wednesday',
@@ -99,39 +101,23 @@ class GanttConfig {
         'friday',
         'saturday',
         'sunday',
-      }, 'sunday'),
+          },
+          'sunday'),
       titleTopMargin: nonNegativeDouble(values, 'titleTopMargin', 25),
     );
   }
 }
 
-// theme-default gantt colors.
-const _taskFill = Color(0xff8a90dd);
-const _taskBorder = Color(0xff534fbc);
-const _activeFill = Color(0xffbfc7ff);
-const _doneFill = Color(0xffd3d3d3);
-const _doneBorder = Color(0xff808080);
-// critBkgColor=red(#ff0000), critBorderColor=#ff8888 (theme-default).
-const _critFill = Color(0xffff0000);
-const _critBorder = Color(0xffff8888);
-// Outside / dark task text = taskTextDarkColor = black.
-const _taskTextDark = Color(0xff000000);
-// Inside task text for normal tasks = taskTextColor = taskTextLightColor = white.
-const _taskTextLight = Color(0xffffffff);
-// excludeBkgColor (theme-default).
-const _excludeBkgColor = Color(0xffeeeeee);
-// Section band fills (theme-default), with `.section` opacity 0.2 baked in.
-// section0=sectionBkgColor=rgba(102,102,255,0.49)*0.2 -> alpha ~0.098;
-// section1/3=altSectionBkgColor=white@0.2; section2=sectionBkgColor2=#fff400@0.2.
-const _sectionBands = <Color>[
-  Color(0x196666ff),
-  Color(0x33ffffff),
-  Color(0x33fff400),
-  Color(0x33ffffff),
-];
-// Grid tick stroke = gridColor (lightgrey) with `.grid .tick` opacity 0.8
-// baked into the alpha channel (upstream styles.js).
-const _gridColor = Color(0xccd3d3d3);
+// Every gantt color lives on `MermaidTheme` so a host application can theme
+// the chart. The theme defaults keep upstream's theme-default.js values:
+//   taskBkgColor=#8a90dd, taskBorderColor=#534fbc,
+//   activeTaskBkgColor=#bfc7ff, doneTaskBkgColor=lightgrey,
+//   doneTaskBorderColor=grey, critBkgColor=red(#ff0000),
+//   critBorderColor=#ff8888, taskTextColor=white, taskTextDarkColor=black,
+//   taskTextOutsideColor=black, excludeBkgColor=#eee, gridColor=lightgrey@0.8,
+//   todayLineColor=red.
+// The `.section` opacity 0.2 and the grid's 0.8 opacity are baked into the
+// alpha channel of the theme's section and grid colors (upstream styles.js).
 
 RenderScene layoutGanttChart(
   GanttChart chart, {
@@ -197,9 +183,8 @@ RenderScene layoutGanttChart(
     final taskRows = config.displayMode == 'compact'
         ? _compactTaskRows(rowTasks)
         : {for (var i = 0; i < rowTasks.length; i++) rowTasks[i]: i};
-    final rowCount = taskRows.isEmpty
-        ? 0
-        : taskRows.values.reduce(math.max) + 1;
+    final rowCount =
+        taskRows.isEmpty ? 0 : taskRows.values.reduce(math.max) + 1;
     // Section band: spans the full width, `y = rowTop - 2`, one stride per row
     // (upstream drawRects band geometry). Vert markers don't occupy rows.
     final bandHeight = rowCount * rowStride;
@@ -214,8 +199,9 @@ RenderScene layoutGanttChart(
           ),
         ),
         fill: Fill(
-          _sectionBands[(sectionIndex % config.numberSectionStyles) %
-              _sectionBands.length],
+          theme.ganttSectionBkgColors[
+              (sectionIndex % config.numberSectionStyles) %
+                  theme.ganttSectionBkgColors.length],
         ),
       ),
     );
@@ -246,17 +232,17 @@ RenderScene layoutGanttChart(
       // Bar is drawn to renderEnd (original duration); excluded days extend
       // `end` for sequencing/axis only, matching upstream's renderEndTime.
       final x2 = xOf(t.renderEnd);
-      var fill = _taskFill;
-      var border = _taskBorder;
+      var fill = theme.ganttTaskBkgColor;
+      var border = theme.ganttTaskBorderColor;
       if (t.done) {
-        fill = _doneFill;
-        border = _doneBorder;
+        fill = theme.ganttDoneTaskBkgColor;
+        border = theme.ganttDoneTaskBorderColor;
       } else if (t.active) {
-        fill = _activeFill;
+        fill = theme.ganttActiveTaskBkgColor;
       }
       if (t.crit) {
-        fill = t.done ? _doneFill : _critFill;
-        border = _critBorder;
+        fill = t.done ? theme.ganttDoneTaskBkgColor : theme.ganttCritBkgColor;
+        border = theme.ganttCritBorderColor;
       }
       final children = <SceneNode>[];
       if (t.milestone) {
@@ -294,11 +280,22 @@ RenderScene layoutGanttChart(
       }
       final size = measurer.measure(t.name, baseStyle);
       final fitsInside = !t.milestone && size.width < (x2 - x1) - 8;
-      // Inside text: normal tasks use taskTextColor (white); active/done/crit
-      // use taskTextDarkColor (black). Outside text always taskTextOutsideColor
-      // (black).
-      final styled = t.active || t.done || t.crit;
-      final insideColor = styled ? _taskTextDark : _taskTextLight;
+      // Inside text: every task state carries its own label color so a host
+      // can keep the label legible against the fill it chose for that state.
+      // Outside text always uses taskTextOutsideColor, because it sits on the
+      // diagram canvas rather than on a task fill.
+      final Color insideColor;
+      if (t.crit) {
+        insideColor = t.done
+            ? theme.ganttDoneTaskTextColor
+            : theme.ganttCritTaskTextColor;
+      } else if (t.done) {
+        insideColor = theme.ganttDoneTaskTextColor;
+      } else if (t.active) {
+        insideColor = theme.ganttActiveTaskTextColor;
+      } else {
+        insideColor = theme.ganttTaskTextColor;
+      }
       final Rect labelBounds;
       final TextAlignH labelAlign;
       final Color labelColor;
@@ -333,7 +330,7 @@ RenderScene layoutGanttChart(
           );
           labelAlign = TextAlignH.left;
         }
-        labelColor = _taskTextDark;
+        labelColor = theme.ganttTaskTextOutsideColor;
       }
       children.add(
         SceneText(
@@ -358,17 +355,17 @@ RenderScene layoutGanttChart(
   for (final t in vertTasks) {
     final x = xOf(t.start);
     final width = math.max(0.08 * config.barHeight, 1.0);
-    var fill = _taskFill;
-    var border = _taskBorder;
+    var fill = theme.ganttTaskBkgColor;
+    var border = theme.ganttTaskBorderColor;
     if (t.done) {
-      fill = _doneFill;
-      border = _doneBorder;
+      fill = theme.ganttDoneTaskBkgColor;
+      border = theme.ganttDoneTaskBorderColor;
     } else if (t.active) {
-      fill = _activeFill;
+      fill = theme.ganttActiveTaskBkgColor;
     }
     if (t.crit) {
-      fill = t.done ? _doneFill : _critFill;
-      border = _critBorder;
+      fill = t.done ? theme.ganttDoneTaskBkgColor : theme.ganttCritBkgColor;
+      border = theme.ganttCritBorderColor;
     }
     final children = <SceneNode>[
       SceneShape(
@@ -391,7 +388,7 @@ RenderScene layoutGanttChart(
             size.height,
           ),
           style: baseStyle,
-          color: _taskTextDark,
+          color: theme.ganttTaskTextOutsideColor,
           align: TextAlignH.center,
         ),
       );
@@ -416,15 +413,14 @@ RenderScene layoutGanttChart(
           geometry: RectGeometry(
             Rect.fromLTWH(x1, chartTop - 2, x2 - x1, chartBottom - chartTop),
           ),
-          fill: const Fill(_excludeBkgColor),
+          fill: Fill(theme.ganttExcludeBkgColor),
         ),
       );
       rangeStart = null;
     }
 
     while (!day.isAfter(maxDate)) {
-      final excluded =
-          chart.excludeWeekdays.contains(day.weekday) ||
+      final excluded = chart.excludeWeekdays.contains(day.weekday) ||
           chart.excludeDates.contains(day);
       if (excluded) {
         rangeStart ??= day;
@@ -446,8 +442,7 @@ RenderScene layoutGanttChart(
             MoveTo(Point(x, chartTop - 2)),
             LineTo(Point(x, chartBottom)),
           ]),
-          // todayLineColor = red (theme-default).
-          stroke: const Stroke(color: Color(0xffff0000), width: 2),
+          stroke: Stroke(color: theme.ganttTodayLineColor, width: 2),
         ),
       );
     }
@@ -461,16 +456,14 @@ RenderScene layoutGanttChart(
     interval: config.tickInterval,
     weekday: _weekdays[config.weekday] ?? DateTime.sunday,
   );
-  final fmt =
-      chart.axisFormat ??
+  final fmt = chart.axisFormat ??
       config.axisFormat ??
       _defaultAxisFormat(minDate, maxDate, chart.dateFormat);
   var labelEvery = 1;
   if (ticks.length > 1) {
     final spacing = xOf(ticks[1]) - xOf(ticks[0]);
-    final labelW = measurer
-        .measure(formatGanttDate(ticks.first, fmt), baseStyle)
-        .width;
+    final labelW =
+        measurer.measure(formatGanttDate(ticks.first, fmt), baseStyle).width;
     labelEvery = math.max(1, ((labelW + 12) / spacing).ceil());
   }
   final gridNodes = <SceneNode>[];
@@ -483,7 +476,7 @@ RenderScene layoutGanttChart(
           MoveTo(Point(x, chartTop - config.gridLineStartPadding)),
           LineTo(Point(x, chartBottom + 4)),
         ]),
-        stroke: const Stroke(color: _gridColor, width: 1),
+        stroke: Stroke(color: theme.ganttGridColor, width: 1),
       ),
     );
     if (i % labelEvery != 0) continue;
@@ -534,9 +527,8 @@ RenderScene layoutGanttChart(
       fontWeight: 700,
     );
     final size = measurer.measure(title, style);
-    final topAxisHeight = config.topAxis
-        ? measurer.measure('0', baseStyle).height + 18
-        : 0.0;
+    final topAxisHeight =
+        config.topAxis ? measurer.measure('0', baseStyle).height + 18 : 0.0;
     // Full chart width includes the right padding (mirrors leftPadding).
     final fullWidth = gutter + chartWidth + config.rightPadding;
     nodes.add(

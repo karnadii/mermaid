@@ -18,11 +18,15 @@ import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
-final _wardleyLabelCoords = RegExp(r'label\s*\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\]');
+final _wardleyLabelCoords = RegExp(
+  r'label\s*\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\]',
+);
 final _wardleyInlineParens = RegExp(r'\(([^)]*)\)');
 final _wardleyHeader = RegExp(r'^wardley(-beta)?\b');
 final _wardleyHeaderPrefix = RegExp(r'^wardley(-beta)?\s*');
-final _wardleyComponent = RegExp(r'^component\s+(.+?)\s*\[\s*([\d.]+)\s*\](.*)$');
+final _wardleyComponent = RegExp(
+  r'^component\s+(.+?)\s*\[\s*([\d.]+)\s*\](.*)$',
+);
 final _wardleyTitle = RegExp(r'^title\s+(.+)$');
 final _wardleySize = RegExp(r'^size\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$');
 final _wardleyEvolution = RegExp(r'^evolution\s+(.+)$');
@@ -30,13 +34,25 @@ final _wardleyPipelineBound = RegExp(r'@\s*([\d.]+)\s*$');
 final _wardleyXAxis = RegExp(r'^x-axis\s+(.+)$');
 final _wardleyYAxis = RegExp(r'^y-axis\s+(.+)$');
 final _wardleyPipeline = RegExp(r'^pipeline\s+(.+?)\s*\{$');
-final _wardleyNode = RegExp(r'^(anchor|component)\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\](.*)$');
-final _wardleyNote = RegExp(r'^note\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$');
-final _wardleyAnnotations = RegExp(r'^annotations\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$');
-final _wardleyAnnotation = RegExp(r'^annotation\s+(\d+)\s*,?\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]\s*(.*)$');
-final _wardleyAccelerator = RegExp(r'^(de)?accelerator\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$');
+final _wardleyNode = RegExp(
+  r'^(anchor|component)\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\](.*)$',
+);
+final _wardleyNote = RegExp(
+  r'^note\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$',
+);
+final _wardleyAnnotations = RegExp(
+  r'^annotations\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$',
+);
+final _wardleyAnnotation = RegExp(
+  r'^annotation\s+(\d+)\s*,?\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]\s*(.*)$',
+);
+final _wardleyAccelerator = RegExp(
+  r'^(de)?accelerator\s+(.+?)\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$',
+);
 final _wardleyEvolve = RegExp(r'^evolve\s+(.+?)\s+([\d.]+)$');
-final _wardleyLinkConnector = RegExp(r"(?<conn>\+'[^']*'(?:<>|<|>)|-\.->|\.-\.|-->|->|\+<>|\+>|\+<|>)");
+final _wardleyLinkConnector = RegExp(
+  r"(?<conn>\+'[^']*'(?:<>|<|>)|-\.->|\.-\.|-->|->|\+<>|\+>|\+<|>)",
+);
 final _wardleyLinkPortSuffix = RegExp(r'(\+<>|\+>|\+<)\s*$');
 final _wardleyLinkLabel = RegExp(r"^\+'([^']*)'");
 
@@ -493,16 +509,16 @@ WardleyMap parseWardley(String source) {
   );
 }
 
-// Upstream default theme constants (default theme equals mermaid's default).
-const _axisColor = Color(0xff000000); // #000
-const _axisTextColor = Color(0xff222222); // primaryTextColor default #222
-const _componentFill = Color(0xffffffff); // #fff
-const _componentStroke = Color(0xff000000); // #000
-const _componentLabelColor = Color(0xff222222);
-const _linkStroke = Color(0xff000000); // #000
-const _evolutionStroke = Color(0xffdc3545); // #dc3545
-const _annotationStroke = Color(0xff000000);
-const _white = Color(0xffffffff);
+// The wardley palette lives on `MermaidTheme`, so a host app can theme the
+// map: `wardleyAxisColor` / `wardleyAxisTextColor` for the axes, the stage
+// labels and the free-standing text (notes, annotation numbers, annotation
+// box), `wardleyComponentFill` / `wardleyComponentStroke` /
+// `wardleyComponentLabelColor` for the nodes, `wardleyLinkStroke` for the
+// links, `wardleyEvolutionStroke` for the trends, `wardleyAnnotationStroke`
+// for the annotations, `wardleyOutsourceFill` / `wardleyBuyFill` /
+// `wardleyBuildFill` for the source-strategy overlays, and `canvasColor` for
+// the "paper" fills painted on the canvas (market glyph, annotations,
+// accelerators).
 
 const _defaultStages = ['Genesis', 'Custom Built', 'Product', 'Commodity'];
 
@@ -615,7 +631,7 @@ RenderScene layoutWardley(
           ts.height,
         ),
         style: style,
-        color: _axisTextColor,
+        color: theme.wardleyAxisTextColor,
       ),
     );
   }
@@ -627,7 +643,7 @@ RenderScene layoutWardley(
         MoveTo(Point(padding, height - padding)),
         LineTo(Point(width - padding, height - padding)),
       ]),
-      stroke: const Stroke(color: _axisColor, width: 1),
+      stroke: Stroke(color: theme.wardleyAxisColor, width: 1),
     ),
   );
 
@@ -641,7 +657,7 @@ RenderScene layoutWardley(
             LineTo(Point(width - padding, y)),
           ]),
           stroke: Stroke(
-            color: _axisColor.withOpacity(0.2),
+            color: theme.wardleyAxisColor.withOpacity(0.2),
             width: 1,
             dash: const [3, 3],
           ),
@@ -655,7 +671,7 @@ RenderScene layoutWardley(
         MoveTo(Point(padding, padding)),
         LineTo(Point(padding, height - padding)),
       ]),
-      stroke: const Stroke(color: _axisColor, width: 1),
+      stroke: Stroke(color: theme.wardleyAxisColor, width: 1),
     ),
   );
 
@@ -673,7 +689,7 @@ RenderScene layoutWardley(
         xs.height,
       ),
       style: axisStyle,
-      color: _axisTextColor,
+      color: theme.wardleyAxisTextColor,
     ),
   );
   final ys = measurer.measure(yLabel, axisStyle);
@@ -687,7 +703,7 @@ RenderScene layoutWardley(
         ys.height,
       ),
       style: axisStyle,
-      color: _axisTextColor,
+      color: theme.wardleyAxisTextColor,
       rotation: -90,
     ),
   );
@@ -724,7 +740,7 @@ RenderScene layoutWardley(
           ]),
           // Upstream draws dividers at opacity 0.8 (wardleyRenderer.ts).
           stroke: Stroke(
-            color: _axisColor.withOpacity(0.8),
+            color: theme.wardleyAxisColor.withOpacity(0.8),
             width: 1,
             dash: const [5, 5],
           ),
@@ -742,7 +758,7 @@ RenderScene layoutWardley(
           ss.height,
         ),
         style: stageStyle,
-        color: _axisTextColor,
+        color: theme.wardleyAxisTextColor,
       ),
     );
   }
@@ -766,7 +782,11 @@ RenderScene layoutWardley(
       nodes.add(
         SceneShape(
           geometry: PathGeometry([MoveTo(sorted[i]), LineTo(sorted[i + 1])]),
-          stroke: const Stroke(color: _linkStroke, width: 1, dash: [4, 4]),
+          stroke: Stroke(
+            color: theme.wardleyLinkStroke,
+            width: 1,
+            dash: const [4, 4],
+          ),
         ),
       );
     }
@@ -793,7 +813,7 @@ RenderScene layoutWardley(
           rx: 4,
           ry: 4,
         ),
-        stroke: const Stroke(color: _axisColor, width: 1.5),
+        stroke: Stroke(color: theme.wardleyAxisColor, width: 1.5),
       ),
     );
   }
@@ -805,9 +825,8 @@ RenderScene layoutWardley(
     final fromName = centers.containsKey(link.from)
         ? link.from
         : _resolveId(centers, link.from);
-    final toName = centers.containsKey(link.to)
-        ? link.to
-        : _resolveId(centers, link.to);
+    final toName =
+        centers.containsKey(link.to) ? link.to : _resolveId(centers, link.to);
     final a = centers[fromName];
     final b = centers[toName];
     if (a == null || b == null) continue;
@@ -833,7 +852,7 @@ RenderScene layoutWardley(
       SceneShape(
         geometry: PathGeometry([MoveTo(start), LineTo(end)]),
         stroke: Stroke(
-          color: _linkStroke,
+          color: theme.wardleyLinkStroke,
           width: 1,
           dash: link.dashed ? const [6, 6] : null,
         ),
@@ -843,11 +862,11 @@ RenderScene layoutWardley(
     // Flow arrowheads.
     if (link.flow == WardleyFlow.forward ||
         link.flow == WardleyFlow.bidirectional) {
-      nodes.add(_arrowHead(end, dx, dy, _linkStroke, 6));
+      nodes.add(_arrowHead(end, dx, dy, theme.wardleyLinkStroke, 6));
     }
     if (link.flow == WardleyFlow.backward ||
         link.flow == WardleyFlow.bidirectional) {
-      nodes.add(_arrowHead(start, -dx, -dy, _linkStroke, 6));
+      nodes.add(_arrowHead(start, -dx, -dy, theme.wardleyLinkStroke, 6));
     }
 
     // Link label (rotated, offset perpendicular above the line).
@@ -869,7 +888,7 @@ RenderScene layoutWardley(
             lls.height,
           ),
           style: labelStyle,
-          color: _axisTextColor,
+          color: theme.wardleyAxisTextColor,
           rotation: angle,
         ),
       );
@@ -894,11 +913,15 @@ RenderScene layoutWardley(
     nodes.add(
       SceneShape(
         geometry: PathGeometry([MoveTo(origin), LineTo(end)]),
-        stroke: const Stroke(color: _evolutionStroke, width: 1, dash: [4, 4]),
+        stroke: Stroke(
+          color: theme.wardleyEvolutionStroke,
+          width: 1,
+          dash: const [4, 4],
+        ),
       ),
     );
     if (dist > 0) {
-      nodes.add(_arrowHead(end, dx, dy, _evolutionStroke, 6));
+      nodes.add(_arrowHead(end, dx, dy, theme.wardleyEvolutionStroke, 6));
     }
   }
 
@@ -914,32 +937,32 @@ RenderScene layoutWardley(
       nodes.add(
         SceneShape(
           geometry: CircleGeometry(c, nodeRadius * 2),
-          fill: const Fill(Color(0xff666666)),
-          stroke: const Stroke(color: _componentStroke, width: 1),
+          fill: Fill(theme.wardleyOutsourceFill),
+          stroke: Stroke(color: theme.wardleyComponentStroke, width: 1),
         ),
       );
     } else if (strat == WardleySourceStrategy.buy) {
       nodes.add(
         SceneShape(
           geometry: CircleGeometry(c, nodeRadius * 2),
-          fill: const Fill(Color(0xffcccccc)),
-          stroke: const Stroke(color: _componentStroke, width: 1),
+          fill: Fill(theme.wardleyBuyFill),
+          stroke: Stroke(color: theme.wardleyComponentStroke, width: 1),
         ),
       );
     } else if (strat == WardleySourceStrategy.build) {
       nodes.add(
         SceneShape(
           geometry: CircleGeometry(c, nodeRadius * 2),
-          fill: const Fill(Color(0xffeeeeee)),
-          stroke: const Stroke(color: _componentStroke, width: 1),
+          fill: Fill(theme.wardleyBuildFill),
+          stroke: Stroke(color: theme.wardleyComponentStroke, width: 1),
         ),
       );
     } else if (strat == WardleySourceStrategy.market) {
       nodes.add(
         SceneShape(
           geometry: CircleGeometry(c, nodeRadius * 2),
-          fill: const Fill(_white),
-          stroke: const Stroke(color: _componentStroke, width: 1),
+          fill: Fill(theme.canvasColor),
+          stroke: Stroke(color: theme.wardleyComponentStroke, width: 1),
         ),
       );
     }
@@ -949,18 +972,18 @@ RenderScene layoutWardley(
       nodes.add(
         SceneShape(
           geometry: RectGeometry(Rect.fromCenter(c, squareSize, squareSize)),
-          fill: const Fill(_componentFill),
-          stroke: const Stroke(color: _componentStroke, width: 1),
+          fill: Fill(theme.wardleyComponentFill),
+          stroke: Stroke(color: theme.wardleyComponentStroke, width: 1),
         ),
       );
     } else if (strat == WardleySourceStrategy.market) {
-      _addMarketGlyph(nodes, c, nodeRadius);
+      _addMarketGlyph(nodes, c, nodeRadius, theme);
     } else if (comp.className != 'anchor') {
       nodes.add(
         SceneShape(
           geometry: CircleGeometry(c, nodeRadius),
-          fill: const Fill(_componentFill),
-          stroke: const Stroke(color: _componentStroke, width: 1),
+          fill: Fill(theme.wardleyComponentFill),
+          stroke: Stroke(color: theme.wardleyComponentStroke, width: 1),
         ),
       );
     }
@@ -977,7 +1000,7 @@ RenderScene layoutWardley(
             MoveTo(Point(bx, c.y - lineHeight / 2)),
             LineTo(Point(bx, c.y + lineHeight / 2)),
           ]),
-          stroke: const Stroke(color: _componentStroke, width: 6),
+          stroke: Stroke(color: theme.wardleyComponentStroke, width: 6),
         ),
       );
     }
@@ -998,7 +1021,11 @@ RenderScene layoutWardley(
             ls.height,
           ),
           style: labelStyle.copyWith(fontWeight: 700),
-          color: const Color(0xff000000),
+          // An anchor has no shape of its own — the bold label *is* the
+          // node's mark — so it borrows the component ink
+          // (`wardleyComponentStroke`, #000) rather than the component
+          // label colour (#222), which upstream never applies to anchors.
+          color: theme.wardleyComponentStroke,
         ),
       );
     } else {
@@ -1013,7 +1040,7 @@ RenderScene layoutWardley(
           text: comp.name,
           bounds: Rect.fromLTWH(lx, ly - ls.height / 2, ls.width, ls.height),
           style: labelStyle,
-          color: _componentLabelColor,
+          color: theme.wardleyComponentLabelColor,
           align: TextAlignH.left,
         ),
       );
@@ -1026,8 +1053,8 @@ RenderScene layoutWardley(
     nodes.add(
       SceneShape(
         geometry: CircleGeometry(p, 10),
-        fill: const Fill(_white),
-        stroke: const Stroke(color: _annotationStroke, width: 1.5),
+        fill: Fill(theme.canvasColor),
+        stroke: Stroke(color: theme.wardleyAnnotationStroke, width: 1.5),
       ),
     );
     final ns = measurer.measure(
@@ -1044,7 +1071,7 @@ RenderScene layoutWardley(
           ns.height,
         ),
         style: labelStyle.copyWith(fontWeight: 700),
-        color: _axisTextColor,
+        color: theme.wardleyAxisTextColor,
       ),
     );
   }
@@ -1083,8 +1110,8 @@ RenderScene layoutWardley(
             rx: 4,
             ry: 4,
           ),
-          fill: const Fill(_white),
-          stroke: const Stroke(color: _annotationStroke, width: 1.5),
+          fill: Fill(theme.canvasColor),
+          stroke: Stroke(color: theme.wardleyAnnotationStroke, width: 1.5),
         ),
       );
       for (var idx = 0; idx < texts.length; idx++) {
@@ -1099,7 +1126,7 @@ RenderScene layoutWardley(
               texts[idx].$2,
             ),
             style: boxStyle,
-            color: _axisTextColor,
+            color: theme.wardleyAxisTextColor,
             align: TextAlignH.left,
           ),
         );
@@ -1121,7 +1148,7 @@ RenderScene layoutWardley(
         text: note.text,
         bounds: Rect.fromLTWH(p.x, p.y - ms.height / 2, ms.width, ms.height),
         style: style,
-        color: _axisTextColor,
+        color: theme.wardleyAxisTextColor,
         align: TextAlignH.left,
       ),
     );
@@ -1176,7 +1203,12 @@ SceneShape _arrowHead(
 }
 
 /// Three small white circles in a triangle with connecting lines (market).
-void _addMarketGlyph(List<SceneNode> nodes, Point c, double nodeRadius) {
+void _addMarketGlyph(
+  List<SceneNode> nodes,
+  Point c,
+  double nodeRadius,
+  MermaidTheme theme,
+) {
   final small = nodeRadius * 0.7;
   final tri = nodeRadius * 1.2;
   final cos = math.cos(math.pi / 6), sin = math.sin(math.pi / 6);
@@ -1187,7 +1219,7 @@ void _addMarketGlyph(List<SceneNode> nodes, Point c, double nodeRadius) {
     nodes.add(
       SceneShape(
         geometry: PathGeometry([MoveTo(a), LineTo(b)]),
-        stroke: const Stroke(color: _componentStroke, width: 1),
+        stroke: Stroke(color: theme.wardleyComponentStroke, width: 1),
       ),
     );
   }
@@ -1195,8 +1227,8 @@ void _addMarketGlyph(List<SceneNode> nodes, Point c, double nodeRadius) {
     nodes.add(
       SceneShape(
         geometry: CircleGeometry(pt, small),
-        fill: const Fill(_white),
-        stroke: const Stroke(color: _componentStroke, width: 2),
+        fill: Fill(theme.canvasColor),
+        stroke: Stroke(color: theme.wardleyComponentStroke, width: 2),
       ),
     );
   }
@@ -1237,8 +1269,8 @@ void _addAccelerator(
   nodes.add(
     SceneShape(
       geometry: PolygonGeometry(pts),
-      fill: const Fill(_white),
-      stroke: const Stroke(color: _componentStroke, width: 1),
+      fill: Fill(theme.canvasColor),
+      stroke: Stroke(color: theme.wardleyComponentStroke, width: 1),
     ),
   );
   final style = TextStyleSpec(
@@ -1257,7 +1289,7 @@ void _addAccelerator(
         ms.height,
       ),
       style: style,
-      color: _axisTextColor,
+      color: theme.wardleyAxisTextColor,
     ),
   );
 }

@@ -31,9 +31,8 @@ abstract final class MaterialMermaidTheme {
     TextTheme? textTheme,
   }) {
     final dark = colorScheme.brightness == Brightness.dark;
-    final fallback = dark
-        ? core.MermaidTheme.darkTheme
-        : core.MermaidTheme.defaultTheme;
+    final fallback =
+        dark ? core.MermaidTheme.darkTheme : core.MermaidTheme.defaultTheme;
     final body = textTheme?.bodyMedium;
     final fills = <Color>[
       colorScheme.primaryContainer,
@@ -262,6 +261,120 @@ abstract final class MaterialMermaidTheme {
       relationLabelBackground: c(colorScheme.surfaceContainerHigh),
       relationLabelColor: c(colorScheme.onSurface),
       xyChartPlotColorPalette: fills.map(c).toList(growable: false),
+
+      // --- Shared ---------------------------------------------------------
+      //
+      // `canvasColor` is the opaque surface a diagram is painted on. It
+      // carries the knockout ink upstream draws with the theme background
+      // (the git merge ring, the ER relationship leaf), which a transparent
+      // background would erase.
+      canvasColor: c(colorScheme.surface),
+      // Text painted on a fill the host did not choose (a mindmap `classDef`
+      // fill, a kanban card). Dark mode inverts which of the two is light.
+      textOnDarkFill: c(dark ? colorScheme.onSurface : colorScheme.surface),
+      textOnLightFill: c(dark ? colorScheme.surface : colorScheme.onSurface),
+      tertiaryColor: c(colorScheme.tertiaryContainer),
+
+      // --- Gantt ----------------------------------------------------------
+      //
+      // The chart chrome follows the scheme: a task bar is a primary
+      // container, an active task a tertiary container, a completed task a
+      // neutral surface. The critical state keeps the error role, because
+      // "critical" is a status rather than a decoration.
+      ganttTaskBkgColor: c(colorScheme.primaryContainer),
+      ganttTaskBorderColor: c(colorScheme.primary),
+      ganttActiveTaskBkgColor: c(colorScheme.tertiaryContainer),
+      ganttActiveTaskBorderColor: c(colorScheme.tertiary),
+      ganttDoneTaskBkgColor: c(colorScheme.surfaceContainerHighest),
+      ganttDoneTaskBorderColor: c(colorScheme.outline),
+      ganttCritBkgColor: c(colorScheme.errorContainer),
+      ganttCritBorderColor: c(colorScheme.error),
+      ganttTaskTextColor: c(colorScheme.onPrimaryContainer),
+      ganttActiveTaskTextColor: c(colorScheme.onTertiaryContainer),
+      ganttDoneTaskTextColor: c(colorScheme.onSurfaceVariant),
+      ganttCritTaskTextColor: c(colorScheme.onErrorContainer),
+      // A label that overflows its bar sits on the canvas, not on the bar.
+      ganttTaskTextOutsideColor: c(colorScheme.onSurface),
+      ganttExcludeBkgColor: c(colorScheme.surfaceContainerHigh),
+      ganttGridColor: c(colorScheme.outlineVariant),
+      ganttTodayLineColor: c(colorScheme.error),
+      ganttSectionBkgColors: [
+        c(colorScheme.surfaceContainerHighest),
+        c(colorScheme.surfaceContainerHigh),
+        c(colorScheme.surfaceContainerHighest),
+        c(colorScheme.surfaceContainerHigh),
+      ],
+
+      // --- Sequence -------------------------------------------------------
+      sequenceAltFrameColor: c(colorScheme.primaryContainer).withOpacity(0.12),
+
+      // --- Git ------------------------------------------------------------
+      gitMergeInnerColor: c(colorScheme.surface),
+
+      // --- Railroad -------------------------------------------------------
+      railroadSpecialFill: c(colorScheme.tertiaryContainer),
+      railroadSpecialStroke: c(colorScheme.tertiary),
+
+      // --- Radar ----------------------------------------------------------
+      radarGraticuleColor: c(colorScheme.outlineVariant),
+
+      // --- Packet ---------------------------------------------------------
+      //
+      // Upstream keeps the packet diagram theme-independent (a grey block
+      // with black ink). The block stays a neutral surface so the diagram
+      // still reads as a wire frame, but the ink follows the brightness.
+      packetBlockFill: c(colorScheme.surfaceContainerHighest),
+      packetBlockBorder: c(colorScheme.onSurfaceVariant),
+      packetTextColor: c(colorScheme.onSurface),
+
+      // --- Kanban ---------------------------------------------------------
+      //
+      // The priority bar is a status, so it takes the error, tertiary,
+      // primary and secondary roles in that order.
+      kanbanPriorityVeryHigh: c(colorScheme.error),
+      kanbanPriorityHigh: c(colorScheme.tertiary),
+      kanbanPriorityLow: c(colorScheme.primary),
+      kanbanPriorityVeryLow: c(colorScheme.secondary),
+
+      // --- Wardley --------------------------------------------------------
+      wardleyAxisColor: c(colorScheme.onSurfaceVariant),
+      wardleyAxisTextColor: c(colorScheme.onSurface),
+      wardleyComponentFill: c(colorScheme.surfaceContainer),
+      wardleyComponentStroke: c(colorScheme.outline),
+      wardleyComponentLabelColor: c(colorScheme.onSurface),
+      wardleyLinkStroke: c(colorScheme.onSurfaceVariant),
+      // The evolution arrow marks risk, so it keeps the error role.
+      wardleyEvolutionStroke: c(colorScheme.error),
+      wardleyAnnotationStroke: c(colorScheme.onSurfaceVariant),
+      wardleyOutsourceFill: c(colorScheme.surfaceContainerHighest),
+      wardleyBuyFill: c(colorScheme.surfaceContainerHigh),
+      wardleyBuildFill: c(colorScheme.surfaceContainer),
+
+      // --- Event modeling -------------------------------------------------
+      //
+      // The entity fills keep their predefined pastel palette, because the
+      // entity kind (UI, processor, read model, command, event) is the
+      // diagram's data. Only the swimlane band follows the scheme.
+      emSwimlaneBackgroundOdd: c(colorScheme.surfaceContainerLow),
+      emSwimlaneBackgroundStroke: c(colorScheme.outlineVariant),
+      // An entity whose kind the diagram does not know is a mistake in the
+      // source, so it takes the error role.
+      emUnknownTypeFill: c(colorScheme.error),
+
+      // --- Journey --------------------------------------------------------
+      //
+      // The face keeps its cornsilk fill: it is a character, not a wash, so
+      // it stays the same in both modes. The outline and eyes follow the
+      // brightness.
+      journeyFaceFill: c(const Color(0xfffff8dc)),
+      journeyFaceBorder: c(colorScheme.outline),
+      journeyFaceEyeColor: c(colorScheme.onSurfaceVariant),
+
+      // --- Cynefin --------------------------------------------------------
+      //
+      // The domain fills stay predefined (the domain is the data), but the
+      // cliff edge takes the error role so it stays visible in dark mode.
+      cynefinCliffColor: c(colorScheme.error),
     );
   }
 }

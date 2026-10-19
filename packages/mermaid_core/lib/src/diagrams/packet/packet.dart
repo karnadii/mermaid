@@ -9,7 +9,6 @@ library;
 
 import 'dart:math' as math;
 
-import '../../color.dart';
 import '../../config_values.dart';
 import '../../detect.dart';
 import '../../directives.dart';
@@ -153,9 +152,9 @@ RenderScene layoutPacket(
 
   // Packet styling is theme-INDEPENDENT upstream (styles.ts hardcodes these):
   // block fill #efefef, stroke/text black; label 12px, byte numbers 10px.
-  const blockFill = Color(0xffefefef);
-  const blockStroke = Color(0xff000000);
-  const blackText = Color(0xff000000);
+  // The colors themselves now live on `MermaidTheme` as `packetBlockFill`,
+  // `packetBlockBorder` and `packetTextColor`, whose defaults keep the
+  // upstream values so a themed render stays pixel-identical by default.
   final labelStyle = TextStyleSpec(fontFamily: theme.fontFamily, fontSize: 12);
   final bitStyle = labelStyle.copyWith(fontSize: 10);
   final nodes = <SceneNode>[];
@@ -180,14 +179,14 @@ RenderScene layoutPacket(
       final children = <SceneNode>[
         SceneShape(
           geometry: RectGeometry(rect),
-          fill: const Fill(blockFill),
-          stroke: const Stroke(color: blockStroke, width: 1),
+          fill: Fill(theme.packetBlockFill),
+          stroke: Stroke(color: theme.packetBlockBorder, width: 1),
         ),
         SceneText(
           text: f.label,
           bounds: rect,
           style: labelStyle,
-          color: blackText,
+          color: theme.packetTextColor,
         ),
       ];
       if (showBits) {
@@ -207,7 +206,7 @@ RenderScene layoutPacket(
                 ? Rect.fromLTWH(x, bitBandTop, w, bitLabelH)
                 : Rect.fromLTWH(x, bitBandTop, 24, bitLabelH),
             style: bitStyle,
-            color: blackText,
+            color: theme.packetTextColor,
             align: isSingle ? TextAlignH.center : TextAlignH.left,
           ),
         );
@@ -218,7 +217,7 @@ RenderScene layoutPacket(
               text: '$segEnd',
               bounds: Rect.fromLTWH(x + w - 24, bitBandTop, 24, bitLabelH),
               style: bitStyle,
-              color: blackText,
+              color: theme.packetTextColor,
               align: TextAlignH.right,
             ),
           );
@@ -255,7 +254,7 @@ RenderScene layoutPacket(
           totalRowHeight,
         ),
         style: titleStyle,
-        color: blackText,
+        color: theme.packetTextColor,
       ),
     );
   }

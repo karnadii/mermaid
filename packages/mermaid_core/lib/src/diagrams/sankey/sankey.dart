@@ -91,12 +91,16 @@ class SankeyConfig {
       height: positiveDouble(values, 'height', 600),
       nodeWidth: positiveDouble(values, 'nodeWidth', 10),
       nodePadding: nonNegativeDouble(values, 'nodePadding', 12),
-      nodeAlignment: enumValue(values, 'nodeAlignment', const {
+      nodeAlignment: enumValue(
+          values,
+          'nodeAlignment',
+          const {
         'left',
         'right',
         'center',
         'justify',
-      }, 'justify'),
+          },
+          'justify'),
       linkColor: linkColor,
       showValues: boolValue(values, 'showValues', true),
       prefix: stringValue(values, 'prefix', ''),
@@ -104,9 +108,11 @@ class SankeyConfig {
       labelStyle: enumValue(
         values,
         'labelStyle',
-        const {'legacy', 'outlined'},
+          const {
         'legacy',
-      ),
+            'outlined',
+          },
+          'legacy'),
       nodeColors: Map.unmodifiable(nodeColors),
     );
   }
@@ -213,22 +219,13 @@ List<String> _csv(String line) {
   return out;
 }
 
-/// Node fill palette (d3 `schemeTableau10`, cycled by node first-seen order;
-/// d3 keys the ordinal scale by node id but assigns colors in encounter
-/// order, which equals first-seen node order here). Links inherit a gradient
-/// from their source to their target color.
-const _palette = <Color>[
-  Color(0xff4e79a7),
-  Color(0xfff28e2c),
-  Color(0xffe15759),
-  Color(0xff76b7b2),
-  Color(0xff59a14f),
-  Color(0xffedc949),
-  Color(0xffaf7aa1),
-  Color(0xffff9da7),
-  Color(0xff9c755f),
-  Color(0xffbab0ab),
-];
+// Node fill palette (d3 `schemeTableau10`, cycled by node first-seen order;
+// d3 keys the ordinal scale by node id but assigns colors in encounter
+// order, which equals first-seen node order here). Links inherit a gradient
+// from their source to their target color.
+//
+// The palette itself lives in `MermaidTheme.sankeyColorPalette` so a host can
+// retheme it; its default values are upstream's `schemeTableau10`.
 
 /// Node-alignment strategies, mirroring d3-sankey's `sankeyLeft/Right/Center/
 /// Justify`. `justify` is upstream's default.
@@ -312,14 +309,15 @@ RenderScene layoutSankey(
   // Build nodes (first-seen order) and links wired to node objects.
   final nodes = <String, _Node>{};
   final nodeList = <_Node>[];
+  // Theme-owned node palette (upstream `schemeTableau10` by default).
+  final palette = theme.sankeyColorPalette;
   // d3's ordinal scale only draws a palette entry when it is asked for an
   // unseen key, so a node carrying an explicit `nodeColors` entry never
-  // consumes a slot: the next uncolored node still gets `_palette[0]`.
+  // consumes a slot: the next uncolored node still gets `palette[0]`.
   var paletteSlot = 0;
   for (var i = 0; i < diagram.nodes.length; i++) {
     final name = diagram.nodes[i];
-    final color =
-        nodeColors[name] ?? _palette[paletteSlot++ % _palette.length];
+    final color = nodeColors[name] ?? palette[paletteSlot++ % palette.length];
     final n = _Node(name, i, color);
     nodes[name] = n;
     nodeList.add(n);
@@ -564,9 +562,8 @@ RenderScene layoutSankey(
   final outlined = labelStyle == 'outlined';
   for (final n in nodeList) {
     // `n.value` is already `max(sum(out), sum(in))` from computeNodeValues.
-    final text = showValues
-        ? '${n.name}\n$prefix${_fmtValue(n.value)}$suffix'
-        : n.name;
+    final text =
+        showValues ? '${n.name}\n$prefix${_fmtValue(n.value)}$suffix' : n.name;
 
     // Label position. legacy: position-based (x0 < width/2). outlined:
     // layer-based relative to the central node. Offset 6 either side.
@@ -588,11 +585,8 @@ RenderScene layoutSankey(
 
     SceneText makeText(Color color) => SceneText(
       text: text,
-      bounds: Rect.fromCenter(
-        Point(lx, cy),
-        labelSize.width,
-        labelSize.height,
-      ),
+          bounds:
+              Rect.fromCenter(Point(lx, cy), labelSize.width, labelSize.height),
       style: labelTextStyle,
       color: color,
     );
@@ -1011,8 +1005,7 @@ void _resolveBottomToTop(
 }
 
 double _targetTop(_Node source, _Node target, double py) {
-  var y =
-      source.y0 +
+  var y = source.y0 +
       _bundleInset(source) -
       _bundleInset(target) -
       (source.sourceLinks.length - 1) * py / 2;
@@ -1028,8 +1021,7 @@ double _targetTop(_Node source, _Node target, double py) {
 }
 
 double _sourceTop(_Node source, _Node target, double py) {
-  var y =
-      target.y0 +
+  var y = target.y0 +
       _bundleInset(target) -
       _bundleInset(source) -
       (target.targetLinks.length - 1) * py / 2;

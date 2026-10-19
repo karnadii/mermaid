@@ -26,9 +26,7 @@ import '../flowchart/layout_engines.dart';
 
 // Hoisted so each pattern compiles once instead of on every call.
 final _mindmapHeader = RegExp(r'^\s*mindmap\b');
-final _mindmapClassDef = RegExp(
-  r'^classDef\s+([^\s]+)\s+(.+)$',
-);
+final _mindmapClassDef = RegExp(r'^classDef\s+([^\s]+)\s+(.+)$');
 final _iconLine = RegExp(r'^::icon\(\s*(.+?)\s*\)$');
 final _whitespaceRun = RegExp(r'\s+');
 final _htmlBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
@@ -186,8 +184,7 @@ String _resolveIconRef(String ref) {
     '))' => (MindmapShape.bang, label),
     '(-' => (MindmapShape.cloud, label),
     ')' => (MindmapShape.cloud, label),
-    '(' =>
-      (close == ')'
+    '(' => (close == ')'
           ? (MindmapShape.rounded, label)
           : (MindmapShape.cloud, label)),
     '[' => (MindmapShape.rect, label),
@@ -219,10 +216,6 @@ Color _sectionTextColor(MermaidTheme theme, int section) {
   final scale = theme.cScaleLabel;
   return scale[1 + (section % (scale.length - 1))];
 }
-
-/// Perceived luminance, for choosing readable text on a fill.
-double _luminance(Color c) =>
-    (0.299 * c.red + 0.587 * c.green + 0.114 * c.blue) / 255;
 
 /// Approximate one SVG relative elliptical arc (`a rx ry 0 0 sweep dx dy`,
 /// large-arc-flag always 0 as in upstream cloud/bang paths) as cubic Béziers,
@@ -332,7 +325,8 @@ List<PathCommand> _cloudPath(
     int sweep,
     double dx,
     double dy,
-  ) => _arcTo(local, from, rx, ry, sweep, dx, dy);
+  ) =>
+      _arcTo(local, from, rx, ry, sweep, dx, dy);
   cur = arc(cur, r1, r1, 1, w * 0.25, -w * 0.1);
   cur = arc(cur, r3, r3, 1, w * 0.4, -w * 0.1);
   cur = arc(cur, r2, r2, 1, w * 0.35, w * 0.2);
@@ -368,7 +362,8 @@ List<PathCommand> _bangPath(
     int sweep,
     double dx,
     double dy,
-  ) => _arcTo(local, from, rx, ry, sweep, dx, dy);
+  ) =>
+      _arcTo(local, from, rx, ry, sweep, dx, dy);
   cur = arc(cur, r, r, 0, w * 0.25, -h * 0.1);
   cur = arc(cur, r, r, 0, w * 0.25, 0);
   cur = arc(cur, r, r, 0, w * 0.25, 0);
@@ -420,7 +415,11 @@ class _PlacedMind {
   int section = -1;
 
   /// Resolved fill color (section fill / root fill). Assigned during layout.
-  Color color = const Color(0xff000000);
+  ///
+  /// The placeholder is deliberately neutral and carries no theme value: the
+  /// layout tints every non-root node with its section fill and the root
+  /// paints `theme.git0`, so this default is never rendered.
+  Color color = Color.transparent;
 }
 
 class MindmapConfig {
@@ -487,17 +486,15 @@ RenderScene layoutMindmap(
     if (!matched) return null;
     return (
       fill: merged['fill'] != null ? Color.tryParse(merged['fill']!) : null,
-      stroke: merged['stroke'] != null
-          ? Color.tryParse(merged['stroke']!)
-          : null,
+      stroke:
+          merged['stroke'] != null ? Color.tryParse(merged['stroke']!) : null,
       text: merged['color'] != null ? Color.tryParse(merged['color']!) : null,
     );
   }
 
   _PlacedMind measure(MindmapNode n) {
-    final style = n.depth == 0
-        ? baseStyle.copyWith(fontWeight: 700)
-        : baseStyle;
+    final style =
+        n.depth == 0 ? baseStyle.copyWith(fontWeight: 700) : baseStyle;
     // Upstream: maxNodeWidth 200, padding 10 (doubled for rect/rounded/hexagon).
     final labelSize = labels.measure(
       n.label,
@@ -507,7 +504,8 @@ RenderScene layoutMindmap(
     final padding = switch (n.shape) {
       MindmapShape.rect ||
       MindmapShape.rounded ||
-      MindmapShape.hexagon => 2 * config.padding,
+      MindmapShape.hexagon =>
+        2 * config.padding,
       _ => config.padding,
     };
     // svgDraw.drawNode: width = bbox.w + 2*padding,
@@ -680,9 +678,8 @@ RenderScene layoutMindmap(
   // Nodes on top.
   void draw(MindmapNode n) {
     final p = placed[n]!;
-    final style = n.depth == 0
-        ? baseStyle.copyWith(fontWeight: 700)
-        : baseStyle;
+    final style =
+        n.depth == 0 ? baseStyle.copyWith(fontWeight: 700) : baseStyle;
     final labelSize = labels.measure(
       n.label,
       style,
@@ -703,12 +700,11 @@ RenderScene layoutMindmap(
     final stroke = cls?.stroke;
     // Text color: explicit classDef `color:` wins; otherwise the theme paints
     // root text `gitBranchLabel0` and section text `cScaleLabel<i+1>`.
-    final textColor =
-        cls?.text ??
+    final textColor = cls?.text ??
         (cls?.fill != null
-            ? (_luminance(cls!.fill!) < 0.5
-                  ? const Color(0xffffffff)
-                  : const Color(0xff333333))
+            ? (cls!.fill!.luminance < 0.5
+                ? theme.textOnDarkFill
+                : theme.textOnLightFill)
             : (isRoot
                   ? theme.gitBranchLabel0
                   : _sectionTextColor(theme, p.section)));
@@ -794,9 +790,8 @@ RenderScene layoutMindmap(
             stroke: nodeStroke,
           ),
         );
-        final lineColor = isRoot
-            ? _sectionLine(theme, 0)
-            : _sectionLine(theme, p.section);
+        final lineColor =
+            isRoot ? _sectionLine(theme, 0) : _sectionLine(theme, p.section);
         children.add(
           SceneShape(
             geometry: PathGeometry([MoveTo(pt(0, h)), LineTo(pt(w, h))]),

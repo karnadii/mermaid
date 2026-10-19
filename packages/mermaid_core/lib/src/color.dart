@@ -10,8 +10,7 @@ class Color {
   const Color(this.value);
 
   const Color.fromARGB(int a, int r, int g, int b)
-    : value =
-          ((a & 0xff) << 24) |
+      : value = ((a & 0xff) << 24) |
           ((r & 0xff) << 16) |
           ((g & 0xff) << 8) |
           (b & 0xff);
@@ -23,6 +22,14 @@ class Color {
   int get red => (value >> 16) & 0xff;
   int get green => (value >> 8) & 0xff;
   int get blue => value & 0xff;
+
+  /// Perceived luminance in the 0..1 range.
+  ///
+  /// The weights are the ones khroma — mermaid.js' color library — uses for
+  /// `isDark`, so a fill that reads as dark in mermaid.js reads as dark
+  /// here too. Renderers use it to pick ink that survives the fill it is
+  /// painted on.
+  double get luminance => (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
 
   static const transparent = Color(0x00000000);
   static const black = Color(0xff000000);
