@@ -21,6 +21,7 @@ import '../../icons/icon_registry.dart';
 import '../../ir/scene.dart';
 import '../../ir/scene_utils.dart';
 import '../../math/tex_math.dart';
+import '../../text/markdown_label.dart';
 import '../../text/text_measurer.dart';
 import '../../text/text_style.dart';
 import '../../theme/theme.dart';
@@ -31,7 +32,6 @@ import '../../vendor/dagre/dart_dagre.dart' as dagre;
 import 'elk_adapter.dart';
 import 'flow_model.dart';
 import 'layout_engines.dart';
-import 'markdown_label.dart';
 
 /// Upstream flowchart defaults (defaultConfig.ts / flowchart schema).
 /// Icon glyph square + gap to the label below it, for `@{ icon: }` nodes.
