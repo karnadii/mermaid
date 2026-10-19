@@ -198,6 +198,7 @@ SceneNode translateSceneNode(SceneNode node, double dx, double dy) =>
         :final align,
         :final underline,
         :final paintRole,
+        :final run,
       ) =>
         SceneText(
           text: text,
@@ -208,6 +209,7 @@ SceneNode translateSceneNode(SceneNode node, double dx, double dy) =>
           rotation: node.rotation,
           underline: underline,
           paintRole: paintRole,
+          run: run,
         ),
     };
 

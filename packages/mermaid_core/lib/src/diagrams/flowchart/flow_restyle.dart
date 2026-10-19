@@ -154,6 +154,7 @@ RenderScene applyFlowchartPaintOverrides(
       :final rotation,
       :final underline,
       :final paintRole,
+      :final run,
     ) =>
       SceneText(
         text: text,
@@ -166,6 +167,7 @@ RenderScene applyFlowchartPaintOverrides(
         rotation: rotation,
         underline: underline,
         paintRole: paintRole,
+        run: run,
       ),
   };
 

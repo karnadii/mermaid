@@ -41,28 +41,52 @@ class MarkdownLabelLayout {
     final nodes = <SceneNode>[];
     var y = center.y - size.height / 2;
     for (final line in lines) {
-      var x = switch (align) {
+      final lineLeft = switch (align) {
         TextAlignH.left => center.x - size.width / 2,
         TextAlignH.center => center.x - line.size.width / 2,
         TextAlignH.right => center.x + size.width / 2 - line.size.width,
       };
+      // Painted runs with their start and their text including spaces. A
+      // run of only spaces is not painted; its text joins the run before it
+      // (or the first painted run, at the line start).
+      final painted = <(MarkdownLabelRun, double, StringBuffer)>[];
+      var leading = '';
+      var x = lineLeft;
       for (final run in line.runs) {
         if (run.paintText.isNotEmpty) {
-          nodes.add(
-            SceneText(
-              text: run.paintText,
-              bounds: Rect.fromLTWH(
-                x + run.paintOffset,
-                y + (line.size.height - run.size.height) / 2,
-                run.paintWidth,
-                run.size.height,
-              ),
-              style: run.style,
-              color: color,
-            ),
-          );
+          painted.add((run, x, StringBuffer(leading)..write(run.text)));
+          leading = '';
+        } else if (painted.isEmpty) {
+          leading += run.text;
+        } else {
+          painted.last.$3.write(run.text);
         }
         x += run.size.width;
+      }
+      for (var i = 0; i < painted.length; i++) {
+        final (run, runX, text) = painted[i];
+        final left = runX + run.paintOffset;
+        nodes.add(
+          SceneText(
+            text: run.paintText,
+            bounds: Rect.fromLTWH(
+              left,
+              y + (line.size.height - run.size.height) / 2,
+              run.paintWidth,
+              run.size.height,
+            ),
+            style: run.style,
+            color: color,
+            run: SceneTextRun(
+              index: i,
+              count: painted.length,
+              text: text.toString(),
+              lineLeft: lineLeft - left,
+              lineWidth: line.size.width,
+              lineAlign: align,
+            ),
+          ),
+        );
       }
       y += line.size.height;
     }
