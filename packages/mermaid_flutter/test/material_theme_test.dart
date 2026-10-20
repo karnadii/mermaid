@@ -155,6 +155,37 @@ void main() {
         );
       }
     });
+
+    test('unmapped tokens inherit the mode\'s named theme', () {
+      // The mapping is layered on `darkTheme`/`defaultTheme`, so a token
+      // it does not touch keeps that mode's value instead of silently
+      // falling back to the light default.
+      final light = MaterialMermaidTheme.fromColorScheme(
+        ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4)),
+      );
+      final dark = MaterialMermaidTheme.fromColorScheme(
+        ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: Brightness.dark,
+        ),
+      );
+      expect(
+        light.c4BoundaryColor,
+        core.MermaidTheme.defaultTheme.c4BoundaryColor,
+      );
+      expect(
+        light.c4TextColor,
+        core.MermaidTheme.defaultTheme.c4TextColor,
+      );
+      expect(
+        dark.c4BoundaryColor,
+        core.MermaidTheme.darkTheme.c4BoundaryColor,
+      );
+      expect(
+        dark.c4TextColor,
+        core.MermaidTheme.darkTheme.c4TextColor,
+      );
+    });
   });
 
   test('maps text metrics that take part in layout', () {

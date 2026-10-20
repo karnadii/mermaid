@@ -310,6 +310,14 @@ PathGeometry _cliffPath(double width, double height) {
   ]);
 }
 
+/// Ink that survives the fill it is painted on.
+///
+/// A dark fill takes the light ink, a light fill the dark one — the same
+/// rule C4's `_inkOn` uses. The pair comes from the theme, so a host can
+/// pick its own two inks.
+Color _inkOn(Color fill, MermaidTheme theme) =>
+    fill.luminance < 0.5 ? theme.textOnDarkFill : theme.textOnLightFill;
+
 RenderScene layoutCynefin(
   CynefinDiagram d, {
   required TextMeasurer measurer,
@@ -335,6 +343,11 @@ RenderScene layoutCynefin(
     'chaotic': theme.cynefinChaoticFill,
     'confusion': theme.cynefinConfusionFill,
   };
+  // Domain labels, subtitles and badges sit on the washes above, which are
+  // predefined light fills in both modes — so their ink follows the fill,
+  // not the mode-dependent text roles (which would be light-on-light in
+  // dark mode).
+  Color inkFor(String domain) => _inkOn(domainFills[domain]!, theme);
 
   const domainFontSize = 16.0;
   const itemFontSize = 12.0;
@@ -459,12 +472,12 @@ RenderScene layoutCynefin(
       l.cx,
       labelY,
       labelStyle,
-      labelColor,
+      inkFor(name),
     );
     if (showDomainDescriptions) {
       final meta = _domainMeta[name]!;
-      addCenteredText(meta[0], l.cx, l.cy - 10, subtitleStyle, textColor);
-      addCenteredText(meta[1], l.cx, l.cy + 5, subtitleStyle, textColor);
+      addCenteredText(meta[0], l.cx, l.cy - 10, subtitleStyle, inkFor(name));
+      addCenteredText(meta[1], l.cx, l.cy + 5, subtitleStyle, inkFor(name));
     }
   }
 
@@ -474,7 +487,7 @@ RenderScene layoutCynefin(
     width / 2,
     showDomainDescriptions ? height / 2 - 10 : height / 2,
     labelStyle,
-    labelColor,
+    inkFor('confusion'),
   );
   if (showDomainDescriptions) {
     addCenteredText(
@@ -482,7 +495,7 @@ RenderScene layoutCynefin(
       width / 2,
       height / 2 + 8,
       subtitleStyle,
-      textColor,
+      inkFor('confusion'),
     );
   }
 
@@ -529,7 +542,7 @@ RenderScene layoutCynefin(
           s.height,
         ),
         style: itemStyle,
-        color: textColor,
+        color: _inkOn(fillColor, theme),
         align: TextAlignH.center,
       ),
     );

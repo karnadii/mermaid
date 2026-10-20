@@ -583,6 +583,13 @@ RenderScene layoutEventModeling(
   // Boxes (renderD3Box).
   for (final box in boxes) {
     final y = box.top;
+    final fillColor = entityFill[box.block.type] ?? theme.emUnknownTypeFill;
+    // Ink follows the fill it sits on: the entity fills are predefined
+    // light pastels in both modes, so the mode-dependent textColor would
+    // be light-on-light in dark mode.
+    final inkColor = fillColor.luminance < 0.5
+        ? theme.textOnDarkFill
+        : theme.textOnLightFill;
     nodes.add(
       SceneShape(
         geometry: RectGeometry(
@@ -593,7 +600,7 @@ RenderScene layoutEventModeling(
         // A frame whose type is not one of the five canonical ones is a
         // diagram bug, so it is painted with a loud marker
         // (`emUnknownTypeFill`, #f00) instead of a silent default.
-        fill: Fill(entityFill[box.block.type] ?? theme.emUnknownTypeFill),
+        fill: Fill(fillColor),
         stroke: Stroke(color: entityStroke[box.block.type] ?? Color.black),
       ),
     );
@@ -611,7 +618,7 @@ RenderScene layoutEventModeling(
             ns.height,
           ),
           style: nameStyle,
-          color: theme.textColor,
+          color: inkColor,
           align: TextAlignH.center,
         ),
       );
@@ -630,7 +637,7 @@ RenderScene layoutEventModeling(
             ns.height,
           ),
           style: nameStyle,
-          color: theme.textColor,
+          color: inkColor,
           align: TextAlignH.center,
         ),
       );
@@ -644,7 +651,7 @@ RenderScene layoutEventModeling(
             bs.height,
           ),
           style: bodyStyle,
-          color: theme.textColor,
+          color: inkColor,
           align: TextAlignH.left,
         ),
       );

@@ -91,7 +91,11 @@ abstract final class MaterialMermaidTheme {
 
     core.Color c(Color value) => core.Color(value.toARGB32());
 
-    return core.MermaidTheme(
+    // Base the mapping on the mode's named theme, so a token the mapping
+    // does not touch keeps that mode's value (e.g. the dark
+    // `c4BoundaryColor`) instead of silently falling back to the light
+    // default.
+    return fallback.copyWith(
       background: c(colorScheme.surface),
       primaryColor: c(colorScheme.primaryContainer),
       primaryTextColor: c(colorScheme.onPrimaryContainer),

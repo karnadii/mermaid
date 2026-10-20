@@ -1,6 +1,6 @@
 ## Unreleased
 
-- Route every diagram color through `MermaidTheme`. Ninety-three palette
+- Route every diagram color through `MermaidTheme`. Ninety-two palette
   entries were added — gantt task and status colors, the sequence alt-frame
   fill, the git merge ink, the railroad special node, the radar graticule,
   the packet block, the kanban priority bars, the C4 element palette, the
@@ -25,6 +25,12 @@
   gantt task takes the error role, an evolution arrow too.
 - Add `Color.luminance`, the perceived luminance mermaid.js' khroma uses to
   decide whether a fill reads as dark.
+- Ink on predefined fills follows the fill's luminance instead of the
+  mode-dependent text roles: event-modeling entity text and cynefin domain
+  labels, subtitles and badges were light-on-light in dark mode. C4
+  boundary and relation ink now comes from the mode's named theme, because
+  `MaterialMermaidTheme.fromColorScheme` layers its mapping on
+  `darkTheme`/`defaultTheme` instead of the light constructor defaults.
 
 ## 0.3.2
 
