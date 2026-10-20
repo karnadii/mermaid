@@ -262,6 +262,12 @@ RenderScene layoutTimeline(
     final ci = colorIndex % _themeColorLimit;
     var fill = theme.cScale[ci];
     if (event) fill = _brightness(fill, 1.2);
+    // Event fills are brightened pastels; section fills use the paired
+    // label. Both take ink from the actual fill luminance so dark mode
+    // keeps contrast after brightening.
+    final ink = event
+        ? (fill.luminance < 0.5 ? theme.textOnDarkFill : theme.textOnLightFill)
+        : theme.cScaleLabel[ci];
     final size = measurer.measure(text, labelStyle, maxWidth: width);
     return SceneGroup(
       id: '${idPrefix}_${x.round()}_${y.round()}',
@@ -292,7 +298,7 @@ RenderScene layoutTimeline(
             size.height,
           ),
           style: event ? labelStyle : labelStyle.copyWith(fontWeight: 700),
-          color: event ? theme.textColor : theme.cScaleLabel[ci],
+          color: ink,
         ),
       ],
     );

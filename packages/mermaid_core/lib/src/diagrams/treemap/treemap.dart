@@ -351,14 +351,25 @@ RenderScene layoutTreemap(
 
   final colorScale = _OrdinalScale(_scaleRange(theme));
   final peerScale = _OrdinalScale(_peerRange(theme));
-  // colorScaleLabel keyed the same way (first-seen order), no leading slot.
+  // Fill and label scales share first-seen order, but the fill range
+  // carries a leading `transparent` slot for the synthetic root while
+  // the label range does not. `labelColor` compensates by shifting one
+  // slot back, so section N pairs cScale[N] with cScaleLabel[N].
+  // Leaf text is keyed by the parent section name (the fill owner),
+  // not the leaf name — otherwise sibling leaves would each take a
+  // different ink than the fill they sit on.
   final labelRange = _labelRange(theme);
   final labelIndex = <String, int>{};
   var labelNext = 0;
   Color labelColor(String name) {
     final i = labelIndex.putIfAbsent(name, () => labelNext++);
-    return labelRange[i % labelRange.length];
+    // Shift past the fill range's leading transparent slot.
+    final li = (i - 1) % labelRange.length;
+    return labelRange[li];
   }
+
+  Color inkOn(Color fill) =>
+      fill.luminance < 0.5 ? theme.textOnDarkFill : theme.textOnLightFill;
 
   // Prime the ordinal scales in upstream's first-seen (pre-order) order so the
   // synthetic root's empty name takes the leading `transparent` slot and the
@@ -506,7 +517,9 @@ RenderScene layoutTreemap(
       if (child.isLeaf) {
         // Leaves inherit the parent section's color (colorScale(parent.name)).
         final base = colorScale[node.label] ?? Color.transparent;
-        final fillColor = cls?.fill ?? base.withOpacity(0.3);
+        final customFill = cls?.fill;
+        final customColor = cls?.color;
+        final fillColor = customFill ?? base.withOpacity(0.3);
         final strokeColor = cls?.stroke ?? base;
         nodes.add(
           SceneShape(
@@ -515,6 +528,12 @@ RenderScene layoutTreemap(
             stroke: Stroke(color: strokeColor, width: 3),
           ),
         );
+        // Ink follows the parent section pairing; a custom fill without
+        // an explicit color takes ink from its own luminance.
+        final leafInk = customColor ??
+            (customFill != null
+                ? inkOn(customFill)
+                : labelColor(node.label));
         _drawLeafText(
           nodes: nodes,
           measurer: measurer,
@@ -522,7 +541,7 @@ RenderScene layoutTreemap(
           rect: cellRect,
           label: child.label,
           value: child.value,
-          textColor: cls?.color ?? labelColor(child.label),
+          textColor: leafInk,
           baseLabelFont: baseLabelFont,
           baseValueFont: baseValueFont,
           minLabelFont: minLabelFont,
@@ -538,7 +557,9 @@ RenderScene layoutTreemap(
         // header band carrying a bold label and a right-aligned italic value.
         final base = colorScale[child.label] ?? Color.transparent;
         final peer = peerScale[child.label] ?? Color.transparent;
-        final bodyFill = cls?.fill ?? base.withOpacity(0.6);
+        final customFill = cls?.fill;
+        final customColor = cls?.color;
+        final bodyFill = customFill ?? base.withOpacity(0.6);
         final bodyStroke = cls?.stroke ?? peer.withOpacity(0.4);
         nodes.add(
           SceneShape(
@@ -548,7 +569,8 @@ RenderScene layoutTreemap(
           ),
         );
 
-        final lblColor = cls?.color ?? labelColor(child.label);
+        final lblColor = customColor ??
+            (customFill != null ? inkOn(customFill) : labelColor(child.label));
         _drawSectionHeader(
           nodes: nodes,
           measurer: measurer,

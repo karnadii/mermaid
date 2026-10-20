@@ -398,6 +398,11 @@ Color _lighten(Color c, double amount) {
   return Color.fromARGB(c.alpha, rgb[0], rgb[1], rgb[2]);
 }
 
+/// Ink that stays legible on [fill]: dark fills take [textOnDarkFill],
+/// light fills take [textOnLightFill]. Mirrors mindmap/c4/cynefin.
+Color _inkOn(Color fill, MermaidTheme theme) =>
+    fill.luminance < 0.5 ? theme.textOnDarkFill : theme.textOnLightFill;
+
 List<double> _rgbToHsl(int r, int g, int b) {
   final rr = r / 255, gg = g / 255, bb = b / 255;
   final mx = math.max(rr, math.max(gg, bb));
@@ -583,28 +588,37 @@ RenderScene layoutKanban(
       ),
     );
     // Section label starts at the section box top and is centered across it.
+    // Ink follows the section fill luminance so light fills in either
+    // mode keep a dark title and dark fills keep a light one.
     final titleSz = titleSizes[ci];
     nodes.addAll(
       labels.paint(
         col.title,
         bounds: Rect.fromLTWH(x, 0, width, titleSz.height),
         style: titleStyle,
-        color: theme.textColor,
+        color: _inkOn(fill, theme),
         maxWidth: width,
       ),
     );
 
-    // Cards: white fill, neutral nodeBorder stroke (1px), rx/ry = 5.
+    // Cards: opaque canvas fill (theme.background is transparent in the
+    // app, which would leave the section showing through), neutral
+    // nodeBorder stroke (1px), rx/ry = 5.
     for (final card in cardLayout) {
       // Upstream shares the section and item center; the narrower card is
       // therefore inset equally on both sides.
       final cardX = x + (width - cardW) / 2;
       final cardRect = Rect.fromLTWH(cardX, card.y, cardW, card.totalHeight);
       final cardChildren = <SceneNode>[];
-      final fillColor = _styleColor(card.styles['fill']) ?? theme.background;
+      final customFill = _styleColor(card.styles['fill']);
+      final customColor = _styleColor(card.styles['color']);
+      final fillColor = customFill ?? theme.canvasColor;
       final strokeColor =
           _styleColor(card.styles['stroke']) ?? theme.nodeBorder;
-      final textColor = _styleColor(card.styles['color']) ?? theme.textColor;
+      // A custom fill without an explicit color takes ink from the
+      // fill luminance; the default canvas fill keeps the theme ink.
+      final textColor = customColor ??
+          (customFill != null ? _inkOn(customFill, theme) : theme.textColor);
       cardChildren.add(
         SceneShape(
           geometry: RectGeometry(cardRect, rx: 5, ry: 5),

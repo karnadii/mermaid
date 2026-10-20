@@ -849,6 +849,15 @@ List<SceneNode> _drawNode(
 ) {
   final fill = Color.tryParse(n.styles['fill'] ?? '') ?? theme.mainBkg;
   final stroke = Color.tryParse(n.styles['stroke'] ?? '') ?? theme.nodeBorder;
+  final explicitColor = Color.tryParse(n.styles['color'] ?? '');
+  // A `fill:` without an explicit `color:` takes ink from the fill
+  // luminance; the themed pair stays as designed.
+  final ink = explicitColor ??
+      (n.styles['fill'] != null
+          ? (fill.luminance < 0.5
+              ? theme.textOnDarkFill
+              : theme.textOnLightFill)
+          : theme.textColor);
   final rect = Rect.fromCenter(c, w, h);
   final st = Stroke(color: stroke, width: 1);
   final f = Fill(fill);
@@ -971,7 +980,7 @@ List<SceneNode> _drawNode(
           n.label,
           bounds: Rect.fromCenter(c, ls.width, ls.height),
           style: style,
-          color: Color.tryParse(n.styles['color'] ?? '') ?? theme.textColor,
+          color: ink,
           maxWidth: 200,
         ),
       ],

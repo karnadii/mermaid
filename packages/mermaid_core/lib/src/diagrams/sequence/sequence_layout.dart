@@ -951,7 +951,9 @@ class _SequenceLayout {
         text: text,
         bounds: Rect.fromCenter(center, size.width, size.height),
         style: style,
-        color: theme.background,
+        // Knockout ink on the badge dot: the scene background is
+        // transparent in the app, so canvasColor (opaque) survives.
+        color: theme.canvasColor,
       ),
     ];
   }

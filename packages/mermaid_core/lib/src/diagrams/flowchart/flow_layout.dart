@@ -1726,17 +1726,27 @@ _NodeStyle _resolveNodeStyle(
     strokeWidth: 1,
     textColor: theme.textColor,
   );
+  var fillOverridden = false;
+  var colorExplicit = false;
 
   void apply(Map<String, String>? props) {
     if (props == null) return;
     props.forEach((key, value) {
       switch (key.trim()) {
         case 'fill':
-          style.fill = Color.tryParse(value) ?? style.fill;
+          final parsed = Color.tryParse(value);
+          if (parsed != null) {
+            style.fill = parsed;
+            fillOverridden = true;
+          }
         case 'stroke':
           style.stroke = Color.tryParse(value) ?? style.stroke;
         case 'color':
-          style.textColor = Color.tryParse(value) ?? style.textColor;
+          final parsed = Color.tryParse(value);
+          if (parsed != null) {
+            style.textColor = parsed;
+            colorExplicit = true;
+          }
         case 'stroke-width':
           style.strokeWidth = _parsePx(value) ?? style.strokeWidth;
         case 'stroke-dasharray':
@@ -1750,6 +1760,14 @@ _NodeStyle _resolveNodeStyle(
     apply(graph.classDefs[c]);
   }
   apply(node.styles);
+  // A user `fill:` without an explicit `color:` keeps the theme ink,
+  // which is unreadable on light fills in dark mode (and vice versa).
+  // Pick ink from the fill luminance, mirroring mindmap/c4/cynefin.
+  if (fillOverridden && !colorExplicit) {
+    style.textColor = style.fill.luminance < 0.5
+        ? theme.textOnDarkFill
+        : theme.textOnLightFill;
+  }
   return style;
 }
 

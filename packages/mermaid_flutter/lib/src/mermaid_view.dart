@@ -672,11 +672,12 @@ class _CtlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final button = Material(
-      color: active ? const Color(0xFFE8E4F6) : Colors.white,
+      color: active ? scheme.primaryContainer : scheme.surfaceContainerHigh,
       elevation: 1,
       shape: RoundedRectangleBorder(
-        side: const BorderSide(color: Color(0xFFD9D5E4)),
+        side: BorderSide(color: scheme.outlineVariant),
         borderRadius: BorderRadius.circular(7),
       ),
       child: InkWell(
@@ -685,7 +686,13 @@ class _CtlButton extends StatelessWidget {
         child: SizedBox(
           width: 30,
           height: 30,
-          child: Icon(icon, size: 18, color: const Color(0xFF4A4458)),
+          child: Icon(
+            icon,
+            size: 18,
+            color: active
+                ? scheme.onPrimaryContainer
+                : scheme.onSurfaceVariant,
+          ),
         ),
       ),
     );

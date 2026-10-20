@@ -345,8 +345,20 @@ RenderScene layoutJourney(
     final configuredTextColor = config.sectionColours == null
         ? null
         : config.sectionColours![sectionIndex % config.sectionColours!.length];
-    final sectionTitleColor = configuredTextColor ?? theme.titleColor;
-    final textColor = configuredTextColor ?? theme.textColor;
+    // A lone custom `sectionFills` without `sectionColours` takes ink
+    // from the fill luminance; defaults keep their designed pairs.
+    final sectionTitleColor = configuredTextColor ??
+        (config.sectionFills != null
+            ? (fill.luminance < 0.5
+                ? theme.textOnDarkFill
+                : theme.textOnLightFill)
+            : theme.titleColor);
+    final textColor = configuredTextColor ??
+        (config.sectionFills != null
+            ? (fill.luminance < 0.5
+                ? theme.textOnDarkFill
+                : theme.textOnLightFill)
+            : theme.textColor);
     final sectionX = globalIndex * config.taskMargin +
         globalIndex * config.width +
         leftMargin;

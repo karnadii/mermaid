@@ -678,10 +678,14 @@ class _ClassLayout {
     final rect = b.rectAt(b.center);
     var fill = theme.mainBkg;
     var stroke = theme.nodeBorder;
+    Color? explicitColor;
     void applyStyles(Map<String, String>? styles) {
       if (styles == null) return;
-      fill = Color.tryParse(styles['fill'] ?? '') ?? fill;
+      final parsedFill = Color.tryParse(styles['fill'] ?? '');
+      if (parsedFill != null) fill = parsedFill;
       stroke = Color.tryParse(styles['stroke'] ?? '') ?? stroke;
+      final parsedColor = Color.tryParse(styles['color'] ?? '');
+      if (parsedColor != null) explicitColor = parsedColor;
     }
 
     applyStyles(diagram.classDefs['default']);
@@ -689,6 +693,14 @@ class _ClassLayout {
       applyStyles(diagram.classDefs[c]);
     }
     applyStyles(b.node.styles);
+    // A `fill:` without an explicit `color:` takes ink from the fill
+    // luminance; an explicit `color:` always wins.
+    final ink = explicitColor ??
+        (fill != theme.mainBkg
+            ? (fill.luminance < 0.5
+                ? theme.textOnDarkFill
+                : theme.textOnLightFill)
+            : theme.textColor);
 
     final children = <SceneNode>[
       SceneShape(
@@ -723,7 +735,7 @@ class _ClassLayout {
               line.size.height,
             ),
             style: line.style,
-            color: theme.textColor,
+            color: ink,
             maxWidth: 300,
           ),
         );
@@ -746,7 +758,7 @@ class _ClassLayout {
                   line.size.height,
                 ),
           style: line.style,
-          color: theme.textColor,
+          color: ink,
           align: line.centered ? TextAlignH.center : TextAlignH.left,
           underline: line.underline,
         ),
@@ -782,7 +794,7 @@ class _ClassLayout {
               base + perp * (_markerSize / 2),
               base - perp * (_markerSize / 2),
             ]),
-            fill: Fill(theme.background),
+            fill: Fill(theme.canvasColor),
             stroke: Stroke(color: theme.lineColor, width: 1.5),
           ),
         ];
@@ -800,7 +812,7 @@ class _ClassLayout {
             fill: Fill(
               end == RelationEnd.composition
                   ? theme.lineColor
-                  : theme.background,
+                  : theme.canvasColor,
             ),
             stroke: Stroke(color: theme.lineColor, width: 1.5),
           ),
@@ -821,7 +833,7 @@ class _ClassLayout {
         return [
           SceneShape(
             geometry: CircleGeometry(tip - dir * 6, 6),
-            fill: Fill(theme.background),
+            fill: Fill(theme.canvasColor),
             stroke: Stroke(color: theme.lineColor, width: 1.5),
           ),
         ];

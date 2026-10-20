@@ -835,18 +835,23 @@ RenderScene layoutRequirementDiagram(
     final (size, lines) = boxes[id]!;
     final rect = Rect.fromCenter(centers[id]!, size.width, size.height);
     final styles = _nodeStyles(diagram, n);
+    final customFill = _styleColor(styles['fill']);
+    final customColor = _styleColor(styles['color']);
     final fillColor =
-        _styleColor(styles['fill']) ??
-        config.rectFill ??
-        theme.requirementBackground;
+        customFill ?? config.rectFill ?? theme.requirementBackground;
     final strokeColor =
         _styleColor(styles['stroke']) ??
         config.rectBorderColor ??
         theme.requirementBorderColor;
+    // A custom fill without an explicit color takes ink from the fill
+    // luminance; the themed fill/color pair stays as designed.
     final textColor =
-        _styleColor(styles['color']) ??
-        config.textColor ??
-        theme.requirementTextColor;
+        customColor ??
+        (customFill != null
+            ? (customFill.luminance < 0.5
+                ? theme.textOnDarkFill
+                : theme.textOnLightFill)
+            : (config.textColor ?? theme.requirementTextColor));
     final strokeWidth =
         _styleWidth(styles['stroke-width']) ?? config.rectBorderSize;
     // Upstream draws square corners (no rx/ry), `requirementBackground`

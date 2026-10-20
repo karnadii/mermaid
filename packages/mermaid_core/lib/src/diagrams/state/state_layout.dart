@@ -824,7 +824,7 @@ class _StateLayout {
       depth++;
       parentId = diagram.states[parentId]?.parent;
     }
-    if (depth.isEven) return theme.background;
+    if (depth.isEven) return theme.canvasColor;
 
     // Mermaid alternates nested composite bodies with altBackground. The core
     // theme does not expose that token yet, so derive its default 6% contrast
@@ -894,10 +894,14 @@ class _StateLayout {
     final s = p.node;
     var fill = theme.mainBkg;
     var stroke = theme.nodeBorder;
+    Color? explicitColor;
     void apply(Map<String, String>? styles) {
       if (styles == null) return;
-      fill = Color.tryParse(styles['fill'] ?? '') ?? fill;
+      final parsedFill = Color.tryParse(styles['fill'] ?? '');
+      if (parsedFill != null) fill = parsedFill;
       stroke = Color.tryParse(styles['stroke'] ?? '') ?? stroke;
+      final parsedColor = Color.tryParse(styles['color'] ?? '');
+      if (parsedColor != null) explicitColor = parsedColor;
     }
 
     apply(diagram.classDefs['default']);
@@ -905,6 +909,14 @@ class _StateLayout {
       apply(diagram.classDefs[c]);
     }
     apply(s.styles);
+    // A `fill:` without an explicit `color:` takes ink from the fill
+    // luminance; an explicit `color:` always wins.
+    final ink = explicitColor ??
+        (fill != theme.mainBkg
+            ? (fill.luminance < 0.5
+                ? theme.textOnDarkFill
+                : theme.textOnLightFill)
+            : theme.textColor);
 
     final children = <SceneNode>[];
     switch (s.kind) {
@@ -919,7 +931,7 @@ class _StateLayout {
         children.addAll([
           SceneShape(
             geometry: CircleGeometry(p.center, 7),
-            fill: Fill(theme.background),
+            fill: Fill(theme.canvasColor),
             stroke: Stroke(color: theme.lineColor, width: 2),
           ),
           SceneShape(
@@ -962,7 +974,7 @@ class _StateLayout {
             text: s.kind == StateKind.historyDeep ? 'H*' : 'H',
             bounds: Rect.fromCenter(p.center, 26, 18),
             style: baseStyle,
-            color: theme.textColor,
+            color: ink,
           ),
         );
       case StateKind.normal || StateKind.composite:
@@ -984,7 +996,7 @@ class _StateLayout {
               p.labelSize.height,
             ),
             style: baseStyle,
-            color: theme.textColor,
+            color: ink,
             maxWidth: 200,
           ),
         ]);

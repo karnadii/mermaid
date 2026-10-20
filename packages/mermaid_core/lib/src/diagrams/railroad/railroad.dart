@@ -603,9 +603,17 @@ class _Layouter {
     final stroke = terminal
         ? config.terminalStroke ?? theme.lineColor
         : config.nonTerminalStroke ?? theme.nodeBorder;
+    // A configured fill without its matching text color takes ink from
+    // the fill luminance; defaults keep their designed pairs.
+    Color inkFor(Color c) =>
+        c.luminance < 0.5 ? theme.textOnDarkFill : theme.textOnLightFill;
     final textColor = terminal
-        ? config.terminalTextColor ?? theme.textColor
-        : config.nonTerminalTextColor ?? theme.primaryTextColor;
+        ? config.terminalTextColor ??
+            (config.terminalFill != null ? inkFor(fill) : theme.textColor)
+        : config.nonTerminalTextColor ??
+            (config.nonTerminalFill != null
+                ? inkFor(fill)
+                : theme.primaryTextColor);
     return _Frag(
       nodes: [
         SceneShape(
@@ -635,11 +643,12 @@ class _Layouter {
     final bh = ts.height + 2 * _pad;
     final rect = Rect.fromLTWH(0, 0, bw, bh);
     final mid = bh / 2;
+    final specialFill = config.specialFill ?? theme.railroadSpecialFill;
     return _Frag(
       nodes: [
         SceneShape(
           geometry: RectGeometry(rect),
-          fill: Fill(config.specialFill ?? theme.railroadSpecialFill),
+          fill: Fill(specialFill),
           stroke: Stroke(
             color: config.specialStroke ?? theme.railroadSpecialStroke,
             width: _strokeWidth,
@@ -651,7 +660,12 @@ class _Layouter {
           bounds: Rect.fromCenter(rect.center, ts.width, ts.height),
           style: baseStyle,
           // Upstream `.railroad-special text` uses nonTerminalTextColor.
-          color: theme.primaryTextColor,
+          // A configured special fill without ink takes it from luminance.
+          color: config.specialFill != null
+              ? (specialFill.luminance < 0.5
+                  ? theme.textOnDarkFill
+                  : theme.textOnLightFill)
+              : (config.nonTerminalTextColor ?? theme.primaryTextColor),
         ),
       ],
       width: bw,

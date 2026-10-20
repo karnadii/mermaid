@@ -438,7 +438,14 @@ class _ErLayout {
         b.entity.label,
         bounds: labelBounds,
         style: headerStyle,
-        color: style.color ?? theme.textColor,
+        // A `fill:` without an explicit `color:` takes ink from the
+        // fill luminance; the themed pair stays as designed.
+        color: style.color ??
+            (style.fill != null
+                ? (style.fill!.luminance < 0.5
+                    ? theme.textOnDarkFill
+                    : theme.textOnLightFill)
+                : theme.textColor),
       ),
     ];
     var y = rect.top + b.headerHeight;
