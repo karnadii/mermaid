@@ -81,6 +81,35 @@ void main() {
       }
     });
 
+    test('a complex-script run is emitted as text, not dropped', () {
+      // The KaTeX port hands Arabic/Hebrew to the platform as one shaped
+      // string (a TextRunNode) because the KaTeX faces have no coverage
+      // for it. The adapter used to have no case for that node, so the
+      // text vanished: zero scene nodes for a nonzero box. It is now one
+      // text node in logical order, shaped by the backend in a system font.
+      final ml = layoutMath(r'\text{مرحبا}', style, measurer, black);
+      final texts = flattenScene(
+        ml.render(const Point(0, 0)),
+      ).whereType<SceneText>().toList();
+      expect(texts, hasLength(1));
+      expect(texts.single.text, 'مرحبا');
+    });
+
+    test('a run beside Latin maths keeps both', () {
+      final ml = layoutMath(
+        r'x + \text{مرحبا}',
+        style,
+        measurer,
+        black,
+      );
+      final nodes = flattenScene(ml.render(const Point(0, 0))).toList();
+      expect(
+        nodes.whereType<SceneText>().map((n) => n.text),
+        contains('مرحبا'),
+      );
+      expect(nodes.whereType<SceneShape>(), isNotEmpty);
+    });
+
     test('a bigger expression produces more shapes than a single glyph', () {
       expect(
         shapes(layoutMath(r'\frac{a+b}{c+d}', style, measurer, black)).length,

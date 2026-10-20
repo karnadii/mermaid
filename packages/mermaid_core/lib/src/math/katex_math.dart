@@ -16,6 +16,7 @@ import '../color.dart';
 import '../geometry.dart';
 import '../icons/svg_path.dart';
 import '../ir/scene.dart';
+import '../text/text_style.dart';
 
 /// A laid-out math result relative to a top-left origin of (0,0): the [size],
 /// the [ascent] (top→baseline distance) and the absolute scene [nodes].
@@ -92,7 +93,36 @@ void _emit(kx.BoxNode node, double penX, double baselineY, double scale,
       _emit(node.child, penX, baselineY, scale, color, out);
     case kx.ImageNode():
       break; // \includegraphics — not supported in diagram labels
+    case kx.TextRunNode():
+      _emitTextRun(node, penX, baselineY, scale, color, out);
   }
+}
+
+void _emitTextRun(kx.TextRunNode node, double penX, double baselineY,
+    double scale, Color color, List<SceneNode> out) {
+  // A complex-script run (Arabic, Hebrew, ...) has no KaTeX glyph outlines:
+  // its letterforms need contextual shaping that only a text engine can do.
+  // Emit it as one text node and let the backend shape it in a system font —
+  // the same trade-off the port's own SVG serializer makes (it emits no
+  // font-family for runs). The string stays in logical order and both
+  // backends apply the bidi algorithm, so `rtl` needs no extra handling.
+  if (node.text.isEmpty) return;
+  final runSize = scale * node.size;
+  if (runSize <= 0) return;
+  out.add(
+    SceneText(
+      text: node.text,
+      bounds: Rect.fromLTWH(
+        penX,
+        baselineY - node.height * scale,
+        node.width * scale,
+        (node.height + node.depth) * scale,
+      ),
+      style: TextStyleSpec(fontFamily: 'sans-serif', fontSize: runSize),
+      color: color,
+      align: TextAlignH.left,
+    ),
+  );
 }
 
 void _emitRow(List<kx.BoxNode> children, double penX, double baselineY,
