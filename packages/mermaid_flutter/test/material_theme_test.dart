@@ -48,6 +48,115 @@ void main() {
     });
   }
 
+  // The mapping follows three rules: structure follows the scheme, a
+  // palette that encodes data keeps its predefined colors, and a status
+  // keeps its identity. These tests pin the rules so a later mapping
+  // change cannot quietly repaint a data palette with the accent.
+  group('palette policy', () {
+    for (final brightness in Brightness.values) {
+      test('structure follows the scheme in $brightness', () {
+        final scheme = ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: brightness,
+        );
+        final theme = MaterialMermaidTheme.fromColorScheme(scheme);
+
+        expect(
+            theme.ganttTaskBkgColor.value, scheme.primaryContainer.toARGB32());
+        expect(theme.ganttTaskBorderColor.value, scheme.primary.toARGB32());
+        expect(
+          theme.ganttActiveTaskBkgColor.value,
+          scheme.tertiaryContainer.toARGB32(),
+        );
+        expect(
+          theme.ganttDoneTaskBkgColor.value,
+          scheme.surfaceContainerHighest.toARGB32(),
+        );
+        expect(
+          theme.ganttTaskTextColor.value,
+          scheme.onPrimaryContainer.toARGB32(),
+        );
+        expect(
+          theme.ganttTaskTextOutsideColor.value,
+          scheme.onSurface.toARGB32(),
+        );
+        expect(theme.railroadSpecialFill.value,
+            scheme.tertiaryContainer.toARGB32());
+        expect(
+            theme.radarGraticuleColor.value, scheme.outlineVariant.toARGB32());
+        expect(
+          theme.packetBlockFill.value,
+          scheme.surfaceContainerHighest.toARGB32(),
+        );
+        expect(theme.canvasColor.value, scheme.surface.toARGB32());
+        expect(theme.wardleyComponentFill.value,
+            scheme.surfaceContainer.toARGB32());
+        expect(
+            theme.wardleyLinkStroke.value, scheme.onSurfaceVariant.toARGB32());
+      });
+
+      test('a status keeps its identity in $brightness', () {
+        final scheme = ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: brightness,
+        );
+        final theme = MaterialMermaidTheme.fromColorScheme(scheme);
+
+        expect(theme.ganttCritBkgColor.value, scheme.errorContainer.toARGB32());
+        expect(theme.ganttCritBorderColor.value, scheme.error.toARGB32());
+        expect(theme.wardleyEvolutionStroke.value, scheme.error.toARGB32());
+        expect(theme.cynefinCliffColor.value, scheme.error.toARGB32());
+        expect(theme.emUnknownTypeFill.value, scheme.error.toARGB32());
+        expect(
+          theme.kanbanPriorityVeryHigh.value,
+          scheme.error.toARGB32(),
+        );
+      });
+
+      test('a data palette keeps its predefined colors in $brightness', () {
+        final scheme = ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: brightness,
+        );
+        final theme = MaterialMermaidTheme.fromColorScheme(scheme);
+        const upstream = core.MermaidTheme.defaultTheme;
+
+        expect(theme.sankeyColorPalette, upstream.sankeyColorPalette);
+        expect(theme.journeyActorColors, upstream.journeyActorColors);
+        expect(
+            theme.cynefinComplexFill.value, upstream.cynefinComplexFill.value);
+        expect(theme.cynefinClearFill.value, upstream.cynefinClearFill.value);
+        expect(theme.emUiFill.value, upstream.emUiFill.value);
+        expect(theme.emEventFill.value, upstream.emEventFill.value);
+        expect(theme.c4PersonFill.value, upstream.c4PersonFill.value);
+        expect(theme.c4ContainerFill.value, upstream.c4ContainerFill.value);
+        expect(theme.journeyFaceFill.value, upstream.journeyFaceFill.value);
+      });
+    }
+
+    test('the ink on a host-chosen fill survives both modes', () {
+      for (final brightness in Brightness.values) {
+        final scheme = ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: brightness,
+        );
+        final theme = MaterialMermaidTheme.fromColorScheme(scheme);
+        // A label on a dark fill takes the light ink, a label on a light
+        // fill the dark one — in both modes.
+        expect(
+          _contrast(theme.textOnDarkFill, const core.Color(0xff101010)),
+          greaterThanOrEqualTo(4.5),
+          reason: 'light ink on a dark fill in $brightness',
+        );
+        expect(
+          _contrast(theme.textOnLightFill, const core.Color(0xfff0f0f0)),
+          greaterThanOrEqualTo(4.5),
+          reason: 'dark ink on a light fill in $brightness',
+        );
+      }
+    });
+  });
+
   test('maps text metrics that take part in layout', () {
     final theme = MaterialMermaidTheme.fromColorScheme(
       ColorScheme.fromSeed(seedColor: const Color(0xff3457d5)),

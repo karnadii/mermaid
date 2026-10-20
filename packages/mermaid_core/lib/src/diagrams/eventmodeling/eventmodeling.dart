@@ -591,8 +591,8 @@ RenderScene layoutEventModeling(
           ry: 3,
         ),
         // A frame whose type is not one of the five canonical ones is a
-        // diagram bug, so it is painted with a loud marker instead of a
-        // silent default. No theme token owns that role, hence the literal.
+        // diagram bug, so it is painted with a loud marker
+        // (`emUnknownTypeFill`, #f00) instead of a silent default.
         fill: Fill(entityFill[box.block.type] ?? theme.emUnknownTypeFill),
         stroke: Stroke(color: entityStroke[box.block.type] ?? Color.black),
       ),
