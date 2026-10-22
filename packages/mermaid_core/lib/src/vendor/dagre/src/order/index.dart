@@ -24,8 +24,18 @@ void order(Graph g, DagreConfig config) {
 
   var maxRank = util.maxRank(g)!;
   var byRank = nodesByRank(g);
-  List<Graph> downLayerGraphs = _buildLayerGraphs(g, range(1, maxRank + 1), Relationship.inEdges, byRank);
-  List<Graph> upLayerGraphs = _buildLayerGraphs(g, range(maxRank - 1, -1, -1), Relationship.outEdges, byRank);
+  List<Graph> downLayerGraphs = _buildLayerGraphs(
+    g,
+    range(1, maxRank + 1),
+    Relationship.inEdges,
+    byRank,
+  );
+  List<Graph> upLayerGraphs = _buildLayerGraphs(
+    g,
+    range(maxRank - 1, -1, -1),
+    Relationship.outEdges,
+    byRank,
+  );
 
   List<List<String>> layering = initOrder(g);
   _assignOrder(g, layering);
@@ -48,7 +58,10 @@ void order(Graph g, DagreConfig config) {
   num bestCC = double.infinity;
   List<List<String>> best = [];
   for (int i = 0, lastBest = 0; lastBest < 4; ++i, ++lastBest) {
-    _sweepLayerGraphs((i % 2)!=0 ? downLayerGraphs : upLayerGraphs, i % 4 >= 2);
+    _sweepLayerGraphs(
+      (i % 2) != 0 ? downLayerGraphs : upLayerGraphs,
+      i % 4 >= 2,
+    );
     layering = util.buildLayerMatrix(g);
     var cc = crossCount(g, layering);
     if (cc < bestCC) {
@@ -60,11 +73,19 @@ void order(Graph g, DagreConfig config) {
   _assignOrder(g, best);
 }
 
-List<Graph> _buildLayerGraphs(Graph g, List<int> ranks, Relationship ship, Map<int, List<String>> byRank) {
-  return [for (var rank in ranks) buildLayerGraph(g, rank, ship, byRank[rank] ?? const [])];
+List<Graph> _buildLayerGraphs(
+  Graph g,
+  List<int> ranks,
+  Relationship ship,
+  Map<int, List<String>> byRank,
+) {
+  return [
+    for (var rank in ranks)
+      buildLayerGraph(g, rank, ship, byRank[rank] ?? const []),
+  ];
 }
 
-void _sweepLayerGraphs(List<Graph> layerGraphs,bool biasRight) {
+void _sweepLayerGraphs(List<Graph> layerGraphs, bool biasRight) {
   var cg = Graph();
   for (var lg in layerGraphs) {
     String root = lg.label[rootK];

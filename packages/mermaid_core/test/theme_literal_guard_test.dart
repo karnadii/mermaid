@@ -20,10 +20,10 @@ void main() {
   const allowed = <String, String>{
     'lib/src/diagrams/venn/venn.dart:Color(0xff800080)':
         'debug-only overlay circle (drawn when useDebugLayout is set); '
-            'not part of the rendered diagram.',
+        'not part of the rendered diagram.',
     'lib/src/diagrams/venn/venn.dart:Color(0xff008080)':
         'debug-only overlay rectangle (drawn when useDebugLayout is '
-            'set); not part of the rendered diagram.',
+        'set); not part of the rendered diagram.',
   };
 
   /// Matches a color literal with an explicit 0xAARRGGBB value.
@@ -53,7 +53,8 @@ void main() {
     expect(
       violations,
       isEmpty,
-      reason: 'These renderers paint a literal color, so a host cannot theme '
+      reason:
+          'These renderers paint a literal color, so a host cannot theme '
           'them. Add a token to MermaidTheme and read it from the theme '
           'instead.\n${violations.join('\n')}',
     );
@@ -65,7 +66,8 @@ void main() {
     expect(
       stale,
       isEmpty,
-      reason: 'These exemptions no longer match any literal. Remove them so '
+      reason:
+          'These exemptions no longer match any literal. Remove them so '
           'the guard keeps its teeth.\n${stale.join('\n')}',
     );
   });

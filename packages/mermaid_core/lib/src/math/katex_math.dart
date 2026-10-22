@@ -67,8 +67,14 @@ KatexMath? _build(String tex, double fontSize, Color color) {
 
 /// Emits [node] with its left edge at [penX] and baseline at [baselineY]
 /// (top-left origin, y growing downward; one em = [scale] px).
-void _emit(kx.BoxNode node, double penX, double baselineY, double scale,
-    Color color, List<SceneNode> out) {
+void _emit(
+  kx.BoxNode node,
+  double penX,
+  double baselineY,
+  double scale,
+  Color color,
+  List<SceneNode> out,
+) {
   switch (node) {
     case kx.GlyphNode():
       _emitGlyph(node, penX, baselineY, scale, color, out);
@@ -79,7 +85,9 @@ void _emit(kx.BoxNode node, double penX, double baselineY, double scale,
     case kx.HBox():
       _emitRow(node.children, penX, baselineY, scale, color, out);
     case kx.SpanNode():
-      final c = node.color != null ? (Color.tryParse(node.color!) ?? color) : color;
+      final c = node.color != null
+          ? (Color.tryParse(node.color!) ?? color)
+          : color;
       _emitRow(node.children, penX, baselineY, scale, c, out);
     case kx.VList():
       for (final pos in node.positions) {
@@ -98,8 +106,14 @@ void _emit(kx.BoxNode node, double penX, double baselineY, double scale,
   }
 }
 
-void _emitTextRun(kx.TextRunNode node, double penX, double baselineY,
-    double scale, Color color, List<SceneNode> out) {
+void _emitTextRun(
+  kx.TextRunNode node,
+  double penX,
+  double baselineY,
+  double scale,
+  Color color,
+  List<SceneNode> out,
+) {
   // A complex-script run (Arabic, Hebrew, ...) has no KaTeX glyph outlines:
   // its letterforms need contextual shaping that only a text engine can do.
   // Emit it as one text node and let the backend shape it in a system font —
@@ -125,8 +139,14 @@ void _emitTextRun(kx.TextRunNode node, double penX, double baselineY,
   );
 }
 
-void _emitRow(List<kx.BoxNode> children, double penX, double baselineY,
-    double scale, Color color, List<SceneNode> out) {
+void _emitRow(
+  List<kx.BoxNode> children,
+  double penX,
+  double baselineY,
+  double scale,
+  Color color,
+  List<SceneNode> out,
+) {
   var x = penX;
   for (final child in children) {
     if (child is! kx.KernNode) {
@@ -136,8 +156,14 @@ void _emitRow(List<kx.BoxNode> children, double penX, double baselineY,
   }
 }
 
-void _emitGlyph(kx.GlyphNode node, double penX, double baselineY, double scale,
-    Color color, List<SceneNode> out) {
+void _emitGlyph(
+  kx.GlyphNode node,
+  double penX,
+  double baselineY,
+  double scale,
+  Color color,
+  List<SceneNode> out,
+) {
   final path = kx.katexGlyphPaths[node.font.fontName]?[node.codepoint];
   if (path == null) return; // missing outline — skip (rare)
   // Outlines are in font units (y-up); scale by size/unitsPerEm and flip Y so
@@ -151,8 +177,14 @@ void _emitGlyph(kx.GlyphNode node, double penX, double baselineY, double scale,
   out.add(SceneShape(geometry: PathGeometry(cmds), fill: Fill(color)));
 }
 
-void _emitRule(kx.RuleNode node, double penX, double baselineY, double scale,
-    Color color, List<SceneNode> out) {
+void _emitRule(
+  kx.RuleNode node,
+  double penX,
+  double baselineY,
+  double scale,
+  Color color,
+  List<SceneNode> out,
+) {
   final rect = Rect.fromLTWH(
     penX,
     baselineY - node.height * scale,
@@ -162,9 +194,17 @@ void _emitRule(kx.RuleNode node, double penX, double baselineY, double scale,
   out.add(SceneShape(geometry: RectGeometry(rect), fill: Fill(color)));
 }
 
-void _emitSvgPath(kx.SvgPathNode node, double penX, double baselineY,
-    double scale, Color color, List<SceneNode> out) {
-  if (node.pathData.isEmpty || node.viewBoxWidth <= 0 || node.viewBoxHeight <= 0) {
+void _emitSvgPath(
+  kx.SvgPathNode node,
+  double penX,
+  double baselineY,
+  double scale,
+  Color color,
+  List<SceneNode> out,
+) {
+  if (node.pathData.isEmpty ||
+      node.viewBoxWidth <= 0 ||
+      node.viewBoxHeight <= 0) {
     return;
   }
   final boxW = node.width * scale;
@@ -183,8 +223,7 @@ void _emitSvgPath(kx.SvgPathNode node, double penX, double baselineY,
     // "slice": uniform scale to *cover* the box, anchored per the variant,
     // overflow clipped — emulated by clamping points to the box (exact for the
     // surd vinculum and arrow shafts, which run off-box horizontally).
-    final s =
-        math.max(boxW / node.viewBoxWidth, boxH / node.viewBoxHeight);
+    final s = math.max(boxW / node.viewBoxWidth, boxH / node.viewBoxHeight);
     final scaledW = node.viewBoxWidth * s;
     final offX = switch (node.preserveAspectRatio) {
       kx.SvgPreserveAspectRatio.xMaxYMinSlice => boxW - scaledW,
@@ -192,22 +231,24 @@ void _emitSvgPath(kx.SvgPathNode node, double penX, double baselineY,
       _ => 0.0, // xMinYMin (and none, unreachable here)
     };
     m = (p) => Point(
-          (penX + offX + p.x * s).clamp(penX, penX + boxW),
-          (top + p.y * s).clamp(top, top + boxH),
-        );
+      (penX + offX + p.x * s).clamp(penX, penX + boxW),
+      (top + p.y * s).clamp(top, top + boxH),
+    );
   }
-  out.add(SceneShape(geometry: PathGeometry(_mapPath(cmds, m)), fill: Fill(color)));
+  out.add(
+    SceneShape(geometry: PathGeometry(_mapPath(cmds, m)), fill: Fill(color)),
+  );
 }
 
 /// Maps every point of [cmds] through [m] (used to bake a glyph/path transform
 /// into absolute scene coordinates).
 List<PathCommand> _mapPath(List<PathCommand> cmds, Point Function(Point) m) => [
-      for (final c in cmds)
-        switch (c) {
-          MoveTo() => MoveTo(m(c.p)),
-          LineTo() => LineTo(m(c.p)),
-          CubicTo() => CubicTo(m(c.c1), m(c.c2), m(c.p)),
-          QuadTo() => QuadTo(m(c.c), m(c.p)),
-          ClosePath() => const ClosePath(),
-        }
-    ];
+  for (final c in cmds)
+    switch (c) {
+      MoveTo() => MoveTo(m(c.p)),
+      LineTo() => LineTo(m(c.p)),
+      CubicTo() => CubicTo(m(c.c1), m(c.c2), m(c.p)),
+      QuadTo() => QuadTo(m(c.c), m(c.p)),
+      ClosePath() => const ClosePath(),
+    },
+];

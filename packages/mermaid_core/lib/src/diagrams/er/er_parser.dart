@@ -18,7 +18,9 @@ final _titleLine = RegExp(r'^title\s+(.*)$');
 final _classDefLine = RegExp(r'^classDef\s+([\w-]+)\s+(.+)$');
 final _styleLine = RegExp(r'^style\s+([\wÀ-￿-]+)\s+(.+)$');
 final _classAssignLine = RegExp(r'^class\s+([\w,\s-]+?)\s+([\w-]+)\s*$');
-final _entityDecl = RegExp(r'^("([^"]+)"|[\wÀ-￿-]+)\s*(\[([^\]]+)\])?\s*(\{)?\s*$');
+final _entityDecl = RegExp(
+  r'^("([^"]+)"|[\wÀ-￿-]+)\s*(\[([^\]]+)\])?\s*(\{)?\s*$',
+);
 final _relationshipLine = RegExp(
   r'^("([^"]+)"|[\wÀ-￿-]+)\s*(\S+)\s+("([^"]+)"|[\wÀ-￿-]+)\s*(?::\s*(.*))?$',
 );
@@ -73,8 +75,10 @@ class _ErParser {
       if (line.isEmpty) continue;
       if (!seenHeader) {
         if (!_erHeader.hasMatch(line)) {
-          throw MermaidParseException('expected "erDiagram" header',
-              line: i + 1);
+          throw MermaidParseException(
+            'expected "erDiagram" header',
+            line: i + 1,
+          );
         }
         seenHeader = true;
         continue;
@@ -149,8 +153,9 @@ class _ErParser {
         if (id.isEmpty) continue;
         final entity = entities[id];
         if (entity != null) {
-          entities[id] =
-              entity.copyWith(cssClasses: [...entity.cssClasses, className]);
+          entities[id] = entity.copyWith(
+            cssClasses: [...entity.cssClasses, className],
+          );
         }
       }
       return;
@@ -203,23 +208,26 @@ class _ErParser {
         '1+': ErCardinality.oneOrMore,
       };
       final cardPattern = words.keys.map(RegExp.escape).join('|');
-      m = RegExp(r'^("([^"]+)"|[\wÀ-￿-]+)\s+'
-              '($cardPattern)\\s+(to|optionally to)\\s+($cardPattern)'
-              r'\s+("([^"]+)"|[\wÀ-￿-]+)\s*(?::\s*(.*))?$')
-          .firstMatch(line);
+      m = RegExp(
+        r'^("([^"]+)"|[\wÀ-￿-]+)\s+'
+        '($cardPattern)\\s+(to|optionally to)\\s+($cardPattern)'
+        r'\s+("([^"]+)"|[\wÀ-￿-]+)\s*(?::\s*(.*))?$',
+      ).firstMatch(line);
       if (m == null) return false;
       final fromId = m.group(2) ?? m.group(1)!;
       final toId = m.group(7) ?? m.group(6)!;
       _ensure(fromId);
       _ensure(toId);
-      relationships.add(ErRelationship(
-        from: fromId,
-        to: toId,
-        cardFrom: words[m.group(3)!]!,
-        cardTo: words[m.group(5)!]!,
-        identifying: m.group(4) == 'to',
-        label: normalizeHtmlLabel((m.group(8) ?? '').trim()),
-      ));
+      relationships.add(
+        ErRelationship(
+          from: fromId,
+          to: toId,
+          cardFrom: words[m.group(3)!]!,
+          cardTo: words[m.group(5)!]!,
+          identifying: m.group(4) == 'to',
+          label: normalizeHtmlLabel((m.group(8) ?? '').trim()),
+        ),
+      );
       return true;
     }
     final (cardFrom, identifying, cardTo) = rel;
@@ -233,14 +241,16 @@ class _ErParser {
     if (label.length >= 2 && label.startsWith('"') && label.endsWith('"')) {
       label = label.substring(1, label.length - 1);
     }
-    relationships.add(ErRelationship(
-      from: fromId,
-      to: toId,
-      cardFrom: cardFrom,
-      cardTo: cardTo,
-      identifying: identifying,
-      label: normalizeHtmlLabel(label),
-    ));
+    relationships.add(
+      ErRelationship(
+        from: fromId,
+        to: toId,
+        cardFrom: cardFrom,
+        cardTo: cardTo,
+        identifying: identifying,
+        label: normalizeHtmlLabel(label),
+      ),
+    );
     return true;
   }
 
@@ -249,8 +259,7 @@ class _ErParser {
       if (!token.startsWith(left)) continue;
       for (final (right, cardTo) in _rightCards) {
         if (!token.endsWith(right)) continue;
-        final mid =
-            token.substring(left.length, token.length - right.length);
+        final mid = token.substring(left.length, token.length - right.length);
         final identifying = switch (mid) {
           '--' => true,
           '..' || '.-' || '-.' => false,
@@ -275,20 +284,23 @@ class _ErParser {
     final parts = rest.split(_whitespaceRun);
     if (parts.length < 2) {
       throw MermaidParseException(
-          'expected "type name" attribute in "$entityId"', line: n);
+        'expected "type name" attribute in "$entityId"',
+        line: n,
+      );
     }
     final keys = <String>[];
-    while (parts.length > 2 &&
-        _keyList.hasMatch(parts.last)) {
+    while (parts.length > 2 && _keyList.hasMatch(parts.last)) {
       keys.insertAll(0, parts.removeLast().split(','));
     }
     final type = _convertGenerics(parts.first);
     final name = parts.sublist(1).join(' ');
     final entity = entities[entityId]!;
-    entities[entityId] = entity.copyWith(attributes: [
-      ...entity.attributes,
-      ErAttribute(type: type, name: name, keys: keys, comment: comment),
-    ]);
+    entities[entityId] = entity.copyWith(
+      attributes: [
+        ...entity.attributes,
+        ErAttribute(type: type, name: name, keys: keys, comment: comment),
+      ],
+    );
   }
 
   String _convertGenerics(String s) {
@@ -301,8 +313,7 @@ class _ErParser {
         continue;
       }
       final next = i + 1 < s.length ? s[i + 1] : '';
-      if (next.isNotEmpty && next != '~' &&
-          _cardTokenChar.hasMatch(next)) {
+      if (next.isNotEmpty && next != '~' && _cardTokenChar.hasMatch(next)) {
         out.write('<');
         depth++;
       } else if (depth > 0) {
@@ -317,9 +328,9 @@ class _ErParser {
 
   /// Splits a CSS style string (`fill:#f00,stroke:#000`) into `k:v` entries.
   List<String> _splitStyles(String s) => [
-        for (final part in s.split(','))
-          if (part.trim().isNotEmpty) part.trim(),
-      ];
+    for (final part in s.split(','))
+      if (part.trim().isNotEmpty) part.trim(),
+  ];
 
   void _ensure(String id) {
     entities.putIfAbsent(id, () => ErEntity(id: id, label: id));

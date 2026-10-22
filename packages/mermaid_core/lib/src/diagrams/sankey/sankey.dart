@@ -91,28 +91,20 @@ class SankeyConfig {
       height: positiveDouble(values, 'height', 600),
       nodeWidth: positiveDouble(values, 'nodeWidth', 10),
       nodePadding: nonNegativeDouble(values, 'nodePadding', 12),
-      nodeAlignment: enumValue(
-          values,
-          'nodeAlignment',
-          const {
+      nodeAlignment: enumValue(values, 'nodeAlignment', const {
         'left',
         'right',
         'center',
         'justify',
-          },
-          'justify'),
+      }, 'justify'),
       linkColor: linkColor,
       showValues: boolValue(values, 'showValues', true),
       prefix: stringValue(values, 'prefix', ''),
       suffix: stringValue(values, 'suffix', ''),
-      labelStyle: enumValue(
-        values,
-        'labelStyle',
-          const {
+      labelStyle: enumValue(values, 'labelStyle', const {
         'legacy',
-            'outlined',
-          },
-          'legacy'),
+        'outlined',
+      }, 'legacy'),
       nodeColors: Map.unmodifiable(nodeColors),
     );
   }
@@ -562,8 +554,9 @@ RenderScene layoutSankey(
   final outlined = labelStyle == 'outlined';
   for (final n in nodeList) {
     // `n.value` is already `max(sum(out), sum(in))` from computeNodeValues.
-    final text =
-        showValues ? '${n.name}\n$prefix${_fmtValue(n.value)}$suffix' : n.name;
+    final text = showValues
+        ? '${n.name}\n$prefix${_fmtValue(n.value)}$suffix'
+        : n.name;
 
     // Label position. legacy: position-based (x0 < width/2). outlined:
     // layer-based relative to the central node. Offset 6 either side.
@@ -585,8 +578,7 @@ RenderScene layoutSankey(
 
     SceneText makeText(Color color) => SceneText(
       text: text,
-          bounds:
-              Rect.fromCenter(Point(lx, cy), labelSize.width, labelSize.height),
+      bounds: Rect.fromCenter(Point(lx, cy), labelSize.width, labelSize.height),
       style: labelTextStyle,
       color: color,
     );
@@ -1005,7 +997,8 @@ void _resolveBottomToTop(
 }
 
 double _targetTop(_Node source, _Node target, double py) {
-  var y = source.y0 +
+  var y =
+      source.y0 +
       _bundleInset(source) -
       _bundleInset(target) -
       (source.sourceLinks.length - 1) * py / 2;
@@ -1021,7 +1014,8 @@ double _targetTop(_Node source, _Node target, double py) {
 }
 
 double _sourceTop(_Node source, _Node target, double py) {
-  var y = target.y0 +
+  var y =
+      target.y0 +
       _bundleInset(target) -
       _bundleInset(source) -
       (target.targetLinks.length - 1) * py / 2;

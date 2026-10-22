@@ -170,18 +170,17 @@ class FlowNode {
     String? link,
     String? tooltip,
     String? icon,
-  }) =>
-      FlowNode(
-        id: id,
-        label: label ?? this.label,
-        shape: shape ?? this.shape,
-        markdown: markdown ?? this.markdown,
-        classes: classes ?? this.classes,
-        styles: styles ?? this.styles,
-        link: link ?? this.link,
-        tooltip: tooltip ?? this.tooltip,
-        icon: icon ?? this.icon,
-      );
+  }) => FlowNode(
+    id: id,
+    label: label ?? this.label,
+    shape: shape ?? this.shape,
+    markdown: markdown ?? this.markdown,
+    classes: classes ?? this.classes,
+    styles: styles ?? this.styles,
+    link: link ?? this.link,
+    tooltip: tooltip ?? this.tooltip,
+    icon: icon ?? this.icon,
+  );
 }
 
 enum EdgeStroke { normal, dotted, thick, invisible }

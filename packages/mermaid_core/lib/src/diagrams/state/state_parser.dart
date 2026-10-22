@@ -13,15 +13,23 @@ import 'state_model.dart';
 // Hoisted so each pattern compiles once instead of on every call.
 final _stateHeader = RegExp(r'^stateDiagram(-v2)?\b');
 final _directionLine = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$');
-final _pseudoState = RegExp(r'^state\s+(\S+)\s*(<<(choice|fork|join)>>|\[\[(fork|join)\]\])\s*$');
+final _pseudoState = RegExp(
+  r'^state\s+(\S+)\s*(<<(choice|fork|join)>>|\[\[(fork|join)\]\])\s*$',
+);
 final _stateAlias = RegExp(r'^state\s+"([^"]*)"\s+as\s+(\S+?)\s*(\{)?\s*$');
 final _stateDecl = RegExp(r'^state\s+([^\s{]+)\s*(\{)?\s*$');
-final _noteLine = RegExp(r'^[Nn]ote\s+(left|right)\s+of\s+([^\s:]+)\s*(?::\s*(.*))?$');
+final _noteLine = RegExp(
+  r'^[Nn]ote\s+(left|right)\s+of\s+([^\s:]+)\s*(?::\s*(.*))?$',
+);
 final _classDefLine = RegExp(r'^classDef\s+(\S+)\s+(.+)$');
 final _classAssignLine = RegExp(r'^class\s+([\w,\s]+?)\s+(\S+)\s*$');
 final _styleLine = RegExp(r'^style\s+([\w,]+)\s+(.+)$');
-final _ignoredLine = RegExp(r'^(hide empty description|scale\s|click\s|acc(Title|Descr))');
-final _transitionLine = RegExp(r'^(\[\*\]|[^\s-]\S*?)\s*-->\s*(\[\*\]|[^\s:]+)\s*(?::\s*(.*))?$');
+final _ignoredLine = RegExp(
+  r'^(hide empty description|scale\s|click\s|acc(Title|Descr))',
+);
+final _transitionLine = RegExp(
+  r'^(\[\*\]|[^\s-]\S*?)\s*-->\s*(\[\*\]|[^\s:]+)\s*(?::\s*(.*))?$',
+);
 final _stateDescLine = RegExp(r'^([^\s:]+)\s*:\s*(.+)$');
 final _bareStateId = RegExp(r'^[\w.-]+$');
 final _htmlBreak = RegExp(r'<br\s*/?>', caseSensitive: false);
@@ -62,8 +70,10 @@ class _StateParser {
       if (line.isEmpty) continue;
       if (!seenHeader) {
         if (!_stateHeader.hasMatch(line)) {
-          throw MermaidParseException('expected "stateDiagram" header',
-              line: i + 1);
+          throw MermaidParseException(
+            'expected "stateDiagram" header',
+            line: i + 1,
+          );
         }
         seenHeader = true;
         continue;
@@ -90,8 +100,13 @@ class _StateParser {
     if (_openNote != null) {
       if (line == 'end note') {
         final (pos, target, buf) = _openNote!;
-        notes.add(StateNote(
-            target: target, text: _normalize(buf.toString()), position: pos));
+        notes.add(
+          StateNote(
+            target: target,
+            text: _normalize(buf.toString()),
+            position: pos,
+          ),
+        );
         _openNote = null;
       } else {
         _openNote!.$3.writeln(line);
@@ -103,14 +118,20 @@ class _StateParser {
 
     if (line == '}') {
       if (_scope.length <= 1) {
-        throw MermaidParseException('"}" without open composite state',
-            line: n);
+        throw MermaidParseException(
+          '"}" without open composite state',
+          line: n,
+        );
       }
       final closed = _scope.removeLast();
       final groups = _regions.remove(closed);
       if (groups != null && groups.length > 1) {
         states[closed] = states[closed]!.copyWith(
-            regions: [for (final g in groups) if (g.isNotEmpty) g]);
+          regions: [
+            for (final g in groups)
+              if (g.isNotEmpty) g,
+          ],
+        );
       }
       return;
     }
@@ -170,10 +191,13 @@ class _StateParser {
           : StateNotePosition.rightOf;
       _reference(m.group(2)!);
       if (m.group(3) != null) {
-        notes.add(StateNote(
+        notes.add(
+          StateNote(
             target: m.group(2)!,
             text: _normalize(m.group(3)!),
-            position: pos));
+            position: pos,
+          ),
+        );
       } else {
         _openNote = (pos, m.group(2)!, StringBuffer());
       }
@@ -193,8 +217,9 @@ class _StateParser {
     if (m != null) {
       for (final id in m.group(1)!.split(',')) {
         final node = _ensure(id.trim());
-        states[node.id] =
-            node.copyWith(cssClasses: [...node.cssClasses, m.group(2)!]);
+        states[node.id] = node.copyWith(
+          cssClasses: [...node.cssClasses, m.group(2)!],
+        );
       }
       return;
     }
@@ -203,8 +228,9 @@ class _StateParser {
     if (m != null) {
       for (final id in m.group(1)!.split(',')) {
         final node = _ensure(id.trim());
-        states[node.id] =
-            node.copyWith(styles: {...node.styles, ..._parseStyles(m.group(2)!)});
+        states[node.id] = node.copyWith(
+          styles: {...node.styles, ..._parseStyles(m.group(2)!)},
+        );
       }
       return;
     }
@@ -218,11 +244,13 @@ class _StateParser {
     if (m != null) {
       final from = _resolvePseudo(m.group(1)!, isSource: true);
       final to = _resolvePseudo(m.group(2)!, isSource: false);
-      transitions.add(StateTransition(
-        from: from,
-        to: to,
-        label: m.group(3) == null ? null : _normalize(m.group(3)!),
-      ));
+      transitions.add(
+        StateTransition(
+          from: from,
+          to: to,
+          label: m.group(3) == null ? null : _normalize(m.group(3)!),
+        ),
+      );
       return;
     }
 
@@ -320,9 +348,11 @@ class _StateParser {
     final node = states[id]!;
     final newParent = _scope.last.isEmpty ? null : _scope.last;
     if (node.parent == newParent) return;
-    for (var ancestor = newParent;
-        ancestor != null;
-        ancestor = states[ancestor]?.parent) {
+    for (
+      var ancestor = newParent;
+      ancestor != null;
+      ancestor = states[ancestor]?.parent
+    ) {
       if (ancestor == id) return;
     }
 

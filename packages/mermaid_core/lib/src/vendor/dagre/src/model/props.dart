@@ -65,8 +65,8 @@ class Props {
   }
 
   double? getD2(String attr) {
-    var value=_valueMap[_format(attr)];
-    if(value==null){
+    var value = _valueMap[_format(attr)];
+    if (value == null) {
       return null;
     }
     return value.toDouble();
@@ -77,8 +77,8 @@ class Props {
   }
 
   int? getI2(String attr) {
-    var value=_valueMap[_format(attr)];
-    if(value==null ||value is! num){
+    var value = _valueMap[_format(attr)];
+    if (value == null || value is! num) {
       return null;
     }
     return value.toInt();
@@ -136,8 +136,8 @@ class Props {
     return key;
   }
 
-  Props copy(){
-    var pp=Props();
+  Props copy() {
+    var pp = Props();
     pp.putAll(_valueMap);
     return pp;
   }

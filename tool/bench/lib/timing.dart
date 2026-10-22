@@ -8,8 +8,7 @@ import 'package:mermaid_core/mermaid_core.dart';
 const _mermaid = Mermaid(measurer: ApproximateTextMeasurer());
 
 /// Source to SVG string, the same unit of work as Pele's `render()`.
-String renderToSvg(String source) =>
-    renderSceneToSvg(_mermaid.render(source));
+String renderToSvg(String source) => renderSceneToSvg(_mermaid.render(source));
 
 class Timing {
   const Timing(this.medianMs, this.rendered, this.samples);

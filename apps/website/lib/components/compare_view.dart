@@ -167,10 +167,10 @@ class _CompareViewState extends State<CompareView> {
   /// Applies the current layout + look choices to [base] as managed
   /// `%%{init}%%` directives (idempotent — re-running normalises in place).
   String _decorate(String base) => _withInitDirective(
-        _withInitDirective(base, 'layout', _layout == 'dagre' ? null : _layout),
-        'look',
-        _look == 'handDrawn' ? 'handDrawn' : null,
-      );
+    _withInitDirective(base, 'layout', _layout == 'dagre' ? null : _layout),
+    'look',
+    _look == 'handDrawn' ? 'handDrawn' : null,
+  );
 
   /// Adds/updates/removes a managed single-key `%%{init}%%` directive ([key] is
   /// `layout` or `look`). A null [value] removes it; otherwise it's inserted
@@ -178,9 +178,12 @@ class _CompareViewState extends State<CompareView> {
   /// (e.g. a sample's `theme`) are left untouched.
   static String _withInitDirective(String base, String key, String? value) {
     var s = base.replaceAll(
-        RegExp('^[ \\t]*%%\\{\\s*init[^\\n]*$key[^\\n]*\\}%%[ \\t]*\\n?',
-            multiLine: true),
-        '');
+      RegExp(
+        '^[ \\t]*%%\\{\\s*init[^\\n]*$key[^\\n]*\\}%%[ \\t]*\\n?',
+        multiLine: true,
+      ),
+      '',
+    );
     s = s.trimRight();
     if (value == null) return s;
     final directive = "%%{init: {'$key': '$value'}}%%";
@@ -288,11 +291,9 @@ class _CompareViewState extends State<CompareView> {
         [.text(_source)],
       ),
       div(classes: 'actions', [
-        button(
-          classes: 'report-btn',
-          onClick: _reportIssue,
-          [.text('⚑ Report an issue with this diagram')],
-        ),
+        button(classes: 'report-btn', onClick: _reportIssue, [
+          .text('⚑ Report an issue with this diagram'),
+        ]),
         span(classes: 'actions-hint', [
           .text('opens a GitHub issue pre-filled with the source above'),
         ]),

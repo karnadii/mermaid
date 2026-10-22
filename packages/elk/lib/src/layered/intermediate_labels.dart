@@ -27,8 +27,9 @@ import 'property.dart';
 
 /// The list of [LLabel]s that have been moved from the edge onto the label
 /// dummy node. Mirrors `InternalProperties.REPRESENTED_LABELS`.
-const representedLabels =
-    Property<List<LLabel>?>('labelDummy.representedLabels');
+const representedLabels = Property<List<LLabel>?>(
+  'labelDummy.representedLabels',
+);
 
 /// The original [LEdge] that the label dummy was inserted for. Mirrors
 /// `InternalProperties.ORIGIN` (in the label-dummy context).
@@ -37,12 +38,13 @@ const labelDummyOriginEdge = Property<LEdge?>('labelDummy.originEdge');
 /// Default spacing between an edge line and its label (px).
 /// Mirrors `LayeredOptions.SPACING_EDGE_LABEL` default.
 
-
 /// Default spacing between stacked labels (px).
 /// Mirrors `LayeredOptions.SPACING_LABEL_LABEL` default.
 
-
-const labelPlacement = Property<ElkEdgeLabelPlacement>('label.placement', ElkEdgeLabelPlacement.center);
+const labelPlacement = Property<ElkEdgeLabelPlacement>(
+  'label.placement',
+  ElkEdgeLabelPlacement.center,
+);
 const labelSide = Property<ElkLabelSide>('label.side', ElkLabelSide.above);
 const labelEdgeThickness = Property<double>('label.edgeThickness', 1);
 const labelStackSpacing = Property<double>('label.stackSpacing', 0);
@@ -87,7 +89,10 @@ class LabelDummyInserter implements ILayoutProcessor {
   /// center label. Head/tail labels do not add a layout rank.
   bool _edgeNeedsProcessing(LEdge edge) {
     if (edge.isSelfLoop) return false;
-    return edge.labels.any((label) => label.getProperty(labelPlacement) == ElkEdgeLabelPlacement.center);
+    return edge.labels.any(
+      (label) =>
+          label.getProperty(labelPlacement) == ElkEdgeLabelPlacement.center,
+    );
   }
 
   /// Creates the label dummy node, sizes it to the labels, and splits [edge]
@@ -96,7 +101,12 @@ class LabelDummyInserter implements ILayoutProcessor {
   /// Mirrors `createLabelDummy` + the label-iteration block in `process`.
   LNode _createLabelDummy(LGraph graph, LEdge edge) {
     // Collect labels that will be represented by this dummy.
-    final labels = edge.labels.where((label) => label.getProperty(labelPlacement) == ElkEdgeLabelPlacement.center).toList();
+    final labels = edge.labels
+        .where(
+          (label) =>
+              label.getProperty(labelPlacement) == ElkEdgeLabelPlacement.center,
+        )
+        .toList();
 
     final dummy = LNode(graph)
       ..type = NodeType.label
@@ -118,7 +128,9 @@ class LabelDummyInserter implements ILayoutProcessor {
     var aboveHeight = 0.0;
     var belowHeight = 0.0;
     final stackGap = graph.getProperty(labelStackSpacing);
-    final gap = graph.getProperty(edgeLabelSpacing) + edge.getProperty(labelEdgeThickness) / 2;
+    final gap =
+        graph.getProperty(edgeLabelSpacing) +
+        edge.getProperty(labelEdgeThickness) / 2;
     for (final label in labels) {
       if (label.size.x > dummyW) dummyW = label.size.x;
       if (label.getProperty(labelSide) == ElkLabelSide.above) {
@@ -252,13 +264,20 @@ class LabelDummyRemover implements ILayoutProcessor {
   /// Mirrors `placeLabelsForHorizontalLayout` in LabelDummyRemover.java.
   void _placeLabelsHorizontal(List<LLabel> labels, LNode dummy) {
     var aboveY = dummy.position.y;
-    var belowY = dummy.position.y + dummy.getProperty(_labelAboveHeight) + 2 * dummy.getProperty(_labelGap);
+    var belowY =
+        dummy.position.y +
+        dummy.getProperty(_labelAboveHeight) +
+        2 * dummy.getProperty(_labelGap);
     for (final label in labels) {
       label.position.x = dummy.position.x + (dummy.size.x - label.size.x) / 2;
       final above = label.getProperty(labelSide) == ElkLabelSide.above;
       label.position.y = above ? aboveY : belowY;
       final advance = label.size.y + dummy.getProperty(labelStackSpacing);
-      if (above) { aboveY += advance; } else { belowY += advance; }
+      if (above) {
+        aboveY += advance;
+      } else {
+        belowY += advance;
+      }
     }
   }
 

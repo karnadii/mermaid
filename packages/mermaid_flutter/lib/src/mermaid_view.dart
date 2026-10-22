@@ -689,9 +689,7 @@ class _CtlButton extends StatelessWidget {
           child: Icon(
             icon,
             size: 18,
-            color: active
-                ? scheme.onPrimaryContainer
-                : scheme.onSurfaceVariant,
+            color: active ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
           ),
         ),
       ),

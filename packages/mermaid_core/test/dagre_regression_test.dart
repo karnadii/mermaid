@@ -48,71 +48,80 @@ void expectSaneScene(RenderScene scene) {
 
 void main() {
   group('vendored dagre regressions', () {
-    test('bug 1: LR fan-in DAG with rank-spanning edges (fixture 04 shrunk)',
-        () {
-      // Mirrors the shape of fixture 04: many sources fanning into a hub,
-      // with edges that span multiple ranks. The long edges are split into
-      // dummy-node chains by normalize, and the Brandes-Koepf type-1
-      // conflict scan then mixes dummy and non-dummy predecessors, which
-      // used to throw "Unsupported operation: not value" in bk.dart.
-      final graph = FlowGraph(
-        direction: FlowDirection.lr,
-        nodes: {for (final id in ['A', 'B', 'C', 'D', 'E', 'F', 'G']) id: node(id)},
-        edges: const [
-          FlowEdge(from: 'A', to: 'B'),
-          FlowEdge(from: 'B', to: 'C'),
-          FlowEdge(from: 'C', to: 'D'),
-          // Rank-spanning edges that produce dummy chains next to real nodes.
-          FlowEdge(from: 'A', to: 'D'),
-          FlowEdge(from: 'A', to: 'C'),
-          // Extra sources fanning into the hub D.
-          FlowEdge(from: 'E', to: 'D'),
-          FlowEdge(from: 'F', to: 'D'),
-          FlowEdge(from: 'G', to: 'D'),
-          FlowEdge(from: 'E', to: 'B'),
-        ],
-      );
-      expectSaneScene(layout(graph));
-    });
-
-    test('bug 2: cyclic compound graph with two subgraphs (fixture 10 shrunk)',
-        () {
-      // Mirrors fixture 10: two subgraphs plus loose nodes, with cycles
-      // (E->A closes A->B->C->D->E; F->D closes D->E->F). The broken
-      // iterative dfsFAS in acyclic.dart never reversed any edge, leaving
-      // cycles that crashed longestPath with a null rank.
-      final graph = FlowGraph(
-        direction: FlowDirection.tb,
-        nodes: {for (final id in ['A', 'B', 'C', 'D', 'E', 'F', 'G']) id: node(id)},
-        edges: const [
-          FlowEdge(from: 'A', to: 'B'),
-          FlowEdge(from: 'B', to: 'C'),
-          FlowEdge(from: 'C', to: 'D'),
-          FlowEdge(from: 'B', to: 'D'),
-          FlowEdge(from: 'D', to: 'E'),
-          FlowEdge(from: 'E', to: 'A'),
-          FlowEdge(from: 'E', to: 'F'),
-          FlowEdge(from: 'F', to: 'D'),
-          FlowEdge(from: 'F', to: 'G'),
-          FlowEdge(from: 'B', to: 'G'),
-          FlowEdge(from: 'G', to: 'D'),
-        ],
-        subgraphs: const [
-          FlowSubgraph(id: 'foo', title: 'Foo SubGraph', nodeIds: ['C', 'D']),
-          FlowSubgraph(id: 'bar', title: 'Bar SubGraph', nodeIds: ['E', 'F']),
-        ],
-      );
-      expectSaneScene(layout(graph));
-    });
+    test(
+      'bug 1: LR fan-in DAG with rank-spanning edges (fixture 04 shrunk)',
+      () {
+        // Mirrors the shape of fixture 04: many sources fanning into a hub,
+        // with edges that span multiple ranks. The long edges are split into
+        // dummy-node chains by normalize, and the Brandes-Koepf type-1
+        // conflict scan then mixes dummy and non-dummy predecessors, which
+        // used to throw "Unsupported operation: not value" in bk.dart.
+        final graph = FlowGraph(
+          direction: FlowDirection.lr,
+          nodes: {
+            for (final id in ['A', 'B', 'C', 'D', 'E', 'F', 'G']) id: node(id),
+          },
+          edges: const [
+            FlowEdge(from: 'A', to: 'B'),
+            FlowEdge(from: 'B', to: 'C'),
+            FlowEdge(from: 'C', to: 'D'),
+            // Rank-spanning edges that produce dummy chains next to real nodes.
+            FlowEdge(from: 'A', to: 'D'),
+            FlowEdge(from: 'A', to: 'C'),
+            // Extra sources fanning into the hub D.
+            FlowEdge(from: 'E', to: 'D'),
+            FlowEdge(from: 'F', to: 'D'),
+            FlowEdge(from: 'G', to: 'D'),
+            FlowEdge(from: 'E', to: 'B'),
+          ],
+        );
+        expectSaneScene(layout(graph));
+      },
+    );
 
     test(
-        'bug 2b: compound subgraphs whose members have no edges at all '
+      'bug 2: cyclic compound graph with two subgraphs (fixture 10 shrunk)',
+      () {
+        // Mirrors fixture 10: two subgraphs plus loose nodes, with cycles
+        // (E->A closes A->B->C->D->E; F->D closes D->E->F). The broken
+        // iterative dfsFAS in acyclic.dart never reversed any edge, leaving
+        // cycles that crashed longestPath with a null rank.
+        final graph = FlowGraph(
+          direction: FlowDirection.tb,
+          nodes: {
+            for (final id in ['A', 'B', 'C', 'D', 'E', 'F', 'G']) id: node(id),
+          },
+          edges: const [
+            FlowEdge(from: 'A', to: 'B'),
+            FlowEdge(from: 'B', to: 'C'),
+            FlowEdge(from: 'C', to: 'D'),
+            FlowEdge(from: 'B', to: 'D'),
+            FlowEdge(from: 'D', to: 'E'),
+            FlowEdge(from: 'E', to: 'A'),
+            FlowEdge(from: 'E', to: 'F'),
+            FlowEdge(from: 'F', to: 'D'),
+            FlowEdge(from: 'F', to: 'G'),
+            FlowEdge(from: 'B', to: 'G'),
+            FlowEdge(from: 'G', to: 'D'),
+          ],
+          subgraphs: const [
+            FlowSubgraph(id: 'foo', title: 'Foo SubGraph', nodeIds: ['C', 'D']),
+            FlowSubgraph(id: 'bar', title: 'Bar SubGraph', nodeIds: ['E', 'F']),
+          ],
+        );
+        expectSaneScene(layout(graph));
+      },
+    );
+
+    test('bug 2b: compound subgraphs whose members have no edges at all '
         'lay out fine', () {
       // Edgeless subgraph members plus isolated roots: every node hangs off
       // the nesting root only, exercising the nesting-edge defaults.
       final graph = FlowGraph(
         direction: FlowDirection.tb,
-        nodes: {for (final id in ['A', 'B', 'C', 'D', 'E', 'F', 'G']) id: node(id)},
+        nodes: {
+          for (final id in ['A', 'B', 'C', 'D', 'E', 'F', 'G']) id: node(id),
+        },
         edges: const [],
         subgraphs: const [
           FlowSubgraph(id: 'foo', title: 'Foo', nodeIds: ['C', 'D']),
@@ -122,8 +131,7 @@ void main() {
       expectSaneScene(layout(graph));
     });
 
-    test(
-        'bug 3: six disconnected labeled-edge pairs terminate '
+    test('bug 3: six disconnected labeled-edge pairs terminate '
         '(fixture 22 shape)', () {
       // Six disconnected 2-node components, every edge labeled (creating
       // edge-label dummy nodes), LR. The broken Graph.inEdges returned null
@@ -136,8 +144,11 @@ void main() {
         nodes['B$i'] = node('B$i');
         edges.add(FlowEdge(from: 'A$i', to: 'B$i', label: 'Multi Line'));
       }
-      final graph =
-          FlowGraph(direction: FlowDirection.lr, nodes: nodes, edges: edges);
+      final graph = FlowGraph(
+        direction: FlowDirection.lr,
+        nodes: nodes,
+        edges: edges,
+      );
       expectSaneScene(layout(graph));
     }, timeout: const Timeout(Duration(seconds: 30)));
 
@@ -148,7 +159,9 @@ void main() {
       // no-crossings early exit fired, and the sweeps never ran.
       final graph = FlowGraph(
         direction: FlowDirection.tb,
-        nodes: {for (final id in ['a', 'b', 'c', 'd', 'e', 'f']) id: node(id)},
+        nodes: {
+          for (final id in ['a', 'b', 'c', 'd', 'e', 'f']) id: node(id),
+        },
         edges: const [
           FlowEdge(from: 'a', to: 'f'),
           FlowEdge(from: 'b', to: 'd'),

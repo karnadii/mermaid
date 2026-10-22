@@ -13,7 +13,10 @@ import 'package:mermaid_core/src/vendor/dagre/src/util.dart' as util;
 
 part 'bk_indexed.dart';
 
-Map<String, Map<String, bool>> _findType1Conflicts(Graph g, List<List<String>> layering) {
+Map<String, Map<String, bool>> _findType1Conflicts(
+  Graph g,
+  List<List<String>> layering,
+) {
   Map<String, Map<String, bool>> conflicts = {};
   visitLayer(prevLayer, List<String> layer) {
     int k0 = 0;
@@ -54,16 +57,27 @@ Map<String, Map<String, bool>> _findType1Conflicts(Graph g, List<List<String>> l
   return conflicts;
 }
 
-Map<String, Map<String, bool>> _findType2Conflicts(Graph g, List<List<String>> layering) {
+Map<String, Map<String, bool>> _findType2Conflicts(
+  Graph g,
+  List<List<String>> layering,
+) {
   Map<String, Map<String, bool>> conflicts = {};
-  scan(List<String> south, int southPos, int southEnd, num prevNorthBorder, num nextNorthBorder) {
+  scan(
+    List<String> south,
+    int southPos,
+    int southEnd,
+    num prevNorthBorder,
+    num nextNorthBorder,
+  ) {
     String v;
     range(southPos, southEnd).forEach((i) {
       v = south[i];
       if (g.node(v)[dummyK] != null) {
         g.predecessors(v)?.forEach((u) {
           var uNode = g.node(u);
-          if (uNode[dummyK] != null && (uNode.getD(orderK) < prevNorthBorder || uNode.getD(orderK) > nextNorthBorder)) {
+          if (uNode[dummyK] != null &&
+              (uNode.getD(orderK) < prevNorthBorder ||
+                  uNode.getD(orderK) > nextNorthBorder)) {
             _addConflict(conflicts, u, v);
           }
         });
@@ -85,7 +99,13 @@ Map<String, Map<String, bool>> _findType2Conflicts(Graph g, List<List<String>> l
           prevNorthPos = nextNorthPos!;
         }
       }
-      scan(south, southPos, south.length, nextNorthPos ?? double.nan, north.length);
+      scan(
+        south,
+        southPos,
+        south.length,
+        nextNorthPos ?? double.nan,
+        north.length,
+      );
     });
     return south;
   }
@@ -111,7 +131,11 @@ String? _findOtherInnerSegmentNode(Graph g, String v) {
   return null;
 }
 
-void _addConflict(Map<String, Map<String, bool>> conflicts, String v, String w) {
+void _addConflict(
+  Map<String, Map<String, bool>> conflicts,
+  String v,
+  String w,
+) {
   int t = v.compareTo(w);
   if (t > 0) {
     var tmp = v;
@@ -125,14 +149,18 @@ void _addConflict(Map<String, Map<String, bool>> conflicts, String v, String w) 
   conflictsV[w] = true;
 }
 
-bool _hasConflict(Map<String,Map<String,bool>> conflicts, String v, String w) {
+bool _hasConflict(
+  Map<String, Map<String, bool>> conflicts,
+  String v,
+  String w,
+) {
   int t = v.compareTo(w);
   if (t > 0) {
     var tmp = v;
     v = w;
     w = tmp;
   }
-  return conflicts[v]!=null&&conflicts[v]!.containsKey(w);
+  return conflicts[v] != null && conflicts[v]!.containsKey(w);
 }
 
 _InnerResult _verticalAlignment(
@@ -156,7 +184,7 @@ _InnerResult _verticalAlignment(
     for (var v in layer) {
       List<String> ws = neighborFn(v) ?? [];
       if (ws.isNotEmpty) {
-        ws.sort((a,b){
+        ws.sort((a, b) {
           return pos[a]!.compareTo(pos[b]!);
         });
 
@@ -191,7 +219,7 @@ Map<String, double> _horizontalCompaction(
   Graph blockG = _buildBlockGraph(g, layering, root, reverseSep);
   String borderType = reverseSep ? "borderLeft" : "borderRight";
 
-  iterate(void Function(String) setXsFunc,bool predecessors) {
+  iterate(void Function(String) setXsFunc, bool predecessors) {
     var stack = blockG.nodes;
     Map<String, bool> visited = {};
 
@@ -202,10 +230,10 @@ Map<String, double> _horizontalCompaction(
       } else {
         visited[elem] = true;
         stack.add(elem);
-        if(predecessors){
+        if (predecessors) {
           stack.addAll(blockG.predecessors(elem) ?? []);
-        }else{
-          stack.addAll(blockG.successors(elem)??[]);
+        } else {
+          stack.addAll(blockG.successors(elem) ?? []);
         }
       }
       elem = stack.removeLastOrNull();
@@ -235,13 +263,18 @@ Map<String, double> _horizontalCompaction(
   iterate(pass1, true);
   iterate(pass2, false);
 
-  for(var v in align.keys){
+  for (var v in align.keys) {
     xs[v] = xs[root[v]]!;
   }
   return xs;
 }
 
-Graph _buildBlockGraph(Graph g, List<List<String>> layering, Map<String, String> root, bool reverseSep) {
+Graph _buildBlockGraph(
+  Graph g,
+  List<List<String>> layering,
+  Map<String, String> root,
+  bool reverseSep,
+) {
   Graph blockGraph = Graph();
   var graphLabel = g.label;
   var sepFn = _sep(graphLabel.nodeSep, graphLabel.edgeSep, reverseSep);
@@ -264,13 +297,15 @@ Graph _buildBlockGraph(Graph g, List<List<String>> layering, Map<String, String>
   return blockGraph;
 }
 
-
-Map<String, double> _findSmallestWidthAlignment(Graph g, Map<GraphAlign, Map<String, double>> xss) {
-  List<dynamic> initValue=[double.infinity,null];
-  for(var item in xss.values){
+Map<String, double> _findSmallestWidthAlignment(
+  Graph g,
+  Map<GraphAlign, Map<String, double>> xss,
+) {
+  List<dynamic> initValue = [double.infinity, null];
+  for (var item in xss.values) {
     double max = double.minPositive;
     double min = double.maxFinite;
-    for(var child in item.entries){
+    for (var child in item.entries) {
       var halfWidth = _width(g, child.key) / 2;
       max = math.max(child.value + halfWidth, max);
       min = math.min(child.value - halfWidth, min);
@@ -280,28 +315,31 @@ Map<String, double> _findSmallestWidthAlignment(Graph g, Map<GraphAlign, Map<Str
       initValue = [newMin, item];
     }
   }
-  return (initValue[1] as Map<String,double>?)??{};
-
+  return (initValue[1] as Map<String, double>?) ?? {};
 }
 
-void _alignCoordinates(Map<GraphAlign, Map<String, double>> xss, Map<String, double> alignTo) {
+void _alignCoordinates(
+  Map<GraphAlign, Map<String, double>> xss,
+  Map<String, double> alignTo,
+) {
   List<double> alignToVals = List.from(alignTo.values);
-  double alignToMin = min(alignToVals)!.toDouble(), alignToMax = max(alignToVals)! .toDouble();
+  double alignToMin = min(alignToVals)!.toDouble(),
+      alignToMax = max(alignToVals)!.toDouble();
   for (var vert in ["u", "d"]) {
     for (var horiz in ["l", "r"]) {
       GraphAlign alignment = fromStr('${vert}t$horiz');
       Map<String, double> xs = xss[alignment]!;
       double delta;
-      if (xs == alignTo){
+      if (xs == alignTo) {
         continue;
       }
 
       List<double> xsVals = List.from(xs.values);
-      delta=alignToMin - min(xsVals)!;
-      if(horiz!="l"){
-        delta=alignToMax - max(xsVals)!;
+      delta = alignToMin - min(xsVals)!;
+      if (horiz != "l") {
+        delta = alignToMax - max(xsVals)!;
       }
-      if (delta!=0) {
+      if (delta != 0) {
         Map<String, double> rm = {};
         xs.forEach((key, value) {
           rm[key] = value + delta;
@@ -312,16 +350,19 @@ void _alignCoordinates(Map<GraphAlign, Map<String, double>> xss, Map<String, dou
   }
 }
 
-Map<String, double> _balance(Map<GraphAlign, Map<String, double>> xss, GraphAlign? align) {
-  Map<String, double> ulMap = xss[GraphAlign.utl]??{};
+Map<String, double> _balance(
+  Map<GraphAlign, Map<String, double>> xss,
+  GraphAlign? align,
+) {
+  Map<String, double> ulMap = xss[GraphAlign.utl] ?? {};
   Map<String, double> map = {};
   for (var key in ulMap.keys) {
     double d;
     if (align != null) {
       d = xss[align]![key]!;
     } else {
-      List<double> xs=[];
-      for(var ve in xss.values){
+      List<double> xs = [];
+      for (var ve in xss.values) {
         xs.add(ve[key]!);
       }
       xs.sort();
@@ -334,21 +375,39 @@ Map<String, double> _balance(Map<GraphAlign, Map<String, double>> xss, GraphAlig
 
 Map<String, double> positionX(Graph g) {
   List<List<String>> layering = util.buildLayerMatrix(g);
-  Map<String, Map<String, bool>> conflicts =_mergeMap( _findType1Conflicts(g, layering), _findType2Conflicts(g, layering));
+  Map<String, Map<String, bool>> conflicts = _mergeMap(
+    _findType1Conflicts(g, layering),
+    _findType2Conflicts(g, layering),
+  );
   Map<GraphAlign, Map<String, double>> xss = {};
   List<List<String>> adjustedLayering;
   for (var vert in ["u", "d"]) {
     adjustedLayering = vert == "u" ? layering : layering.reverseSelf();
     for (var horiz in ["l", "r"]) {
       if (horiz == "r") {
-        adjustedLayering = List.from(adjustedLayering.map((inner) {
-          return inner.reverse2();
-        }));
+        adjustedLayering = List.from(
+          adjustedLayering.map((inner) {
+            return inner.reverse2();
+          }),
+        );
       }
-      List<String>? Function(String) neighborFn = (vert == "u" ? g.predecessors : g.successors);
+      List<String>? Function(String) neighborFn = (vert == "u"
+          ? g.predecessors
+          : g.successors);
 
-      _InnerResult align = _verticalAlignment(g, adjustedLayering, conflicts, neighborFn);
-      Map<String, double> xs = _horizontalCompaction(g, adjustedLayering, align.root, align.align, horiz == "r");
+      _InnerResult align = _verticalAlignment(
+        g,
+        adjustedLayering,
+        conflicts,
+        neighborFn,
+      );
+      Map<String, double> xs = _horizontalCompaction(
+        g,
+        adjustedLayering,
+        align.root,
+        align.align,
+        horiz == "r",
+      );
       if (horiz == "r") {
         Map<String, double> rm = {};
         xs.forEach((key, value) {
@@ -364,7 +423,11 @@ Map<String, double> positionX(Graph g) {
   return _balance(xss, g.label.align);
 }
 
-num Function(Graph, String, String) _sep(num nodeSep, num edgeSep, bool reverseSep) {
+num Function(Graph, String, String) _sep(
+  num nodeSep,
+  num edgeSep,
+  bool reverseSep,
+) {
   return (Graph g, String v, String w) {
     Props vLabel = g.node(v);
     Props wLabel = g.node(w);
@@ -405,12 +468,15 @@ num _width(Graph g, String v) {
   return g.node(v).getD(widthK);
 }
 
-Map<String, Map<String, bool>> _mergeMap(Map<String, Map<String, bool>> m1,Map<String, Map<String, bool>> m2){
-  Map<String, Map<String, bool>> map={};
+Map<String, Map<String, bool>> _mergeMap(
+  Map<String, Map<String, bool>> m1,
+  Map<String, Map<String, bool>> m2,
+) {
+  Map<String, Map<String, bool>> map = {};
   map.addAll(m1);
   m2.forEach((key, value) {
-    Map<String,bool> cm=map[key]??{};
-    map[key]=cm;
+    Map<String, bool> cm = map[key] ?? {};
+    map[key] = cm;
     cm.addAll(value);
   });
   return map;
@@ -420,4 +486,3 @@ class _InnerResult {
   Map<String, String> root = {};
   Map<String, String> align = {};
 }
-

@@ -24,18 +24,17 @@ String addDummyNode(Graph g, Dummy type, Props attrs, String? name) {
 Graph simplify(Graph g) {
   var simplified = Graph()..label = g.label;
   for (var v in g.nodes) {
-    simplified.setNode(v,g.node(v));
+    simplified.setNode(v, g.node(v));
   }
 
   for (var e in g.edges) {
-    var simpleLabel = simplified.edgeNull(e.v, e.w) ?? {weightK: 0, minLenK: 1}.toProps;
+    var simpleLabel =
+        simplified.edgeNull(e.v, e.w) ?? {weightK: 0, minLenK: 1}.toProps;
     var label = g.edge2(e);
 
     var p = {
       weightK: simpleLabel.getD(weightK) + label.getD(weightK),
-      minLenK: math.max(
-        simpleLabel.getD(minLenK),
-        label.getD(minLenK))
+      minLenK: math.max(simpleLabel.getD(minLenK), label.getD(minLenK)),
     };
     simplified.setEdge2(e.v, e.w, value: p.toProps);
   }
@@ -46,7 +45,7 @@ Graph asNonCompoundGraph(Graph g) {
   var simplified = Graph(isMultiGraph: g.isMultiGraph);
   simplified.label = g.label;
   for (var v in g.nodes) {
-    var children=g.children(v);
+    var children = g.children(v);
     if (children == null || children.isEmpty) {
       simplified.setNode(v, g.node(v));
     }
@@ -89,8 +88,10 @@ GraphPoint intersectRect(GraphRect rect, GraphPoint point) {
   var w = rect.width / 2;
   var h = rect.height / 2;
 
-  if (dx==0 && dy==0) {
-    throw StateError("Not possible to find intersection inside of the rectangle");
+  if (dx == 0 && dy == 0) {
+    throw StateError(
+      "Not possible to find intersection inside of the rectangle",
+    );
   }
 
   double sx, sy;
@@ -112,7 +113,7 @@ GraphPoint intersectRect(GraphRect rect, GraphPoint point) {
 
 List<List<String>> buildLayerMatrix(Graph g) {
   List<Array<String>> layering = [];
-  int v =maxRank(g)! +1;
+  int v = maxRank(g)! + 1;
   for (int i = 0; i < v; i++) {
     layering.add(Array());
   }
@@ -160,7 +161,7 @@ void removeEmptyRanks(Graph g) {
   // original Dart port crashed on the null rank instead.
   List<int> rankList = [
     for (var v in g.nodes)
-      if (g.node(v).getI2(rankK) != null) g.node(v).getI(rankK)
+      if (g.node(v).getI2(rankK) != null) g.node(v).getI(rankK),
   ];
   int offset = (min(rankList) ?? 0).toInt();
   Array<List<String>> layers = Array();
@@ -180,9 +181,9 @@ void removeEmptyRanks(Graph g) {
   var nodeRankFactor = g.label.getD(nodeRankFactorK);
 
   layers.forEach((vs, i) {
-    if ((vs == null||vs.isEmpty) && i % nodeRankFactor != 0) {
+    if ((vs == null || vs.isEmpty) && i % nodeRankFactor != 0) {
       --delta;
-    } else if ((vs!=null&&vs.isNotEmpty)&&delta != 0) {
+    } else if ((vs != null && vs.isNotEmpty) && delta != 0) {
       for (var v in vs) {
         var p = g.node(v);
         p[rankK] = p.getD(rankK) + delta;
@@ -203,11 +204,13 @@ String addBorderNode(Graph g, [String? prefix, int? rank, int? order]) {
 }
 
 int? maxRank(Graph g) {
-  return max(g.nodes.map2((v, i) {
-    var r = g.node(v).getD2(rankK);
-    r ??= double.minPositive;
-    return r;
-  }))?.toInt();
+  return max(
+    g.nodes.map2((v, i) {
+      var r = g.node(v).getD2(rankK);
+      r ??= double.minPositive;
+      return r;
+    }),
+  )?.toInt();
 }
 
 sp.Split<T> partition<T>(List<T> collection, bool Function(T) fn) {
@@ -222,7 +225,10 @@ sp.Split<T> partition<T>(List<T> collection, bool Function(T) fn) {
   return split;
 }
 
-Map<String, Map<String, double>> zipObject(List<String> props, List<Map<String, double>> values) {
+Map<String, Map<String, double>> zipObject(
+  List<String> props,
+  List<Map<String, double>> values,
+) {
   Map<String, Map<String, double>> result = {};
   int i = 0;
   for (var item in props) {
@@ -231,7 +237,6 @@ Map<String, Map<String, double>> zipObject(List<String> props, List<Map<String, 
   }
   return result;
 }
-
 
 void printGraph(Graph g) {
   for (var v in g.nodes) {

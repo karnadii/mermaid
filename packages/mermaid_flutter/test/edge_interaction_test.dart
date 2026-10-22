@@ -117,10 +117,7 @@ Future<void> _pumpDiagram(
   WidgetTester tester,
   String source,
   void Function(String, String, int) onEdgeTap,
-) => pumpDiagram(
-  tester,
-  MermaidDiagram(source: source, onEdgeTap: onEdgeTap),
-);
+) => pumpDiagram(tester, MermaidDiagram(source: source, onEdgeTap: onEdgeTap));
 
 core.SceneGroup _edgeGroup(
   core.RenderScene scene,

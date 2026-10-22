@@ -31,8 +31,9 @@ abstract final class MaterialMermaidTheme {
     TextTheme? textTheme,
   }) {
     final dark = colorScheme.brightness == Brightness.dark;
-    final fallback =
-        dark ? core.MermaidTheme.darkTheme : core.MermaidTheme.defaultTheme;
+    final fallback = dark
+        ? core.MermaidTheme.darkTheme
+        : core.MermaidTheme.defaultTheme;
     final body = textTheme?.bodyMedium;
     final fills = <Color>[
       colorScheme.primaryContainer,

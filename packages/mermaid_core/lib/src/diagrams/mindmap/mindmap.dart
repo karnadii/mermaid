@@ -184,7 +184,8 @@ String _resolveIconRef(String ref) {
     '))' => (MindmapShape.bang, label),
     '(-' => (MindmapShape.cloud, label),
     ')' => (MindmapShape.cloud, label),
-    '(' => (close == ')'
+    '(' =>
+      (close == ')'
           ? (MindmapShape.rounded, label)
           : (MindmapShape.cloud, label)),
     '[' => (MindmapShape.rect, label),
@@ -325,8 +326,7 @@ List<PathCommand> _cloudPath(
     int sweep,
     double dx,
     double dy,
-  ) =>
-      _arcTo(local, from, rx, ry, sweep, dx, dy);
+  ) => _arcTo(local, from, rx, ry, sweep, dx, dy);
   cur = arc(cur, r1, r1, 1, w * 0.25, -w * 0.1);
   cur = arc(cur, r3, r3, 1, w * 0.4, -w * 0.1);
   cur = arc(cur, r2, r2, 1, w * 0.35, w * 0.2);
@@ -362,8 +362,7 @@ List<PathCommand> _bangPath(
     int sweep,
     double dx,
     double dy,
-  ) =>
-      _arcTo(local, from, rx, ry, sweep, dx, dy);
+  ) => _arcTo(local, from, rx, ry, sweep, dx, dy);
   cur = arc(cur, r, r, 0, w * 0.25, -h * 0.1);
   cur = arc(cur, r, r, 0, w * 0.25, 0);
   cur = arc(cur, r, r, 0, w * 0.25, 0);
@@ -486,15 +485,17 @@ RenderScene layoutMindmap(
     if (!matched) return null;
     return (
       fill: merged['fill'] != null ? Color.tryParse(merged['fill']!) : null,
-      stroke:
-          merged['stroke'] != null ? Color.tryParse(merged['stroke']!) : null,
+      stroke: merged['stroke'] != null
+          ? Color.tryParse(merged['stroke']!)
+          : null,
       text: merged['color'] != null ? Color.tryParse(merged['color']!) : null,
     );
   }
 
   _PlacedMind measure(MindmapNode n) {
-    final style =
-        n.depth == 0 ? baseStyle.copyWith(fontWeight: 700) : baseStyle;
+    final style = n.depth == 0
+        ? baseStyle.copyWith(fontWeight: 700)
+        : baseStyle;
     // Upstream: maxNodeWidth 200, padding 10 (doubled for rect/rounded/hexagon).
     final labelSize = labels.measure(
       n.label,
@@ -504,8 +505,7 @@ RenderScene layoutMindmap(
     final padding = switch (n.shape) {
       MindmapShape.rect ||
       MindmapShape.rounded ||
-      MindmapShape.hexagon =>
-        2 * config.padding,
+      MindmapShape.hexagon => 2 * config.padding,
       _ => config.padding,
     };
     // svgDraw.drawNode: width = bbox.w + 2*padding,
@@ -678,8 +678,9 @@ RenderScene layoutMindmap(
   // Nodes on top.
   void draw(MindmapNode n) {
     final p = placed[n]!;
-    final style =
-        n.depth == 0 ? baseStyle.copyWith(fontWeight: 700) : baseStyle;
+    final style = n.depth == 0
+        ? baseStyle.copyWith(fontWeight: 700)
+        : baseStyle;
     final labelSize = labels.measure(
       n.label,
       style,
@@ -700,11 +701,12 @@ RenderScene layoutMindmap(
     final stroke = cls?.stroke;
     // Text color: explicit classDef `color:` wins; otherwise the theme paints
     // root text `gitBranchLabel0` and section text `cScaleLabel<i+1>`.
-    final textColor = cls?.text ??
+    final textColor =
+        cls?.text ??
         (cls?.fill != null
             ? (cls!.fill!.luminance < 0.5
-                ? theme.textOnDarkFill
-                : theme.textOnLightFill)
+                  ? theme.textOnDarkFill
+                  : theme.textOnLightFill)
             : (isRoot
                   ? theme.gitBranchLabel0
                   : _sectionTextColor(theme, p.section)));
@@ -790,8 +792,9 @@ RenderScene layoutMindmap(
             stroke: nodeStroke,
           ),
         );
-        final lineColor =
-            isRoot ? _sectionLine(theme, 0) : _sectionLine(theme, p.section);
+        final lineColor = isRoot
+            ? _sectionLine(theme, 0)
+            : _sectionLine(theme, p.section);
         children.add(
           SceneShape(
             geometry: PathGeometry([MoveTo(pt(0, h)), LineTo(pt(w, h))]),

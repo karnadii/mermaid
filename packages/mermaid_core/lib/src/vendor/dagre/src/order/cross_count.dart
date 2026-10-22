@@ -1,4 +1,3 @@
-
 import 'package:mermaid_core/src/vendor/dagre/src/model/props.dart';
 
 import '../graph/graph.dart';
@@ -11,7 +10,11 @@ int crossCount(Graph g, List<List<String>> layering) {
   return cc;
 }
 
-int _twoLayerCrossCount(Graph g, List<String> northLayer, List<String> southLayer) {
+int _twoLayerCrossCount(
+  Graph g,
+  List<String> northLayer,
+  List<String> southLayer,
+) {
   Map<String, int> southPos = {};
   for (int i = 0; i < southLayer.length; i++) {
     southPos[southLayer[i]] = i;
@@ -22,11 +25,13 @@ int _twoLayerCrossCount(Graph g, List<String> northLayer, List<String> southLaye
   // had a heavier one to its right and every layering counted 0 crossings.
   List<_InnerResult> southEntries = [];
   for (var ele in northLayer) {
-    List<_InnerResult> v = List.from((g.outEdges(ele)??[]).map((e) {
-      int pos = southPos[e.w]!;
-      num weight = g.edge2(e)[weightK];
-      return _InnerResult(pos, weight);
-    }));
+    List<_InnerResult> v = List.from(
+      (g.outEdges(ele) ?? []).map((e) {
+        int pos = southPos[e.w]!;
+        num weight = g.edge2(e)[weightK];
+        return _InnerResult(pos, weight);
+      }),
+    );
     v.sort((a, b) {
       return a.pos.compareTo(b.pos);
     });

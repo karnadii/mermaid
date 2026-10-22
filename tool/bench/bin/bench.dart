@@ -30,24 +30,26 @@ void main(List<String> args) {
     final dir = Directory(args[at + 1]);
     var changed = 0;
     // The mermaid_core fixtures widen the check beyond the timed corpus.
-    final fixtures = Directory('../../packages/mermaid_core/test/fixtures')
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.mmd'))
-        .toList()
-      ..sort((a, b) => a.path.compareTo(b.path));
+    final fixtures =
+        Directory('../../packages/mermaid_core/test/fixtures')
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.mmd'))
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
     final checked = [
       ...corpus,
       for (final f in fixtures)
-        BenchCase('fixture: ${f.path.split('/fixtures/').last}',
-            [f.readAsStringSync()]),
+        BenchCase('fixture: ${f.path.split('/fixtures/').last}', [
+          f.readAsStringSync(),
+        ]),
     ];
     for (final c in checked) {
       final file = File(
-          '${dir.path}/${c.name.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_')}.svg');
+        '${dir.path}/${c.name.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_')}.svg',
+      );
       final svg = [
-        for (final src in c.inputs)
-          try_(() => renderToSvg(src)),
+        for (final src in c.inputs) try_(() => renderToSvg(src)),
       ].join('\n');
       if (mode == '--snapshot') {
         file
@@ -59,9 +61,11 @@ void main(List<String> args) {
       }
     }
     if (mode == '--verify') {
-      stderr.writeln(changed == 0
-          ? 'all ${checked.length} cases identical'
-          : '$changed of ${checked.length} cases changed');
+      stderr.writeln(
+        changed == 0
+            ? 'all ${checked.length} cases identical'
+            : '$changed of ${checked.length} cases changed',
+      );
       exitCode = changed == 0 ? 0 : 1;
     }
     return;
@@ -72,9 +76,11 @@ void main(List<String> args) {
   for (final c in corpus) {
     if (only.isNotEmpty && !only.any(c.name.contains)) continue;
     final t = time(c.inputs);
-    stderr.writeln('${c.name.padRight(48)} '
-        '${t.medianMs.toStringAsFixed(3).padLeft(10)} ms'
-        '${t.rendered == c.inputs.length ? '' : '  (${t.rendered}/${c.inputs.length} rendered)'}');
+    stderr.writeln(
+      '${c.name.padRight(48)} '
+      '${t.medianMs.toStringAsFixed(3).padLeft(10)} ms'
+      '${t.rendered == c.inputs.length ? '' : '  (${t.rendered}/${c.inputs.length} rendered)'}',
+    );
     results.add({
       'case': c.name,
       'ms': t.medianMs,

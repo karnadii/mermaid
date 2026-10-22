@@ -1,7 +1,7 @@
-class GraphPoint{
+class GraphPoint {
   double x;
   double y;
-  GraphPoint(this.x,this.y);
+  GraphPoint(this.x, this.y);
 
   @override
   String toString() {

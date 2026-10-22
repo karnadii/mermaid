@@ -23,13 +23,12 @@ class TextStyleSpec {
     double? fontSize,
     int? fontWeight,
     bool? italic,
-  }) =>
-      TextStyleSpec(
-        fontFamily: fontFamily ?? this.fontFamily,
-        fontSize: fontSize ?? this.fontSize,
-        fontWeight: fontWeight ?? this.fontWeight,
-        italic: italic ?? this.italic,
-      );
+  }) => TextStyleSpec(
+    fontFamily: fontFamily ?? this.fontFamily,
+    fontSize: fontSize ?? this.fontSize,
+    fontWeight: fontWeight ?? this.fontWeight,
+    italic: italic ?? this.italic,
+  );
 
   @override
   bool operator ==(Object other) =>

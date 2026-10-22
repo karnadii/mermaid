@@ -13,7 +13,9 @@ void run(Graph g) {
     };
   }
 
-  List<Edge> fas = (g.label.acyclicer == Acyclicer.greedy ? greedyFAS(g, weightFn(g)) : dfsFAS(g));
+  List<Edge> fas = (g.label.acyclicer == Acyclicer.greedy
+      ? greedyFAS(g, weightFn(g))
+      : dfsFAS(g));
   for (var e in fas) {
     var label = g.edge2(e);
     g.removeEdge2(e);
@@ -21,7 +23,6 @@ void run(Graph g) {
     label[reversedK] = true;
     g.setEdge2(e.w, e.v, value: label, name: uniqueId("rev"));
   }
-
 }
 
 List<Edge> dfsFAS(Graph g) {
@@ -47,7 +48,7 @@ List<Edge> dfsFAS(Graph g) {
       return;
     }
     List<List<dynamic>> s = [
-      [v, false]
+      [v, false],
     ];
     while (s.isNotEmpty) {
       var curr = s.removeLast();
@@ -71,6 +72,7 @@ List<Edge> dfsFAS(Graph g) {
       });
     }
   }
+
   g.nodes.forEach(dfs);
   return fas;
 }

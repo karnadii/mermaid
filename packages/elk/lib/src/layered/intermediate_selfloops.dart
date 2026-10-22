@@ -49,8 +49,12 @@ const selfLoopEdgeSpacing = Property<double>('selfLoopEdgeSpacing', 10.0);
 /// Holds all self-loop state for a single [LNode].
 class SelfLoopHolder {
   SelfLoopHolder(this.node)
-      : originalMargin = LInsets(node.margin.top, node.margin.right,
-            node.margin.bottom, node.margin.left);
+    : originalMargin = LInsets(
+        node.margin.top,
+        node.margin.right,
+        node.margin.bottom,
+        node.margin.left,
+      );
 
   final LNode node;
   final LInsets originalMargin;
@@ -179,7 +183,6 @@ class SelfLoopPreProcessor implements ILayoutProcessor {
     }
   }
 }
-
 
 // ---------------------------------------------------------------------------
 // Stage 2: SelfLoopRouter
@@ -410,7 +413,6 @@ class SelfLoopRouter implements ILayoutProcessor {
         sle.lEdge.bendPoints.add(KVector(spAnchorX, y));
         sle.lEdge.bendPoints.add(KVector(tpAnchorX, y));
     }
-
   }
 }
 

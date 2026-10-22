@@ -6,16 +6,20 @@ import '../graph/graph.dart';
 List<List<String>> initOrder(Graph g) {
   Map<String, bool> visited = {};
   var simpleNodes = g.nodes.filter((v) {
-    var list=g.children(v);
-    return list==null||list.isEmpty;
+    var list = g.children(v);
+    return list == null || list.isEmpty;
   });
-  var maxRank = max<int>(simpleNodes.map2((v,i) {
-    return g.node(v).getI(rankK);
-  }))!;
+  var maxRank = max<int>(
+    simpleNodes.map2((v, i) {
+      return g.node(v).getI(rankK);
+    }),
+  )!;
 
-  List<List<String>> layers = List.from(range(0, maxRank + 1).map<List<String>>((e) {
-    return [];
-  }));
+  List<List<String>> layers = List.from(
+    range(0, maxRank + 1).map<List<String>>((e) {
+      return [];
+    }),
+  );
 
   // void dfs(String v) {
   //   if (visited.containsKey(v)) return;
@@ -40,7 +44,7 @@ List<List<String>> initOrder(Graph g) {
     }
   }
 
-  var orderedVs =simpleNodes;
+  var orderedVs = simpleNodes;
   // Same comparisons as reading the labels in the comparator, read once.
   final rankOf = {for (var v in orderedVs) v: g.node(v).getD(rankK)};
   // Vendored fix: lodash sortBy in dagre.js is stable, so nodes of one rank

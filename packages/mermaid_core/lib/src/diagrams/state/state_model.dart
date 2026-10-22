@@ -79,29 +79,28 @@ class StateNode {
     List<String>? cssClasses,
     Map<String, String>? styles,
     List<List<String>>? regions,
-  }) =>
-      StateNode(
-        id: id,
-        label: label ?? this.label,
-        kind: kind ?? this.kind,
-        children: children ?? this.children,
-        parent: parent ?? this.parent,
-        cssClasses: cssClasses ?? this.cssClasses,
-        styles: styles ?? this.styles,
-        regions: regions ?? this.regions,
-      );
+  }) => StateNode(
+    id: id,
+    label: label ?? this.label,
+    kind: kind ?? this.kind,
+    children: children ?? this.children,
+    parent: parent ?? this.parent,
+    cssClasses: cssClasses ?? this.cssClasses,
+    styles: styles ?? this.styles,
+    regions: regions ?? this.regions,
+  );
 
   /// Returns this state with a new composite owner, including the root scope.
   StateNode reparent(String? parent) => StateNode(
-        id: id,
-        label: label,
-        kind: kind,
-        children: children,
-        parent: parent,
-        cssClasses: cssClasses,
-        styles: styles,
-        regions: regions,
-      );
+    id: id,
+    label: label,
+    kind: kind,
+    children: children,
+    parent: parent,
+    cssClasses: cssClasses,
+    styles: styles,
+    regions: regions,
+  );
 }
 
 class StateTransition {

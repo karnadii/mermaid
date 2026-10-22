@@ -4,8 +4,13 @@
 library;
 
 class Sample {
-  const Sample(this.id, this.name, this.category, this.description,
-      this.source);
+  const Sample(
+    this.id,
+    this.name,
+    this.category,
+    this.description,
+    this.source,
+  );
 
   final String id;
   final String name;
@@ -23,19 +28,28 @@ const cCharts = 'Charts & data';
 const cTheming = 'Theming & styles';
 
 const samples = <Sample>[
-  Sample('flowchart', 'Flowchart', cDiagrams,
-      'Nodes connected by edges for processes, decisions and flows — the '
-          'most common Mermaid diagram.', '''
+  Sample(
+    'flowchart',
+    'Flowchart',
+    cDiagrams,
+    'Nodes connected by edges for processes, decisions and flows — the '
+        'most common Mermaid diagram.',
+    '''
 graph TD
     A[Start] --> B{Is it working?}
     B -->|Yes| C[Ship it]
     B -->|No| D[Debug]
     D --> B
     C --> E[Celebrate]
-'''),
-  Sample('subgraphs', 'Subgraphs', cDiagrams,
-      'Group related nodes into labelled clusters; edges can cross freely '
-          'between them.', '''
+''',
+  ),
+  Sample(
+    'subgraphs',
+    'Subgraphs',
+    cDiagrams,
+    'Group related nodes into labelled clusters; edges can cross freely '
+        'between them.',
+    '''
 graph LR
     subgraph Stage One
         a1[Fetch] --> a2[Validate]
@@ -46,10 +60,15 @@ graph LR
     a2 --> b1
     Start([Start]) --> a1
     b2 --> Done([Done])
-'''),
-  Sample('sequence', 'Sequence', cDiagrams,
-      'Interactions between participants over time: messages, activations '
-          'and alt/opt blocks.', '''
+''',
+  ),
+  Sample(
+    'sequence',
+    'Sequence',
+    cDiagrams,
+    'Interactions between participants over time: messages, activations '
+        'and alt/opt blocks.',
+    '''
 sequenceDiagram
     autonumber
     actor U as User
@@ -65,10 +84,15 @@ sequenceDiagram
         S-->>-W: 401
         W-->>-U: Try again
     end
-'''),
-  Sample('class', 'Class', cDiagrams,
-      'UML class diagrams: classes, members, visibility markers and '
-          'relationships.', '''
+''',
+  ),
+  Sample(
+    'class',
+    'Class',
+    cDiagrams,
+    'UML class diagrams: classes, members, visibility markers and '
+        'relationships.',
+    '''
 classDiagram
     class Animal {
         <<abstract>>
@@ -79,10 +103,15 @@ classDiagram
     Animal <|-- Duck
     Animal <|-- Fish
     Duck "1" --> "*" Egg : lays
-'''),
-  Sample('state', 'State', cDiagrams,
-      'Finite state machines: states, transitions, choice nodes and '
-          'start/end markers.', '''
+''',
+  ),
+  Sample(
+    'state',
+    'State',
+    cDiagrams,
+    'Finite state machines: states, transitions, choice nodes and '
+        'start/end markers.',
+    '''
 stateDiagram-v2
     [*] --> Idle
     Idle --> Connecting : connect
@@ -92,10 +121,15 @@ stateDiagram-v2
     check --> Backoff : failed
     Backoff --> Connecting : retry
     Connected --> [*]
-'''),
-  Sample('er', 'ER', cDiagrams,
-      'Entity-relationship diagrams: entities, attributes and the '
-          'cardinality between them.', '''
+''',
+  ),
+  Sample(
+    'er',
+    'ER',
+    cDiagrams,
+    'Entity-relationship diagrams: entities, attributes and the '
+        'cardinality between them.',
+    '''
 erDiagram
     CUSTOMER ||--o{ ORDER : places
     ORDER ||--|{ LINE_ITEM : contains
@@ -103,28 +137,43 @@ erDiagram
         string name PK
         string email UK
     }
-'''),
-  Sample('icons', 'Icons', cDiagrams,
-      'Iconify-style icons on flowchart nodes via `@{ icon: "pack:name" }`. '
-          '(mermaid.js needs the same pack registered to show them.)', '''
+''',
+  ),
+  Sample(
+    'icons',
+    'Icons',
+    cDiagrams,
+    'Iconify-style icons on flowchart nodes via `@{ icon: "pack:name" }`. '
+        '(mermaid.js needs the same pack registered to show them.)',
+    '''
 flowchart LR
     A@{ icon: "icon:cloud", label: "Cloud" } --> B@{ icon: "icon:database", label: "Store" }
     B --> C@{ icon: "icon:cog", label: "Process" }
     C --> D@{ icon: "icon:star", label: "Done" }
-'''),
-  Sample('math', 'Math', cDiagrams,
-      'LaTeX math in node and edge labels with `\$\$...\$\$` — fractions, '
-          'roots, arrays, sized delimiters, vectors and a full symbol table, '
-          'all laid out as scene primitives (no webview).', r'''
+''',
+  ),
+  Sample(
+    'math',
+    'Math',
+    cDiagrams,
+    'LaTeX math in node and edge labels with `\$\$...\$\$` — fractions, '
+        'roots, arrays, sized delimiters, vectors and a full symbol table, '
+        'all laid out as scene primitives (no webview).',
+    r'''
 graph TD
     Q["$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$"]
     S["$$i\hbar\frac{\partial}{\partial t}\Psi = -\frac{\hbar}{2m}\nabla^2\Psi + V\Psi$$"]
     M["$$\left\{ \begin{array}{l} \nabla\cdot\vec{E} = \rho \\ \nabla\times\vec{B} = \vec{J} \end{array} \right.$$"]
     Q --> S --> M
-'''),
-  Sample('git', 'Git graph', cDiagrams,
-      'Git branching and merging visualised as commits flowing across '
-          'branches over time.', '''
+''',
+  ),
+  Sample(
+    'git',
+    'Git graph',
+    cDiagrams,
+    'Git branching and merging visualised as commits flowing across '
+        'branches over time.',
+    '''
 gitGraph
    commit
    commit id: "Normal" tag: "v1.0.0"
@@ -136,10 +185,15 @@ gitGraph
    merge develop
    commit type: HIGHLIGHT
    commit type: REVERSE
-'''),
-  Sample('requirement', 'Requirement', cDiagrams,
-      'Requirements with their attributes, and how elements satisfy or '
-          'verify them.', '''
+''',
+  ),
+  Sample(
+    'requirement',
+    'Requirement',
+    cDiagrams,
+    'Requirements with their attributes, and how elements satisfy or '
+        'verify them.',
+    '''
 requirementDiagram
     requirement test_req {
         id: 1
@@ -151,10 +205,15 @@ requirementDiagram
         type: simulation
     }
     test_entity - satisfies -> test_req
-'''),
-  Sample('c4', 'C4', cDiagrams,
-      'C4-model context diagrams: people, systems, boundaries and their '
-          'relationships.', '''
+''',
+  ),
+  Sample(
+    'c4',
+    'C4',
+    cDiagrams,
+    'C4-model context diagrams: people, systems, boundaries and their '
+        'relationships.',
+    '''
 C4Context
     title System Context diagram
     Person(customer, "Banking Customer", "A customer of the bank")
@@ -164,10 +223,15 @@ C4Context
     }
     Rel(customer, banking, "Uses")
     BiRel(banking, mainframe, "Reads & writes")
-'''),
-  Sample('block', 'Block', cDiagrams,
-      'Grid-based blocks laid out in columns, with nested groups and edges '
-          'between them.', '''
+''',
+  ),
+  Sample(
+    'block',
+    'Block',
+    cDiagrams,
+    'Grid-based blocks laid out in columns, with nested groups and edges '
+        'between them.',
+    '''
 block-beta
     columns 3
     A["Input"] B["Process"] C["Output"]
@@ -175,10 +239,15 @@ block-beta
         D["Worker 1"] E["Worker 2"]
     end
     A --> B
-'''),
-  Sample('architecture', 'Architecture', cDiagrams,
-      'Cloud/service architecture: grouped services (databases, servers, '
-          'disks) wired together with directional edges.', '''
+''',
+  ),
+  Sample(
+    'architecture',
+    'Architecture',
+    cDiagrams,
+    'Cloud/service architecture: grouped services (databases, servers, '
+        'disks) wired together with directional edges.',
+    '''
 architecture-beta
     group api(cloud)[API]
     service db(database)[Database] in api
@@ -186,10 +255,14 @@ architecture-beta
     service disk(disk)[Storage] in api
     db:L -- R:server
     server:L -- R:disk
-'''),
-  Sample('kanban', 'Kanban', cDiagrams,
-      'Task board with columns; each column lists its cards top to bottom.',
-      '''
+''',
+  ),
+  Sample(
+    'kanban',
+    'Kanban',
+    cDiagrams,
+    'Task board with columns; each column lists its cards top to bottom.',
+    '''
 kanban
     todo[To Do]
         t1[Design API]
@@ -199,10 +272,15 @@ kanban
     done[Done]
         t4[Setup repo]
         t5[CI pipeline]
-'''),
-  Sample('cynefin', 'Cynefin', cDiagrams,
-      'Cynefin sense-making framework: items sorted across the clear, '
-          'complicated, complex and chaotic domains.', '''
+''',
+  ),
+  Sample(
+    'cynefin',
+    'Cynefin',
+    cDiagrams,
+    'Cynefin sense-making framework: items sorted across the clear, '
+        'complicated, complex and chaotic domains.',
+    '''
 cynefin-beta
     title Decision contexts
     clear
@@ -213,10 +291,15 @@ cynefin-beta
         Launch a new product
     chaotic
         Recover from outage
-'''),
-  Sample('ishikawa', 'Ishikawa', cDiagrams,
-      'Fishbone (cause-and-effect) diagram: a problem with contributing '
-          'causes grouped by category.', '''
+''',
+  ),
+  Sample(
+    'ishikawa',
+    'Ishikawa',
+    cDiagrams,
+    'Fishbone (cause-and-effect) diagram: a problem with contributing '
+        'causes grouped by category.',
+    '''
 ishikawa-beta
     Slow website
         People
@@ -225,35 +308,54 @@ ishikawa-beta
             No caching
         Technology
             Old servers
-'''),
-  Sample('eventmodeling', 'Event modeling', cDiagrams,
-      'Event-modeling timeline: UI, commands, events and read models placed '
-          'along a horizontal flow.', '''
+''',
+  ),
+  Sample(
+    'eventmodeling',
+    'Event modeling',
+    cDiagrams,
+    'Event-modeling timeline: UI, commands, events and read models placed '
+        'along a horizontal flow.',
+    '''
 eventmodeling
     tf 01 ui OrderPage
     tf 02 cmd PlaceOrder
     tf 03 evt OrderPlaced
     tf 04 rmo OrderList
-'''),
-  Sample('railroad', 'Railroad', cDiagrams,
-      'Syntax (railroad) diagram: grammar rules drawn as branching tracks.',
-      '''
+''',
+  ),
+  Sample(
+    'railroad',
+    'Railroad',
+    cDiagrams,
+    'Syntax (railroad) diagram: grammar rules drawn as branching tracks.',
+    '''
 railroad-diagram
     title Greeting grammar
     name = "a" | "b" ;
-'''),
-  Sample('pie', 'Pie', cCharts,
-      'Proportional slices computed from labelled values, with optional '
-          'data labels.', '''
+''',
+  ),
+  Sample(
+    'pie',
+    'Pie',
+    cCharts,
+    'Proportional slices computed from labelled values, with optional '
+        'data labels.',
+    '''
 pie showData title Browser share
     "Chrome" : 64.7
     "Safari" : 18.1
     "Edge" : 5.4
     "Other" : 11.8
-'''),
-  Sample('quadrant', 'Quadrant', cCharts,
-      'Plot items across two axes into four labelled quadrants for '
-          'prioritisation.', '''
+''',
+  ),
+  Sample(
+    'quadrant',
+    'Quadrant',
+    cCharts,
+    'Plot items across two axes into four labelled quadrants for '
+        'prioritisation.',
+    '''
 quadrantChart
     title Reach and engagement
     x-axis Low Reach --> High Reach
@@ -265,19 +367,29 @@ quadrantChart
     Campaign A: [0.3, 0.6]
     Campaign B: [0.45, 0.23]
     Campaign C: [0.78, 0.34]
-'''),
-  Sample('xychart', 'XY chart', cCharts,
-      'Bar and line series plotted over a shared category axis.', '''
+''',
+  ),
+  Sample(
+    'xychart',
+    'XY chart',
+    cCharts,
+    'Bar and line series plotted over a shared category axis.',
+    '''
 xychart-beta
     title "Sales Revenue"
     x-axis [jan, feb, mar, apr, may, jun]
     y-axis "Revenue (thousands)" 4000 --> 11000
     bar [5000, 6000, 7500, 8200, 9500, 10500]
     line [5000, 6000, 7500, 8200, 9500, 10500]
-'''),
-  Sample('gantt', 'Gantt', cCharts,
-      'Project schedule: tasks, sections, dependencies and milestones laid '
-          'out over dates.', '''
+''',
+  ),
+  Sample(
+    'gantt',
+    'Gantt',
+    cCharts,
+    'Project schedule: tasks, sections, dependencies and milestones laid '
+        'out over dates.',
+    '''
 gantt
     dateFormat YYYY-MM-DD
     title Release plan
@@ -287,10 +399,15 @@ gantt
     section Build
     API             : crit, api1, 2024-03-04, 7d
     Frontend        : fe1, after des2, 6d
-'''),
-  Sample('journey', 'Journey', cCharts,
-      'User-journey stages scored by satisfaction and grouped into '
-          'sections.', '''
+''',
+  ),
+  Sample(
+    'journey',
+    'Journey',
+    cCharts,
+    'User-journey stages scored by satisfaction and grouped into '
+        'sections.',
+    '''
 journey
     title My working day
     section Go to work
@@ -299,9 +416,14 @@ journey
       Do work: 1: Me, Cat
     section Go home
       Sit down: 5: Me
-'''),
-  Sample('timeline', 'Timeline', cCharts,
-      'Chronological events grouped into time periods.', '''
+''',
+  ),
+  Sample(
+    'timeline',
+    'Timeline',
+    cCharts,
+    'Chronological events grouped into time periods.',
+    '''
 timeline
     title History of Social Media
     section Web 1.0
@@ -310,10 +432,15 @@ timeline
     section Web 2.0
     2005 : YouTube
     2006 : Twitter
-'''),
-  Sample('sankey', 'Sankey', cCharts,
-      'Flow diagram: nodes in layered columns, links drawn as ribbons whose '
-          'width is proportional to the flow value.', '''
+''',
+  ),
+  Sample(
+    'sankey',
+    'Sankey',
+    cCharts,
+    'Flow diagram: nodes in layered columns, links drawn as ribbons whose '
+        'width is proportional to the flow value.',
+    '''
 sankey-beta
 Coal,Electricity,40
 Gas,Electricity,25
@@ -321,10 +448,15 @@ Solar,Electricity,10
 Electricity,Homes,35
 Electricity,Industry,30
 Electricity,Losses,10
-'''),
-  Sample('packet', 'Packet', cCharts,
-      'Network-packet layout: bit ranges as labelled blocks on a 32-bit grid '
-          'with bit-index markers.', '''
+''',
+  ),
+  Sample(
+    'packet',
+    'Packet',
+    cCharts,
+    'Network-packet layout: bit ranges as labelled blocks on a 32-bit grid '
+        'with bit-index markers.',
+    '''
 packet
 0-15: "Source Port"
 16-31: "Destination Port"
@@ -339,9 +471,14 @@ packet
 110: "SYN"
 111: "FIN"
 112-127: "Window"
-'''),
-  Sample('mindmap', 'Mindmap', cCharts,
-      'Hierarchical ideas radiating outward from a central root.', '''
+''',
+  ),
+  Sample(
+    'mindmap',
+    'Mindmap',
+    cCharts,
+    'Hierarchical ideas radiating outward from a central root.',
+    '''
 mindmap
   root((mermaid))
     Origins
@@ -353,10 +490,15 @@ mindmap
     Tools
       Pen and paper
       Mermaid
-'''),
-  Sample('radar', 'Radar', cCharts,
-      'Radar (spider) chart: one or more series plotted across shared axes '
-          'radiating from a centre.', '''
+''',
+  ),
+  Sample(
+    'radar',
+    'Radar',
+    cCharts,
+    'Radar (spider) chart: one or more series plotted across shared axes '
+        'radiating from a centre.',
+    '''
 radar-beta
     title Skills
     axis design, code, comms, testing, ops
@@ -364,9 +506,14 @@ radar-beta
     curve bob{3, 4, 5, 2, 4}
     max 5
     min 0
-'''),
-  Sample('treemap', 'Treemap', cCharts,
-      'Nested rectangles sized by value, grouped into categories.', '''
+''',
+  ),
+  Sample(
+    'treemap',
+    'Treemap',
+    cCharts,
+    'Nested rectangles sized by value, grouped into categories.',
+    '''
 treemap-beta
     "Frontend"
         "UI": 40
@@ -374,18 +521,28 @@ treemap-beta
     "Backend"
         "API": 35
         "DB": 20
-'''),
-  Sample('venn', 'Venn', cCharts,
-      'Overlapping sets with their intersections and unions highlighted.', '''
+''',
+  ),
+  Sample(
+    'venn',
+    'Venn',
+    cCharts,
+    'Overlapping sets with their intersections and unions highlighted.',
+    '''
 venn-beta
     title Skills overlap
     set Frontend
     set Backend
     union Frontend,Backend["Full-stack"]
-'''),
-  Sample('wardley', 'Wardley map', cCharts,
-      'Value-chain map: components placed by visibility and evolution, with '
-          'dependencies and an expected movement.', '''
+''',
+  ),
+  Sample(
+    'wardley',
+    'Wardley map',
+    cCharts,
+    'Value-chain map: components placed by visibility and evolution, with '
+        'dependencies and an expected movement.',
+    '''
 wardley-beta
     title Tea shop
     component Cup [0.9, 0.6]
@@ -394,10 +551,15 @@ wardley-beta
     Cup -> Tea
     Tea -> Kettle
     evolve Kettle 0.8
-'''),
-  Sample('dark', 'Dark theme', cTheming,
-      'The same flowchart with the built-in dark theme, selected via an '
-          '%%{init}%% directive.', '''
+''',
+  ),
+  Sample(
+    'dark',
+    'Dark theme',
+    cTheming,
+    'The same flowchart with the built-in dark theme, selected via an '
+        '%%{init}%% directive.',
+    '''
 %%{init: {'theme': 'dark'}}%%
 graph TD
     A[Start] --> B{Is it working?}
@@ -405,9 +567,14 @@ graph TD
     B -->|No| D[Debug]
     D --> B
     C --> E((Done))
-'''),
-  Sample('forest', 'Forest theme', cTheming,
-      'The forest theme — a green palette — applied through a directive.', '''
+''',
+  ),
+  Sample(
+    'forest',
+    'Forest theme',
+    cTheming,
+    'The forest theme — a green palette — applied through a directive.',
+    '''
 %%{init: {'theme': 'forest'}}%%
 graph LR
     seed([Seed]) --> sprout[Sprout]
@@ -418,10 +585,15 @@ graph LR
         sprout
         tree
     end
-'''),
-  Sample('custom', 'Custom colors', cTheming,
-      'Override individual theme variables (primaryColor, lineColor…) with '
-          'themeVariables.', '''
+''',
+  ),
+  Sample(
+    'custom',
+    'Custom colors',
+    cTheming,
+    'Override individual theme variables (primaryColor, lineColor…) with '
+        'themeVariables.',
+    '''
 %%{init: {"theme": "base", "themeVariables": {
     "primaryColor": "#ffd9e8",
     "primaryBorderColor": "#c2185b",
@@ -438,10 +610,15 @@ graph TD
         C -->|yes| D[Yep]
         C -->|no| E[Nope]
     end
-'''),
-  Sample('handdrawn', 'Hand-drawn', cTheming,
-      'The sketchy `look: handDrawn` style — wobbly double-stroked borders '
-          'and hachure fills, seeded for stable output.', '''
+''',
+  ),
+  Sample(
+    'handdrawn',
+    'Hand-drawn',
+    cTheming,
+    'The sketchy `look: handDrawn` style — wobbly double-stroked borders '
+        'and hachure fills, seeded for stable output.',
+    '''
 %%{init: {'look': 'handDrawn'}}%%
 graph TD
     A[Start] --> B{Is it working?}
@@ -449,10 +626,15 @@ graph TD
     B -->|No| D[Debug]
     D --> B
     C --> E[Celebrate]
-'''),
-  Sample('styled', 'classDef styles', cTheming,
-      'Per-node classDef classes, inline style, and linkStyle on a specific '
-          'edge.', '''
+''',
+  ),
+  Sample(
+    'styled',
+    'classDef styles',
+    cTheming,
+    'Per-node classDef classes, inline style, and linkStyle on a specific '
+        'edge.',
+    '''
 graph TD
     classDef hot fill:#ffcccc,stroke:#cc0000,stroke-width:2px,color:#660000
     classDef cool fill:#cce5ff,stroke:#0055aa,color:#003366
@@ -462,7 +644,8 @@ graph TD
     C --> D
     style A fill:#ffffcc,stroke:#aaaa00,stroke-width:3px
     linkStyle 1 stroke:#cc0000,stroke-width:3px
-'''),
+''',
+  ),
 ];
 
 /// Categories in display order.

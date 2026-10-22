@@ -304,8 +304,9 @@ Map<String, String> _parseStyles(String text) {
     part.clear();
     final colon = value.indexOf(':');
     if (colon > 0) {
-      styles[value.substring(0, colon).trim()] =
-          value.substring(colon + 1).trim();
+      styles[value.substring(0, colon).trim()] = value
+          .substring(colon + 1)
+          .trim();
     }
   }
 
@@ -571,7 +572,8 @@ RenderScene layoutKanban(
     }
 
     // Section height: max(y - top + 3*padding, 50) + (maxLabelHeight - 25).
-    final boxHeight = math.max(y - labelTop + 3 * padding, 50.0) +
+    final boxHeight =
+        math.max(y - labelTop + 3 * padding, 50.0) +
         (maxLabelHeight - _minLabelHeight);
 
     // Section box: pale theme fill, same color stroke (upstream paints both
@@ -617,7 +619,8 @@ RenderScene layoutKanban(
           _styleColor(card.styles['stroke']) ?? theme.nodeBorder;
       // A custom fill without an explicit color takes ink from the
       // fill luminance; the default canvas fill keeps the theme ink.
-      final textColor = customColor ??
+      final textColor =
+          customColor ??
           (customFill != null ? _inkOn(customFill, theme) : theme.textColor);
       cardChildren.add(
         SceneShape(

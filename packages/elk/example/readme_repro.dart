@@ -20,7 +20,9 @@ void link(String from, String to) {
   _pc++;
   (_outPorts[from] ??= []).add(sp);
   (_inPorts[to] ??= []).add(tp);
-  _edges.add(ElkEdge(id: 'e${_edges.length}', sources: [sp.id], targets: [tp.id]));
+  _edges.add(
+    ElkEdge(id: 'e${_edges.length}', sources: [sp.id], targets: [tp.id]),
+  );
 }
 
 final _sharedPorts = <String, ElkPort>{};
@@ -30,8 +32,12 @@ final _sharedPorts = <String, ElkPort>{};
 // carries both the MonitorValue output and the feedback to QueueControl). A
 // feedback edge leaving the east side must therefore route all the way around
 // the diagram back to QueueControl's west side.
-void linkVia(String from, String sharedOutId, String to,
-    {bool fixedWestTarget = false}) {
+void linkVia(
+  String from,
+  String sharedOutId,
+  String to, {
+  bool fixedWestTarget = false,
+}) {
   final sp = _sharedPorts.putIfAbsent(sharedOutId, () {
     final p = ElkPort(id: sharedOutId, side: ElkPortSide.east);
     (_outPorts[from] ??= []).add(p);
@@ -47,20 +53,29 @@ void linkVia(String from, String sharedOutId, String to,
       : ElkPort(id: '${to}__i${_pc}');
   _pc++;
   (_inPorts[to] ??= []).add(tp);
-  _edges.add(ElkEdge(id: 'e${_edges.length}', sources: [sp.id], targets: [tp.id]));
+  _edges.add(
+    ElkEdge(id: 'e${_edges.length}', sources: [sp.id], targets: [tp.id]),
+  );
 }
 
 ElkNode _leaf(String id, String label) {
   _labels[id] = label;
   final w = (label.length * 7.0 + 28).clamp(70.0, 240.0);
-  return ElkNode(id: id, width: w, height: 40,
-      ports: [...?_inPorts[id], ...?_outPorts[id]]);
+  return ElkNode(
+    id: id,
+    width: w,
+    height: 40,
+    ports: [...?_inPorts[id], ...?_outPorts[id]],
+  );
 }
 
 ElkNode _cluster(String id, String label, List<ElkNode> children) {
   _labels[id] = label;
-  return ElkNode(id: id, children: children,
-      ports: [...?_inPorts[id], ...?_outPorts[id]]);
+  return ElkNode(
+    id: id,
+    children: children,
+    ports: [...?_inPorts[id], ...?_outPorts[id]],
+  );
 }
 
 void main() {
@@ -130,24 +145,32 @@ void main() {
 String _renderSvg(ElkResult r) {
   const pad = 16.0;
   final b = StringBuffer();
-  b.writeln('<svg viewBox="0 0 ${r.width + pad * 2} ${r.height + pad * 2}" '
-      'xmlns="http://www.w3.org/2000/svg" style="background:white" '
-      'font-family="Inter,sans-serif">');
-  b.writeln('<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" '
-      'markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
-      '<path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker></defs>');
+  b.writeln(
+    '<svg viewBox="0 0 ${r.width + pad * 2} ${r.height + pad * 2}" '
+    'xmlns="http://www.w3.org/2000/svg" style="background:white" '
+    'font-family="Inter,sans-serif">',
+  );
+  b.writeln(
+    '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" '
+    'markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
+    '<path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker></defs>',
+  );
   b.writeln('<g transform="translate($pad,$pad)">');
 
   void clusters(List<ElkPositionedNode> ns, double dx, double dy) {
     for (final n in ns) {
       final ax = n.x + dx, ay = n.y + dy;
       if (n.children.isNotEmpty) {
-        b.writeln('<rect x="$ax" y="$ay" width="${n.width}" height="${n.height}"'
-            ' rx="4" fill="#dfe3f7" stroke="#9aa3d8"/>');
+        b.writeln(
+          '<rect x="$ax" y="$ay" width="${n.width}" height="${n.height}"'
+          ' rx="4" fill="#dfe3f7" stroke="#9aa3d8"/>',
+        );
         // Draw the cluster label just above its box so it never overlaps the
         // child nodes inside.
-        b.writeln('<text x="${ax + 2}" y="${ay - 4}" font-size="12" '
-            'fill="#3a3a6a">${_labels[n.id] ?? ''}</text>');
+        b.writeln(
+          '<text x="${ax + 2}" y="${ay - 4}" font-size="12" '
+          'fill="#3a3a6a">${_labels[n.id] ?? ''}</text>',
+        );
         clusters(n.children, ax, ay);
       }
     }
@@ -159,16 +182,22 @@ String _renderSvg(ElkResult r) {
       if (n.children.isNotEmpty) {
         leaves(n.children, ax, ay);
       } else {
-        b.writeln('<rect x="$ax" y="$ay" width="${n.width}" height="${n.height}"'
-            ' rx="3" fill="#c9cef0" stroke="#5b63b0"/>');
-        b.writeln('<text x="${ax + n.width / 2}" y="${ay + n.height / 2 + 4}" '
-            'font-size="12" text-anchor="middle" fill="#22224a">'
-            '${_labels[n.id] ?? n.id}</text>');
+        b.writeln(
+          '<rect x="$ax" y="$ay" width="${n.width}" height="${n.height}"'
+          ' rx="3" fill="#c9cef0" stroke="#5b63b0"/>',
+        );
+        b.writeln(
+          '<text x="${ax + n.width / 2}" y="${ay + n.height / 2 + 4}" '
+          'font-size="12" text-anchor="middle" fill="#22224a">'
+          '${_labels[n.id] ?? n.id}</text>',
+        );
       }
       // Port squares on every node (leaf or cluster).
       for (final p in n.ports) {
-        b.writeln('<rect x="${ax + p.x - 3}" y="${ay + p.y - 3}" width="6" '
-            'height="6" fill="#5b63b0"/>');
+        b.writeln(
+          '<rect x="${ax + p.x - 3}" y="${ay + p.y - 3}" width="6" '
+          'height="6" fill="#5b63b0"/>',
+        );
       }
     }
   }
@@ -178,8 +207,10 @@ String _renderSvg(ElkResult r) {
   for (final e in r.edges) {
     if (e.sections.isEmpty) continue;
     final pts = e.sections.first.points.map((p) => '${p.x},${p.y}').join(' ');
-    b.writeln('<polyline points="$pts" fill="none" stroke="#444" '
-        'stroke-width="1.4" marker-end="url(#arrow)"/>');
+    b.writeln(
+      '<polyline points="$pts" fill="none" stroke="#444" '
+      'stroke-width="1.4" marker-end="url(#arrow)"/>',
+    );
   }
   b.writeln('</g></svg>');
   return b.toString();

@@ -48,14 +48,13 @@ class ErEntity {
     List<ErAttribute>? attributes,
     List<String>? cssStyles,
     List<String>? cssClasses,
-  }) =>
-      ErEntity(
-        id: id,
-        label: label ?? this.label,
-        attributes: attributes ?? this.attributes,
-        cssStyles: cssStyles ?? this.cssStyles,
-        cssClasses: cssClasses ?? this.cssClasses,
-      );
+  }) => ErEntity(
+    id: id,
+    label: label ?? this.label,
+    attributes: attributes ?? this.attributes,
+    cssStyles: cssStyles ?? this.cssStyles,
+    cssClasses: cssClasses ?? this.cssClasses,
+  );
 }
 
 class ErAttribute {

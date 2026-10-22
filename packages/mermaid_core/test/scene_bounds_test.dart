@@ -56,10 +56,10 @@ void main() {
           ],
         );
 
-      expect(scene.nodeBounds, {
-        'nested': const Rect.fromLTWH(20, 30, 40, 24),
-      });
-      expect(scene.boundsOfNode('nested'), scene.nodeBounds['nested']);
+        expect(scene.nodeBounds, {
+          'nested': const Rect.fromLTWH(20, 30, 40, 24),
+        });
+        expect(scene.boundsOfNode('nested'), scene.nodeBounds['nested']);
         expect(scene.boundsOfNode('cluster'), isNull);
         expect(scene.boundsOfNode('edge_a_b_0'), isNull);
         expect(scene.boundsOfNode('edgelabel_a_b_0'), isNull);
@@ -95,18 +95,18 @@ void main() {
     test('the bounds map is computed once per scene', () {
       // `boundsOfNode` is called from Flutter hover and semantics builders, so
       // repeated lookups must not rewalk the tree and reallocate the map.
-      final scene = Mermaid(measurer: const ApproximateTextMeasurer()).render(
-        'flowchart TD\n  a --> b\n  b --> c\n',
-      );
+      final scene = Mermaid(
+        measurer: const ApproximateTextMeasurer(),
+      ).render('flowchart TD\n  a --> b\n  b --> c\n');
       final first = scene.nodeBounds;
       expect(first.keys, containsAll(['a', 'b', 'c']));
       expect(identical(scene.nodeBounds, first), isTrue);
       expect(identical(scene.boundsOfNode('a'), first['a']), isTrue);
 
       // A different scene gets its own map.
-      final other = Mermaid(measurer: const ApproximateTextMeasurer()).render(
-        'flowchart TD\n  a --> b\n  b --> c\n',
-      );
+      final other = Mermaid(
+        measurer: const ApproximateTextMeasurer(),
+      ).render('flowchart TD\n  a --> b\n  b --> c\n');
       expect(identical(other.nodeBounds, first), isFalse);
       expect(other.nodeBounds, first);
     });

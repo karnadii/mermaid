@@ -2,11 +2,7 @@
 library;
 
 class PieChart {
-  const PieChart({
-    required this.slices,
-    this.title,
-    this.showData = false,
-  });
+  const PieChart({required this.slices, this.title, this.showData = false});
 
   /// Declaration order.
   final List<PieSlice> slices;

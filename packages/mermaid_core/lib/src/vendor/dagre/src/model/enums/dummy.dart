@@ -1,9 +1,1 @@
-enum Dummy{
-  none,
-  border,
-  edgeProxy,
-  selfEdge,
-  root,
-  edge,
-  edgeLabel
-}
+enum Dummy { none, border, edgeProxy, selfEdge, root, edge, edgeLabel }

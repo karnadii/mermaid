@@ -20,42 +20,50 @@ const theme = MermaidTheme.defaultTheme;
 RenderScene layout(FlowGraph graph) =>
     layoutFlowchart(graph, measurer: measurer, theme: theme);
 
-FlowNode node(String id, {String? label, FlowNodeShape shape = FlowNodeShape.rect}) =>
-    FlowNode(id: id, label: label ?? id, shape: shape);
+FlowNode node(
+  String id, {
+  String? label,
+  FlowNodeShape shape = FlowNodeShape.rect,
+}) => FlowNode(id: id, label: label ?? id, shape: shape);
 
 FlowGraph chain({
   FlowDirection direction = FlowDirection.tb,
   EdgeStroke stroke = EdgeStroke.normal,
   ArrowHead headTo = ArrowHead.point,
   String? edgeLabel,
-}) =>
-    FlowGraph(
-      direction: direction,
-      nodes: {
-        'A': node('A', label: 'Alpha'),
-        'B': node('B', label: 'Beta'),
-      },
-      edges: [
-        FlowEdge(from: 'A', to: 'B', stroke: stroke, headTo: headTo, label: edgeLabel),
-      ],
-    );
+}) => FlowGraph(
+  direction: direction,
+  nodes: {
+    'A': node('A', label: 'Alpha'),
+    'B': node('B', label: 'Beta'),
+  },
+  edges: [
+    FlowEdge(
+      from: 'A',
+      to: 'B',
+      stroke: stroke,
+      headTo: headTo,
+      label: edgeLabel,
+    ),
+  ],
+);
 
 /// A 6-node diamond-shaped DAG: A fans out to B/C, which reach F via D/E.
 FlowGraph diamondDag() => FlowGraph(
-      direction: FlowDirection.tb,
-      nodes: {
-        for (final id in ['A', 'B', 'C', 'D', 'E', 'F'])
-          id: node(id, label: 'Node $id'),
-      },
-      edges: const [
-        FlowEdge(from: 'A', to: 'B'),
-        FlowEdge(from: 'A', to: 'C'),
-        FlowEdge(from: 'B', to: 'D'),
-        FlowEdge(from: 'C', to: 'E'),
-        FlowEdge(from: 'D', to: 'F'),
-        FlowEdge(from: 'E', to: 'F'),
-      ],
-    );
+  direction: FlowDirection.tb,
+  nodes: {
+    for (final id in ['A', 'B', 'C', 'D', 'E', 'F'])
+      id: node(id, label: 'Node $id'),
+  },
+  edges: const [
+    FlowEdge(from: 'A', to: 'B'),
+    FlowEdge(from: 'A', to: 'C'),
+    FlowEdge(from: 'B', to: 'D'),
+    FlowEdge(from: 'C', to: 'E'),
+    FlowEdge(from: 'D', to: 'F'),
+    FlowEdge(from: 'E', to: 'F'),
+  ],
+);
 
 // --- scene inspection helpers -----------------------------------------------
 
@@ -108,23 +116,30 @@ Rect groupBounds(SceneGroup g) {
 }
 
 Rect geometryBounds(ShapeGeometry g) => switch (g) {
-      RectGeometry(:final rect) => rect,
-      CircleGeometry(:final center, :final radius) =>
-        Rect.fromCenter(center, radius * 2, radius * 2),
-      EllipseGeometry(:final center, :final rx, :final ry) =>
-        Rect.fromCenter(center, rx * 2, ry * 2),
-      PolygonGeometry(:final points) => pointsBounds(points),
-      PathGeometry(:final commands) =>
-        pointsBounds([for (final c in commands) ...commandPoints(c)]),
-    };
+  RectGeometry(:final rect) => rect,
+  CircleGeometry(:final center, :final radius) => Rect.fromCenter(
+    center,
+    radius * 2,
+    radius * 2,
+  ),
+  EllipseGeometry(:final center, :final rx, :final ry) => Rect.fromCenter(
+    center,
+    rx * 2,
+    ry * 2,
+  ),
+  PolygonGeometry(:final points) => pointsBounds(points),
+  PathGeometry(:final commands) => pointsBounds([
+    for (final c in commands) ...commandPoints(c),
+  ]),
+};
 
 List<Point> commandPoints(PathCommand c) => switch (c) {
-      MoveTo(:final p) => [p],
-      LineTo(:final p) => [p],
-      QuadTo(:final c, :final p) => [c, p],
-      CubicTo(:final c1, :final c2, :final p) => [c1, c2, p],
-      ClosePath() => const <Point>[],
-    };
+  MoveTo(:final p) => [p],
+  LineTo(:final p) => [p],
+  QuadTo(:final c, :final p) => [c, p],
+  CubicTo(:final c1, :final c2, :final p) => [c1, c2, p],
+  ClosePath() => const <Point>[],
+};
 
 Rect pointsBounds(List<Point> pts) {
   var minX = pts.first.x, maxX = pts.first.x;
@@ -159,7 +174,10 @@ Point pathEnd(PathGeometry p) {
 }
 
 bool overlaps(Rect a, Rect b) =>
-    a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    a.left < b.right &&
+    b.left < a.right &&
+    a.top < b.bottom &&
+    b.top < a.bottom;
 
 /// Distance from [p] to the boundary of [r] (0 when exactly on it).
 double distanceToRectBoundary(Point p, Rect r) {
@@ -182,35 +200,50 @@ void main() {
       final scene = layout(chain(direction: FlowDirection.tb));
       final a = groupBounds(findGroup(scene, 'A'));
       final b = groupBounds(findGroup(scene, 'B'));
-      expect(b.top, greaterThan(a.bottom),
-          reason: 'B must start below the bottom of A');
+      expect(
+        b.top,
+        greaterThan(a.bottom),
+        reason: 'B must start below the bottom of A',
+      );
     });
 
     test('(a) two-node chain: B strictly right of A for LR', () {
       final scene = layout(chain(direction: FlowDirection.lr));
       final a = groupBounds(findGroup(scene, 'A'));
       final b = groupBounds(findGroup(scene, 'B'));
-      expect(b.left, greaterThan(a.right),
-          reason: 'B must start right of the right edge of A');
+      expect(
+        b.left,
+        greaterThan(a.right),
+        reason: 'B must start right of the right edge of A',
+      );
     });
 
     test('(a2) BT places B above A; RL places B left of A', () {
       final bt = layout(chain(direction: FlowDirection.bt));
-      expect(groupBounds(findGroup(bt, 'B')).bottom,
-          lessThan(groupBounds(findGroup(bt, 'A')).top));
+      expect(
+        groupBounds(findGroup(bt, 'B')).bottom,
+        lessThan(groupBounds(findGroup(bt, 'A')).top),
+      );
       final rl = layout(chain(direction: FlowDirection.rl));
-      expect(groupBounds(findGroup(rl, 'B')).right,
-          lessThan(groupBounds(findGroup(rl, 'A')).left));
+      expect(
+        groupBounds(findGroup(rl, 'B')).right,
+        lessThan(groupBounds(findGroup(rl, 'A')).left),
+      );
     });
 
     test('(b) no overlapping node bounds in a 6-node diamond DAG', () {
       final scene = layout(diamondDag());
       final ids = ['A', 'B', 'C', 'D', 'E', 'F'];
-      final bounds = {for (final id in ids) id: groupBounds(findGroup(scene, id))};
+      final bounds = {
+        for (final id in ids) id: groupBounds(findGroup(scene, id)),
+      };
       for (var i = 0; i < ids.length; i++) {
         for (var j = i + 1; j < ids.length; j++) {
-          expect(overlaps(bounds[ids[i]]!, bounds[ids[j]]!), isFalse,
-              reason: '${ids[i]} and ${ids[j]} must not overlap');
+          expect(
+            overlaps(bounds[ids[i]]!, bounds[ids[j]]!),
+            isFalse,
+            reason: '${ids[i]} and ${ids[j]} must not overlap',
+          );
         }
       }
     });
@@ -224,14 +257,26 @@ void main() {
       final start = pathStart(path);
       final end = pathEnd(path);
 
-      expect(distanceToRectBoundary(start, a), lessThanOrEqualTo(2),
-          reason: 'path start must touch the boundary of A');
-      expect(distanceToRectBoundary(end, b), lessThanOrEqualTo(2),
-          reason: 'path end must touch the boundary of B');
-      expect(start.distanceTo(a.center), greaterThan(10),
-          reason: 'path start must not be at the center of A');
-      expect(end.distanceTo(b.center), greaterThan(10),
-          reason: 'path end must not be at the center of B');
+      expect(
+        distanceToRectBoundary(start, a),
+        lessThanOrEqualTo(2),
+        reason: 'path start must touch the boundary of A',
+      );
+      expect(
+        distanceToRectBoundary(end, b),
+        lessThanOrEqualTo(2),
+        reason: 'path end must touch the boundary of B',
+      );
+      expect(
+        start.distanceTo(a.center),
+        greaterThan(10),
+        reason: 'path start must not be at the center of A',
+      );
+      expect(
+        end.distanceTo(b.center),
+        greaterThan(10),
+        reason: 'path end must not be at the center of B',
+      );
     });
 
     test('(d) scene size encloses every geometry point', () {
@@ -271,8 +316,9 @@ void main() {
 
     test('(e) dotted edge has a dash pattern, thick edge has width > 3', () {
       final dotted = layout(chain(stroke: EdgeStroke.dotted));
-      final dottedStroke =
-          edgePathShape(findGroup(dotted, 'edge_A_B_0')).stroke!;
+      final dottedStroke = edgePathShape(
+        findGroup(dotted, 'edge_A_B_0'),
+      ).stroke!;
       expect(dottedStroke.dash, isNotNull);
       expect(dottedStroke.dash, isNotEmpty);
 
@@ -281,8 +327,9 @@ void main() {
       expect(thickStroke.width, greaterThan(3));
 
       final normal = layout(chain());
-      final normalStroke =
-          edgePathShape(findGroup(normal, 'edge_A_B_0')).stroke!;
+      final normalStroke = edgePathShape(
+        findGroup(normal, 'edge_A_B_0'),
+      ).stroke!;
       expect(normalStroke.width, 2);
       expect(normalStroke.dash, isNull);
     });
@@ -298,29 +345,33 @@ void main() {
       final edge = findGroup(scene, 'edge_A_B_0');
       final b = groupBounds(findGroup(scene, 'B'));
       final triangles = shapesIn(edge)
-          .where((s) =>
-              s.geometry is PolygonGeometry &&
-              (s.geometry as PolygonGeometry).points.length == 3 &&
-              s.fill != null)
+          .where(
+            (s) =>
+                s.geometry is PolygonGeometry &&
+                (s.geometry as PolygonGeometry).points.length == 3 &&
+                s.fill != null,
+          )
           .toList();
-      expect(triangles, hasLength(1),
-          reason: 'edge with headTo=point must have one filled triangle');
+      expect(
+        triangles,
+        hasLength(1),
+        reason: 'edge with headTo=point must have one filled triangle',
+      );
       final pts = (triangles.single.geometry as PolygonGeometry).points;
-      final tipDistance =
-          pts.map((p) => distanceToRectBoundary(p, b)).reduce(math.min);
-      expect(tipDistance, lessThanOrEqualTo(2),
-          reason: 'arrow tip must touch the target boundary');
+      final tipDistance = pts
+          .map((p) => distanceToRectBoundary(p, b))
+          .reduce(math.min);
+      expect(
+        tipDistance,
+        lessThanOrEqualTo(2),
+        reason: 'arrow tip must touch the target boundary',
+      );
     });
 
     test('(g) subgraph cluster rect contains its member nodes', () {
       final graph = FlowGraph(
         direction: FlowDirection.tb,
-        nodes: {
-          'A': node('A'),
-          'B': node('B'),
-          'C': node('C'),
-          'D': node('D'),
-        },
+        nodes: {'A': node('A'), 'B': node('B'), 'C': node('C'), 'D': node('D')},
         edges: const [
           FlowEdge(from: 'A', to: 'B'),
           FlowEdge(from: 'B', to: 'C'),
@@ -332,11 +383,9 @@ void main() {
       );
       final scene = layout(graph);
       final cluster = findGroup(scene, 'sub1');
-      final clusterRect = shapesIn(cluster)
-          .map((s) => s.geometry)
-          .whereType<RectGeometry>()
-          .first
-          .rect;
+      final clusterRect = shapesIn(
+        cluster,
+      ).map((s) => s.geometry).whereType<RectGeometry>().first.rect;
       for (final id in ['B', 'C']) {
         final nb = groupBounds(findGroup(scene, id));
         expect(nb.left, greaterThanOrEqualTo(clusterRect.left));
@@ -348,7 +397,10 @@ void main() {
       final title = textsIn(cluster).singleWhere((t) => t.text == 'Inner work');
       expect(title.bounds.top - clusterRect.top, closeTo(2, 0.001));
       // Z-order: cluster group precedes member node groups in scene.nodes.
-      final order = scene.nodes.whereType<SceneGroup>().map((g) => g.id).toList();
+      final order = scene.nodes
+          .whereType<SceneGroup>()
+          .map((g) => g.id)
+          .toList();
       expect(order.indexOf('sub1'), lessThan(order.indexOf('B')));
     });
 
@@ -362,39 +414,43 @@ void main() {
 
       // Edge label has a background rect.
       final labelGroup = findGroup(scene, 'edgelabel_A_B_0');
-      final bg = shapesIn(labelGroup)
-          .where((s) => s.geometry is RectGeometry && s.fill != null);
+      final bg = shapesIn(
+        labelGroup,
+      ).where((s) => s.geometry is RectGeometry && s.fill != null);
       expect(bg, isNotEmpty);
     });
 
-    test('(i) doubleCircle emits two circles; diamond emits 4-point polygon',
-        () {
-      final graph = FlowGraph(
-        direction: FlowDirection.tb,
-        nodes: {
-          'A': node('A', shape: FlowNodeShape.doubleCircle),
-          'B': node('B', shape: FlowNodeShape.diamond),
-        },
-        edges: const [FlowEdge(from: 'A', to: 'B')],
-      );
-      final scene = layout(graph);
+    test(
+      '(i) doubleCircle emits two circles; diamond emits 4-point polygon',
+      () {
+        final graph = FlowGraph(
+          direction: FlowDirection.tb,
+          nodes: {
+            'A': node('A', shape: FlowNodeShape.doubleCircle),
+            'B': node('B', shape: FlowNodeShape.diamond),
+          },
+          edges: const [FlowEdge(from: 'A', to: 'B')],
+        );
+        final scene = layout(graph);
 
-      final circles = shapesIn(findGroup(scene, 'A'))
-          .map((s) => s.geometry)
-          .whereType<CircleGeometry>()
-          .toList();
-      expect(circles, hasLength(2));
-      final radii = circles.map((c) => c.radius).toList()..sort();
-      expect(radii[1] - radii[0], closeTo(5, 0.001),
-          reason: 'inner/outer circle gap is 5');
+        final circles = shapesIn(
+          findGroup(scene, 'A'),
+        ).map((s) => s.geometry).whereType<CircleGeometry>().toList();
+        expect(circles, hasLength(2));
+        final radii = circles.map((c) => c.radius).toList()..sort();
+        expect(
+          radii[1] - radii[0],
+          closeTo(5, 0.001),
+          reason: 'inner/outer circle gap is 5',
+        );
 
-      final polys = shapesIn(findGroup(scene, 'B'))
-          .map((s) => s.geometry)
-          .whereType<PolygonGeometry>()
-          .toList();
-      expect(polys, hasLength(1));
-      expect(polys.single.points, hasLength(4));
-    });
+        final polys = shapesIn(
+          findGroup(scene, 'B'),
+        ).map((s) => s.geometry).whereType<PolygonGeometry>().toList();
+        expect(polys, hasLength(1));
+        expect(polys.single.points, hasLength(4));
+      },
+    );
 
     test('per-node style resolution: classDefs and inline styles', () {
       final graph = FlowGraph(
@@ -433,31 +489,41 @@ void main() {
       final edges = <FlowEdge>[];
       for (var i = 0; i < shapes.length; i++) {
         final id = 'n$i';
-        nodes[id] = FlowNode(id: id, label: 'Shape ${shapes[i].name}', shape: shapes[i]);
+        nodes[id] = FlowNode(
+          id: id,
+          label: 'Shape ${shapes[i].name}',
+          shape: shapes[i],
+        );
         if (i > 0) edges.add(FlowEdge(from: 'n${i - 1}', to: id));
       }
-      final scene =
-          layout(FlowGraph(direction: FlowDirection.tb, nodes: nodes, edges: edges));
+      final scene = layout(
+        FlowGraph(direction: FlowDirection.tb, nodes: nodes, edges: edges),
+      );
       for (var i = 0; i < shapes.length; i++) {
         final b = groupBounds(findGroup(scene, 'n$i'));
         expect(b.width, greaterThan(0));
         for (var j = i + 1; j < shapes.length; j++) {
-          expect(overlaps(b, groupBounds(findGroup(scene, 'n$j'))), isFalse,
-              reason: 'n$i (${shapes[i].name}) overlaps n$j (${shapes[j].name})');
+          expect(
+            overlaps(b, groupBounds(findGroup(scene, 'n$j'))),
+            isFalse,
+            reason: 'n$i (${shapes[i].name}) overlaps n$j (${shapes[j].name})',
+          );
         }
       }
     });
 
     test('title is rendered above the content', () {
-      final scene = layout(FlowGraph(
-        direction: FlowDirection.tb,
-        nodes: {'A': node('A')},
-        edges: const [],
-        title: 'Hello title',
-      ));
-      final titleText = scene.nodes
-          .whereType<SceneText>()
-          .firstWhere((t) => t.text == 'Hello title');
+      final scene = layout(
+        FlowGraph(
+          direction: FlowDirection.tb,
+          nodes: {'A': node('A')},
+          edges: const [],
+          title: 'Hello title',
+        ),
+      );
+      final titleText = scene.nodes.whereType<SceneText>().firstWhere(
+        (t) => t.text == 'Hello title',
+      );
       // Upstream .flowchartTitleText sets only font-size/fill (no font-weight),
       // so the title renders at normal weight, not bold.
       expect(titleText.style.fontWeight, lessThan(700));
@@ -472,18 +538,23 @@ void main() {
         'hyphen': 'a-very-long-hyphenated-flowchart-label-with-more-words',
         'unbroken': 'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
       };
-      final scene = layout(FlowGraph(
-        direction: FlowDirection.tb,
-        nodes: {
-          for (final entry in labels.entries)
-            entry.key: node(entry.key, label: entry.value),
-        },
-        edges: const [],
-      ));
+      final scene = layout(
+        FlowGraph(
+          direction: FlowDirection.tb,
+          nodes: {
+            for (final entry in labels.entries)
+              entry.key: node(entry.key, label: entry.value),
+          },
+          edges: const [],
+        ),
+      );
 
       SceneText label(String id) => textsIn(findGroup(scene, id)).single;
       expect(label('identifier').text, 'br_recommendation_\nsummary');
-      expect(label('identifier').text.replaceAll('\n', ''), labels['identifier']);
+      expect(
+        label('identifier').text.replaceAll('\n', ''),
+        labels['identifier'],
+      );
 
       final proseLines = label('prose').text.split('\n');
       expect(proseLines.length, greaterThan(1));
@@ -492,8 +563,10 @@ void main() {
 
       final hyphenLines = label('hyphen').text.split('\n');
       expect(hyphenLines.length, greaterThan(1));
-      expect(hyphenLines.take(hyphenLines.length - 1),
-          everyElement(endsWith('-')));
+      expect(
+        hyphenLines.take(hyphenLines.length - 1),
+        everyElement(endsWith('-')),
+      );
       expect(hyphenLines.join(), labels['hyphen']);
 
       const style = TextStyleSpec(
@@ -502,8 +575,11 @@ void main() {
       );
       for (final id in labels.keys) {
         for (final line in label(id).text.split('\n')) {
-          expect(measurer.measure(line, style).width, lessThanOrEqualTo(300),
-              reason: '$id line "$line" exceeds the flowchart wrap width');
+          expect(
+            measurer.measure(line, style).width,
+            lessThanOrEqualTo(300),
+            reason: '$id line "$line" exceeds the flowchart wrap width',
+          );
         }
       }
       final hardLines = label('unbroken').text.split('\n');
@@ -516,8 +592,10 @@ void main() {
       final svg = renderSceneToSvg(scene);
       expect(svg, contains('br_recommendation_</tspan>'));
       expect(svg, contains('summary</tspan>'));
-      expect(findGroup(scene, 'identifier').semanticLabel,
-          labels['identifier']);
+      expect(
+        findGroup(scene, 'identifier').semanticLabel,
+        labels['identifier'],
+      );
     });
   });
 }

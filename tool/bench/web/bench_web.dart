@@ -10,5 +10,7 @@ import 'package:mermaid_bench/timing.dart';
 external set _mermaidDartRender(JSFunction f);
 
 void main() {
-  _mermaidDartRender = ((JSString source) => renderToSvg(source.toDart).toJS).toJS;
+  _mermaidDartRender = ((JSString source) => renderToSvg(
+    source.toDart,
+  ).toJS).toJS;
 }

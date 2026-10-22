@@ -31,14 +31,16 @@ final _blockGroupStart = RegExp(r'^block:([^\s:]+)(?::(\d+))?\s*$');
 final _blockSpanSuffix = RegExp(r':(\d+)$');
 final _blockArrowBlock = RegExp(r'^([^\s<]+)<\[(.*?)\]>\(([^)]*)\)$');
 final _blockShapeSpec = RegExp(
-    r'^([^\s([{>]+)\s*'
-    r'(\(\(\(|\(\(|\(\[|\[\(|\{\{|\[\[|\[/|\[\\|\(|\[|\{|>)'
-    r'(.*?)'
-    r'(\)\)\)|\)\)|\]\)|\)\]|\}\}|\]\]|/\]|\\\]|\)|\]|\})?\s*$',
+  r'^([^\s([{>]+)\s*'
+  r'(\(\(\(|\(\(|\(\[|\[\(|\{\{|\[\[|\[/|\[\\|\(|\[|\{|>)'
+  r'(.*?)'
+  r'(\)\)\)|\)\)|\]\)|\)\]|\}\}|\]\]|/\]|\\\]|\)|\]|\})?\s*$',
 );
 final _blockDash = RegExp(r'[<ox]?[-=][-=.]*[-=](?:[>ox])?');
 final _blockOpenHalfEnd = RegExp(r'[>ox]$');
-final _blockLeadingNodeAndOp = RegExp(r'^\s*(?:"([^"]*)"|([^<>|"=.-][^<>|]*?))\s*([-=][-=.]*(?:[>ox])?)');
+final _blockLeadingNodeAndOp = RegExp(
+  r'^\s*(?:"([^"]*)"|([^<>|"=.-][^<>|]*?))\s*([-=][-=.]*(?:[>ox])?)',
+);
 final _blockPipedLabel = RegExp(r'^\s*\|\s*(?:"([^"]*)"|([^|]*))\|');
 final _blockSeparators = RegExp(r'[\s"\[\](){}]');
 
@@ -419,9 +421,7 @@ void _parseEdges(String line, List<BlockEdge> edges) {
     // `G-->H-->I` would mistake the node `H` for a label.
     final openHalf = !_blockOpenHalfEnd.hasMatch(opStr);
     // pattern: optional `"label"` or bare label then another link body
-    final twoPart = openHalf
-        ? _blockLeadingNodeAndOp.firstMatch(rest)
-        : null;
+    final twoPart = openHalf ? _blockLeadingNodeAndOp.firstMatch(rest) : null;
     if (twoPart != null) {
       label = (twoPart.group(1) ?? twoPart.group(2) ?? '').trim();
       opStr = opStr + twoPart.group(3)!;
@@ -852,11 +852,12 @@ List<SceneNode> _drawNode(
   final explicitColor = Color.tryParse(n.styles['color'] ?? '');
   // A `fill:` without an explicit `color:` takes ink from the fill
   // luminance; the themed pair stays as designed.
-  final ink = explicitColor ??
+  final ink =
+      explicitColor ??
       (n.styles['fill'] != null
           ? (fill.luminance < 0.5
-              ? theme.textOnDarkFill
-              : theme.textOnLightFill)
+                ? theme.textOnDarkFill
+                : theme.textOnLightFill)
           : theme.textColor);
   final rect = Rect.fromCenter(c, w, h);
   final st = Stroke(color: stroke, width: 1);

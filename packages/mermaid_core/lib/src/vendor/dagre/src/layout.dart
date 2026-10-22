@@ -12,10 +12,12 @@ import 'package:mermaid_core/src/vendor/dagre/src/util.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util.dart' as util;
 import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/acyclic.dart' as acyclic;
-import 'package:mermaid_core/src/vendor/dagre/src/nesting_graph.dart' as nesting_graph;
+import 'package:mermaid_core/src/vendor/dagre/src/nesting_graph.dart'
+    as nesting_graph;
 import 'package:mermaid_core/src/vendor/dagre/src/rank/index.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/normalize.dart' as normalize;
-import 'package:mermaid_core/src/vendor/dagre/src/coordinate_system.dart' as coordinate_system;
+import 'package:mermaid_core/src/vendor/dagre/src/coordinate_system.dart'
+    as coordinate_system;
 
 import 'add_border_segments.dart';
 import 'model/graph_point.dart';
@@ -42,7 +44,12 @@ void layout(Graph g, DagreConfig config) {
 Graph _buildLayoutGraph(Graph inputGraph) {
   var g = Graph(isMultiGraph: true, isCompound: true);
   var graph = inputGraph.label.copy();
-  GraphLabel label = GraphLabel(rankSep: 50, edgeSep: 20, nodeSep: 50, rankDir: RankDir.ttb);
+  GraphLabel label = GraphLabel(
+    rankSep: 50,
+    edgeSep: 20,
+    nodeSep: 50,
+    rankDir: RankDir.ttb,
+  );
   label.nodeSep = graph.nodeSep;
   label.edgeSep = graph.edgeSep;
   label.rankSep = graph.rankSep;
@@ -121,7 +128,7 @@ void _runLayout(Graph g, DagreConfig config) {
   normalize.run(g);
   parentDummyChains(g);
   addBorderSegments(g);
-  order(g,config);
+  order(g, config);
   _insertSelfEdges(g);
   coordinate_system.adjust(g);
   position(g);
@@ -193,7 +200,10 @@ void _injectEdgeLabelProxies(Graph g) {
     if (bw && bh) {
       var v = g.node(e.v);
       var w = g.node(e.w);
-      var label = {rankK: (w.getD(rankK) - v.getD(rankK)) / 2 + v.getD(rankK), eK: e};
+      var label = {
+        rankK: (w.getD(rankK) - v.getD(rankK)) / 2 + v.getD(rankK),
+        eK: e,
+      };
       util.addDummyNode(g, Dummy.edgeProxy, label.toProps, "_ep");
     }
   }
@@ -229,8 +239,8 @@ void _translateGraph(Graph g) {
   var minY = double.maxFinite;
   double maxY = 0;
   var graphLabel = g.label;
-  var marginX =graphLabel.marginX;
-  var marginY =graphLabel.marginY;
+  var marginX = graphLabel.marginX;
+  var marginY = graphLabel.marginY;
 
   ///attrs is NodeProps or EdgeProps
   getExtremes(Props attrs) {
@@ -299,9 +309,28 @@ void _assignNodeIntersects(Graph g) {
       p2 = points.last;
     }
     points?.insert(
-        0, util.intersectRect(GraphRect(nodeV.getD(xK), nodeV.getD(yK), nodeV.getD(widthK), nodeV.getD(heightK)), p1));
+      0,
+      util.intersectRect(
+        GraphRect(
+          nodeV.getD(xK),
+          nodeV.getD(yK),
+          nodeV.getD(widthK),
+          nodeV.getD(heightK),
+        ),
+        p1,
+      ),
+    );
     points?.add(
-        util.intersectRect(GraphRect(nodeW.getD(xK), nodeW.getD(yK), nodeW.getD(widthK), nodeW.getD(heightK)), p2));
+      util.intersectRect(
+        GraphRect(
+          nodeW.getD(xK),
+          nodeW.getD(yK),
+          nodeW.getD(widthK),
+          nodeW.getD(heightK),
+        ),
+        p2,
+      ),
+    );
   }
 }
 
@@ -310,7 +339,8 @@ void _fixupEdgeLabelCoords(Graph g) {
     var edge = g.edge2(e);
     var xValue = edge.getD2(xK);
     if (xValue != null) {
-      if (edge.get2(labelPosK) == LabelPosition.left || edge.get2(labelPosK) == LabelPosition.right) {
+      if (edge.get2(labelPosK) == LabelPosition.left ||
+          edge.get2(labelPosK) == LabelPosition.right) {
         edge[widthK] = edge.getD(widthK) - edge.getD(labelOffsetK);
       }
 
@@ -364,7 +394,9 @@ void _removeSelfEdges(Graph g) {
     if (e.v == e.w) {
       var node = g.node(e.v);
       // dagre.js creates the list on first use (`node.selfEdges ??= []`).
-      node.get<List<SelfEdgeData>>(selfEdgesK, <SelfEdgeData>[]).add(SelfEdgeData(e, g.edge2(e)));
+      node
+          .get<List<SelfEdgeData>>(selfEdgesK, <SelfEdgeData>[])
+          .add(SelfEdgeData(e, g.edge2(e)));
       g.removeEdge2(e);
     }
   }
@@ -389,7 +421,6 @@ void _insertSelfEdges(Graph g) {
       }
       node.remove(selfEdgesK);
     });
-
   }
 }
 
@@ -409,7 +440,7 @@ void _positionSelfEdges(Graph g) {
         GraphPoint(x + 5 * dx / 6, y - dy),
         GraphPoint(x + dx, y),
         GraphPoint(x + 5 * dx / 6, y + dy),
-        GraphPoint(x + 2 * dx / 3, y + dy)
+        GraphPoint(x + 2 * dx / 3, y + dy),
       ];
       node.get<Props>(labelK)[xK] = node.get(xK);
       node.get<Props>(labelK)[yK] = node.get(yK);

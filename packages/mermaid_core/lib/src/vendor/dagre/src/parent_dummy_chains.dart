@@ -20,7 +20,8 @@ void parentDummyChains(Graph g) {
       node = g.node(v);
 
       if (ascending) {
-        while ((pathV = path[pathIdx]) != lca && g.node(pathV!).getD(maxRankK) < node.getD(rankK)) {
+        while ((pathV = path[pathIdx]) != lca &&
+            g.node(pathV!).getD(maxRankK) < node.getD(rankK)) {
           pathIdx++;
         }
 
@@ -30,7 +31,9 @@ void parentDummyChains(Graph g) {
       }
 
       if (!ascending) {
-        while (pathIdx < path.length - 1 && g.node((pathV = path[pathIdx + 1])!).getD(minRankK) <= node.getD(rankK)) {
+        while (pathIdx < path.length - 1 &&
+            g.node((pathV = path[pathIdx + 1])!).getD(minRankK) <=
+                node.getD(rankK)) {
           pathIdx++;
         }
         pathV = path[pathIdx];
@@ -44,7 +47,12 @@ void parentDummyChains(Graph g) {
 
 // Find a path from v to w through the lowest common ancestor (LCA). Return the
 // full path and the LCA.
-_InnerResult _findPath(Graph g, Map<String, _InnerResult2> postorderNums, String v, String w) {
+_InnerResult _findPath(
+  Graph g,
+  Map<String, _InnerResult2> postorderNums,
+  String v,
+  String w,
+) {
   List<String?> vPath = [];
   List<String> wPath = [];
   var low = math.min(postorderNums[v]!.low, postorderNums[w]!.low);
@@ -57,7 +65,8 @@ _InnerResult _findPath(Graph g, Map<String, _InnerResult2> postorderNums, String
   do {
     parent = g.parent(parent!);
     vPath.add(parent);
-  } while (parent != null && (postorderNums[parent]!.low > low || lim > postorderNums[parent]!.lim));
+  } while (parent != null &&
+      (postorderNums[parent]!.low > low || lim > postorderNums[parent]!.lim));
   lca = parent;
 
   // Traverse from w to LCA
@@ -75,7 +84,7 @@ _InnerResult _findPath(Graph g, Map<String, _InnerResult2> postorderNums, String
 Map<String, _InnerResult2> _postorder(Graph g) {
   Map<String, _InnerResult2> result = {};
   var lim = 0;
- void dfs(String v) {
+  void dfs(String v) {
     var low = lim;
     g.children(v)?.forEach(dfs);
     _InnerResult2 result2 = _InnerResult2();

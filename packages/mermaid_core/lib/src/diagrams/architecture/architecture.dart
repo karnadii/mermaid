@@ -151,7 +151,6 @@ ArchitectureDiagram parseArchitecture(String source) {
   final alignments = <ArchAlignment>[];
   var seenHeader = false;
 
-
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i].trim();
     final c = line.indexOf('%%');

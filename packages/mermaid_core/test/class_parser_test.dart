@@ -42,7 +42,9 @@ void main() {
 
   group('members', () {
     test('block body attributes and methods', () {
-      final d = parse('class Animal {\n+String name\n-int age\n+eat(food) : bool\n}');
+      final d = parse(
+        'class Animal {\n+String name\n-int age\n+eat(food) : bool\n}',
+      );
       final c = d.classes['Animal']!;
       expect(c.attributes.map((m) => m.text), ['+String name', '-int age']);
       expect(c.methods.map((m) => m.text), ['+eat(food) : bool']);
@@ -60,11 +62,18 @@ void main() {
     });
     test('visibility prefixes preserved', () {
       final d = parse('A : +pub\nA : -priv\nA : #prot\nA : ~pkg');
-      expect(d.classes['A']!.attributes.map((m) => m.text),
-          ['+pub', '-priv', '#prot', '~pkg']);
+      expect(d.classes['A']!.attributes.map((m) => m.text), [
+        '+pub',
+        '-priv',
+        '#prot',
+        '~pkg',
+      ]);
     });
     test('static and abstract classifiers', () {
-      final d = parse(r'A : +instances() int$' '\nA : +area()*');
+      final d = parse(
+        r'A : +instances() int$'
+        '\nA : +area()*',
+      );
       expect(d.classes['A']!.methods[0].isStatic, isTrue);
       expect(d.classes['A']!.methods[1].isAbstract, isTrue);
       expect(d.classes['A']!.methods[1].text, '+area()');
@@ -160,7 +169,8 @@ void main() {
     });
     test('nested namespaces', () {
       final d = parse(
-          'namespace Outer {\nnamespace Inner {\nclass A\n}\nclass B\n}');
+        'namespace Outer {\nnamespace Inner {\nclass A\n}\nclass B\n}',
+      );
       expect(d.namespaces.length, 2);
       final outer = d.namespaces.firstWhere((n) => n.id == 'Outer');
       expect(outer.classIds, containsAll(['A', 'B']));
@@ -191,7 +201,9 @@ void main() {
       expect(d.classes['A']!.link, 'https://example.com');
     });
     test('frontmatter title', () {
-      final d = parseClassDiagram('---\ntitle: Animals\n---\nclassDiagram\nclass A');
+      final d = parseClassDiagram(
+        '---\ntitle: Animals\n---\nclassDiagram\nclass A',
+      );
       expect(d.title, 'Animals');
     });
     test('comments ignored', () {
@@ -201,8 +213,9 @@ void main() {
     test('garbage throws with line number', () {
       expect(
         () => parse('class A\n!!nonsense!!'),
-        throwsA(isA<MermaidParseException>()
-            .having((e) => e.line, 'line', isNotNull)),
+        throwsA(
+          isA<MermaidParseException>().having((e) => e.line, 'line', isNotNull),
+        ),
       );
     });
   });

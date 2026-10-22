@@ -22,7 +22,7 @@ void main() {
 
       // Snapshot the good order.
       final saved = SweepCopy([
-        [a, b, c]
+        [a, b, c],
       ]);
 
       // Scramble both node order and b's port order.
@@ -50,7 +50,7 @@ void main() {
       layer.nodes.addAll([a, b]);
 
       final original = SweepCopy([
-        [a, b]
+        [a, b],
       ]);
       final copy = SweepCopy.from(original);
       // Mutating the copy's top-level list must not affect the original.

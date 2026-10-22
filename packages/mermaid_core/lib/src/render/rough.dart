@@ -32,14 +32,14 @@ RenderScene roughenScene(RenderScene scene, {int seed = 0}) {
 SceneNode _roughenNode(SceneNode node, int seed) {
   switch (node) {
     case SceneGroup(
-        :final children,
-        :final id,
-        :final role,
-        :final semanticLabel,
-        :final link,
-        :final tooltip,
-        :final edge
-      ):
+      :final children,
+      :final id,
+      :final role,
+      :final semanticLabel,
+      :final link,
+      :final tooltip,
+      :final edge,
+    ):
       // Math expressions stay crisp — sketching glyph outlines is illegible.
       if (id == mathSceneGroupId) return node;
       // Mermaid's arrowheads remain SVG markers in hand-drawn mode. Roughening
@@ -143,21 +143,35 @@ class _Line extends _Op {
 }
 
 List<PathCommand> _toCommands(List<_Op> ops) => [
-      for (final op in ops)
-        switch (op) {
-          _Move(:final x, :final y) => MoveTo(Point(x, y)),
-          _Bcurve(:final c1x, :final c1y, :final c2x, :final c2y, :final x, :final y) =>
-            CubicTo(Point(c1x, c1y), Point(c2x, c2y), Point(x, y)),
-          _Line(:final x, :final y) => LineTo(Point(x, y)),
-        }
-    ];
+  for (final op in ops)
+    switch (op) {
+      _Move(:final x, :final y) => MoveTo(Point(x, y)),
+      _Bcurve(
+        :final c1x,
+        :final c1y,
+        :final c2x,
+        :final c2y,
+        :final x,
+        :final y,
+      ) =>
+        CubicTo(Point(c1x, c1y), Point(c2x, c2y), Point(x, y)),
+      _Line(:final x, :final y) => LineTo(Point(x, y)),
+    },
+];
 
 // ---------------------------------------------------------------------------
 // rough renderer port: _line / doubleLine / linearPath / curve / ellipse.
 // ---------------------------------------------------------------------------
 
 List<_Op> _lineOps(
-    double x1, double y1, double x2, double y2, _Opts o, bool move, bool overlay) {
+  double x1,
+  double y1,
+  double x2,
+  double y2,
+  _Opts o,
+  bool move,
+  bool overlay,
+) {
   final lengthSq = math.pow(x1 - x2, 2) + math.pow(y1 - y2, 2);
   final length = math.sqrt(lengthSq);
   double gain;
@@ -190,23 +204,27 @@ List<_Op> _lineOps(
     }
   }
   if (overlay) {
-    ops.add(_Bcurve(
-      midDispX + x1 + (x2 - x1) * divergePoint + randHalf(),
-      midDispY + y1 + (y2 - y1) * divergePoint + randHalf(),
-      midDispX + x1 + 2 * (x2 - x1) * divergePoint + randHalf(),
-      midDispY + y1 + 2 * (y2 - y1) * divergePoint + randHalf(),
-      x2 + randHalf(),
-      y2 + randHalf(),
-    ));
+    ops.add(
+      _Bcurve(
+        midDispX + x1 + (x2 - x1) * divergePoint + randHalf(),
+        midDispY + y1 + (y2 - y1) * divergePoint + randHalf(),
+        midDispX + x1 + 2 * (x2 - x1) * divergePoint + randHalf(),
+        midDispY + y1 + 2 * (y2 - y1) * divergePoint + randHalf(),
+        x2 + randHalf(),
+        y2 + randHalf(),
+      ),
+    );
   } else {
-    ops.add(_Bcurve(
-      midDispX + x1 + (x2 - x1) * divergePoint + randFull(),
-      midDispY + y1 + (y2 - y1) * divergePoint + randFull(),
-      midDispX + x1 + 2 * (x2 - x1) * divergePoint + randFull(),
-      midDispY + y1 + 2 * (y2 - y1) * divergePoint + randFull(),
-      x2 + randFull(),
-      y2 + randFull(),
-    ));
+    ops.add(
+      _Bcurve(
+        midDispX + x1 + (x2 - x1) * divergePoint + randFull(),
+        midDispY + y1 + (y2 - y1) * divergePoint + randFull(),
+        midDispX + x1 + 2 * (x2 - x1) * divergePoint + randFull(),
+        midDispY + y1 + 2 * (y2 - y1) * divergePoint + randFull(),
+        x2 + randFull(),
+        y2 + randFull(),
+      ),
+    );
   }
   return ops;
 }
@@ -222,10 +240,14 @@ List<_Op> _linearPath(List<Point> pts, bool close, _Opts o) {
   if (len > 2) {
     final ops = <_Op>[];
     for (var i = 0; i < len - 1; i++) {
-      ops.addAll(_doubleLine(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, o));
+      ops.addAll(
+        _doubleLine(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, o),
+      );
     }
     if (close) {
-      ops.addAll(_doubleLine(pts[len - 1].x, pts[len - 1].y, pts[0].x, pts[0].y, o));
+      ops.addAll(
+        _doubleLine(pts[len - 1].x, pts[len - 1].y, pts[0].x, pts[0].y, o),
+      );
     }
     return ops;
   } else if (len == 2) {
@@ -250,25 +272,51 @@ List<_Op> _curve(List<Point> points, _Opts o) {
         points[i + 1].x + (s * points[i].x - s * points[i + 2].x) / 6,
         points[i + 1].y + (s * points[i].y - s * points[i + 2].y) / 6,
       );
-      ops.add(_Bcurve(b1.x, b1.y, b2.x, b2.y, points[i + 1].x, points[i + 1].y));
+      ops.add(
+        _Bcurve(b1.x, b1.y, b2.x, b2.y, points[i + 1].x, points[i + 1].y),
+      );
     }
   } else if (len == 3) {
     ops.add(_Move(points[1].x, points[1].y));
-    ops.add(_Bcurve(points[1].x, points[1].y, points[2].x, points[2].y,
-        points[2].x, points[2].y));
+    ops.add(
+      _Bcurve(
+        points[1].x,
+        points[1].y,
+        points[2].x,
+        points[2].y,
+        points[2].x,
+        points[2].y,
+      ),
+    );
   } else if (len == 2) {
-    ops.addAll(_lineOps(points[0].x, points[0].y, points[1].x, points[1].y, o, true, true));
+    ops.addAll(
+      _lineOps(
+        points[0].x,
+        points[0].y,
+        points[1].x,
+        points[1].y,
+        o,
+        true,
+        true,
+      ),
+    );
   }
   return ops;
 }
 
-
 ({double increment, double rx, double ry}) _ellipseParams(
-    double width, double height, _Opts o) {
+  double width,
+  double height,
+  _Opts o,
+) {
   final psq = math.sqrt(
-      math.pi * 2 * math.sqrt((math.pow(width / 2, 2) + math.pow(height / 2, 2)) / 2));
-  final stepCount =
-      math.max(o.curveStepCount, o.curveStepCount / math.sqrt(200) * psq).ceil();
+    math.pi *
+        2 *
+        math.sqrt((math.pow(width / 2, 2) + math.pow(height / 2, 2)) / 2),
+  );
+  final stepCount = math
+      .max(o.curveStepCount, o.curveStepCount / math.sqrt(200) * psq)
+      .ceil();
   final increment = math.pi * 2 / stepCount;
   var rx = (width / 2).abs();
   var ry = (height / 2).abs();
@@ -278,43 +326,86 @@ List<_Op> _curve(List<Point> points, _Opts o) {
   return (increment: increment, rx: rx, ry: ry);
 }
 
-List<Point> _computeEllipsePoints(double increment, double cx, double cy,
-    double rx, double ry, double offset, double overlap, _Opts o) {
+List<Point> _computeEllipsePoints(
+  double increment,
+  double cx,
+  double cy,
+  double rx,
+  double ry,
+  double offset,
+  double overlap,
+  _Opts o,
+) {
   final all = <Point>[];
   final radOffset = _offsetOpt(0.5, o) - math.pi / 2;
-  all.add(Point(
-    _offsetOpt(offset, o) + cx + 0.9 * rx * math.cos(radOffset - increment),
-    _offsetOpt(offset, o) + cy + 0.9 * ry * math.sin(radOffset - increment),
-  ));
+  all.add(
+    Point(
+      _offsetOpt(offset, o) + cx + 0.9 * rx * math.cos(radOffset - increment),
+      _offsetOpt(offset, o) + cy + 0.9 * ry * math.sin(radOffset - increment),
+    ),
+  );
   final endAngle = math.pi * 2 + radOffset - 0.01;
   for (var angle = radOffset; angle < endAngle; angle += increment) {
-    all.add(Point(
-      _offsetOpt(offset, o) + cx + rx * math.cos(angle),
-      _offsetOpt(offset, o) + cy + ry * math.sin(angle),
-    ));
+    all.add(
+      Point(
+        _offsetOpt(offset, o) + cx + rx * math.cos(angle),
+        _offsetOpt(offset, o) + cy + ry * math.sin(angle),
+      ),
+    );
   }
-  all.add(Point(
-    _offsetOpt(offset, o) + cx + rx * math.cos(radOffset + math.pi * 2 + overlap * 0.5),
-    _offsetOpt(offset, o) + cy + ry * math.sin(radOffset + math.pi * 2 + overlap * 0.5),
-  ));
-  all.add(Point(
-    _offsetOpt(offset, o) + cx + 0.98 * rx * math.cos(radOffset + overlap),
-    _offsetOpt(offset, o) + cy + 0.98 * ry * math.sin(radOffset + overlap),
-  ));
-  all.add(Point(
-    _offsetOpt(offset, o) + cx + 0.9 * rx * math.cos(radOffset + overlap * 0.5),
-    _offsetOpt(offset, o) + cy + 0.9 * ry * math.sin(radOffset + overlap * 0.5),
-  ));
+  all.add(
+    Point(
+      _offsetOpt(offset, o) +
+          cx +
+          rx * math.cos(radOffset + math.pi * 2 + overlap * 0.5),
+      _offsetOpt(offset, o) +
+          cy +
+          ry * math.sin(radOffset + math.pi * 2 + overlap * 0.5),
+    ),
+  );
+  all.add(
+    Point(
+      _offsetOpt(offset, o) + cx + 0.98 * rx * math.cos(radOffset + overlap),
+      _offsetOpt(offset, o) + cy + 0.98 * ry * math.sin(radOffset + overlap),
+    ),
+  );
+  all.add(
+    Point(
+      _offsetOpt(offset, o) +
+          cx +
+          0.9 * rx * math.cos(radOffset + overlap * 0.5),
+      _offsetOpt(offset, o) +
+          cy +
+          0.9 * ry * math.sin(radOffset + overlap * 0.5),
+    ),
+  );
   return all;
 }
 
 List<_Op> _ellipse(double cx, double cy, double width, double height, _Opts o) {
   final p = _ellipseParams(width, height, o);
-  final ap1 = _computeEllipsePoints(p.increment, cx, cy, p.rx, p.ry, 1,
-      p.increment * _offset(0.1, _offset(0.4, 1, o), o), o);
+  final ap1 = _computeEllipsePoints(
+    p.increment,
+    cx,
+    cy,
+    p.rx,
+    p.ry,
+    1,
+    p.increment * _offset(0.1, _offset(0.4, 1, o), o),
+    o,
+  );
   var o1 = _curve(ap1, o);
   if (!o.disableMultiStroke) {
-    final ap2 = _computeEllipsePoints(p.increment, cx, cy, p.rx, p.ry, 1.5, 0, o);
+    final ap2 = _computeEllipsePoints(
+      p.increment,
+      cx,
+      cy,
+      p.rx,
+      p.ry,
+      1.5,
+      0,
+      o,
+    );
     o1 = [...o1, ..._curve(ap2, o)];
   }
   return o1;
@@ -325,7 +416,11 @@ List<_Op> _ellipse(double cx, double cy, double width, double height, _Opts o) {
 // ---------------------------------------------------------------------------
 
 List<(Point, Point)> _hachureLines(
-    List<Point> polygon, double gapIn, double angle, int skipOffset) {
+  List<Point> polygon,
+  double gapIn,
+  double angle,
+  int skipOffset,
+) {
   final gap = math.max(gapIn, 0.1);
   final center = const Point(0, 0);
   // Rotate into hachure-aligned space (angle in degrees).
@@ -334,8 +429,10 @@ List<(Point, Point)> _hachureLines(
     final c = math.cos(f), s = math.sin(f);
     return [
       for (final p in pts)
-        Point((p.x - center.x) * c - (p.y - center.y) * s + center.x,
-            (p.x - center.x) * s + (p.y - center.y) * c + center.y)
+        Point(
+          (p.x - center.x) * c - (p.y - center.y) * s + center.x,
+          (p.x - center.x) * s + (p.y - center.y) * c + center.y,
+        ),
     ];
   }
 
@@ -354,12 +451,14 @@ List<(Point, Point)> _hachureLines(
     final p1 = poly[i], p2 = poly[i + 1];
     if (p1.y != p2.y) {
       final ymin = math.min(p1.y, p2.y);
-      edges.add(_ScanEdge(
-        ymin,
-        math.max(p1.y, p2.y),
-        ymin == p1.y ? p1.x : p2.x,
-        (p2.x - p1.x) / (p2.y - p1.y),
-      ));
+      edges.add(
+        _ScanEdge(
+          ymin,
+          math.max(p1.y, p2.y),
+          ymin == p1.y ? p1.x : p2.x,
+          (p2.x - p1.x) / (p2.y - p1.y),
+        ),
+      );
     }
   }
   edges.sort((a, b) {
@@ -426,14 +525,16 @@ class _ScanEdge {
 
 List<SceneNode> _roughenShape(SceneShape shape, int seed) {
   final out = <SceneNode>[];
-  final isEllipse = shape.geometry is CircleGeometry || shape.geometry is EllipseGeometry;
+  final isEllipse =
+      shape.geometry is CircleGeometry || shape.geometry is EllipseGeometry;
   // A closed PathGeometry (pie wedge, radar area) encloses a fillable region;
   // flatten it to a polygon outline so hachure clipping has a ring to work on.
   final geom = shape.geometry;
   final isClosedPath =
       geom is PathGeometry && shape.fill != null && _pathIsClosed(geom);
-  final outline =
-      isClosedPath ? _flattenPath(geom) : _outlinePoints(shape.geometry);
+  final outline = isClosedPath
+      ? _flattenPath(geom)
+      : _outlinePoints(shape.geometry);
   final closed = isClosedPath || _isClosed(shape.geometry);
 
   // Hachure fill under the outline.
@@ -441,29 +542,37 @@ List<SceneNode> _roughenShape(SceneShape shape, int seed) {
     final o = _Opts(seed);
     // hachureAngle + 90, exactly as polygonHachureLines.
     var skip = 1;
-    if (o.roughness >= 1 && o.randomizer.next() > 0.7) skip = o.hachureGap.round();
-    final lines = _hachureLines(outline, o.hachureGap, o.hachureAngle + 90, skip);
+    if (o.roughness >= 1 && o.randomizer.next() > 0.7)
+      skip = o.hachureGap.round();
+    final lines = _hachureLines(
+      outline,
+      o.hachureGap,
+      o.hachureAngle + 90,
+      skip,
+    );
     final ops = <_Op>[];
     for (final (a, b) in lines) {
       ops.addAll(_doubleLine(a.x, a.y, b.x, b.y, o));
     }
     if (ops.isNotEmpty) {
-      out.add(SceneShape(
-        geometry: PathGeometry(_toCommands(ops)),
-        // roughjs strokes hachure lines at the full `fillWeight`; halving it
-        // (the old value) left wide gaps so the page showed through as stripes
-        // — illegible over a dark background. Full weight makes the dense lines
-        // read as a solid fill, as upstream does.
-        stroke: Stroke(
-          color: shape.fill!.color,
-          width: o.fillWeight,
-          // A gradient fill must stay a gradient once it becomes hachure
-          // strokes, otherwise the sketch collapses to the fallback color.
-          gradient: shape.fill!.gradient,
+      out.add(
+        SceneShape(
+          geometry: PathGeometry(_toCommands(ops)),
+          // roughjs strokes hachure lines at the full `fillWeight`; halving it
+          // (the old value) left wide gaps so the page showed through as stripes
+          // — illegible over a dark background. Full weight makes the dense lines
+          // read as a solid fill, as upstream does.
+          stroke: Stroke(
+            color: shape.fill!.color,
+            width: o.fillWeight,
+            // A gradient fill must stay a gradient once it becomes hachure
+            // strokes, otherwise the sketch collapses to the fallback color.
+            gradient: shape.fill!.gradient,
+          ),
+          blendMode: shape.blendMode,
+          paintRole: _roughFillRole(shape.paintRole),
         ),
-        blendMode: shape.blendMode,
-        paintRole: _roughFillRole(shape.paintRole),
-      ));
+      );
     }
   }
 
@@ -481,19 +590,21 @@ List<SceneNode> _roughenShape(SceneShape shape, int seed) {
     } else {
       ops = _linearPath(outline, true, o);
     }
-    out.add(SceneShape(
-      geometry: PathGeometry(_toCommands(ops)),
-      stroke: Stroke(
-        color: strokeColor,
-        width: width,
-        dash: shape.stroke?.dash,
-        // Gradient strokes (sankey lanes) must survive the sketch pass; the
-        // gradient is in absolute scene coordinates, which roughening keeps.
-        gradient: shape.stroke?.gradient,
+    out.add(
+      SceneShape(
+        geometry: PathGeometry(_toCommands(ops)),
+        stroke: Stroke(
+          color: strokeColor,
+          width: width,
+          dash: shape.stroke?.dash,
+          // Gradient strokes (sankey lanes) must survive the sketch pass; the
+          // gradient is in absolute scene coordinates, which roughening keeps.
+          gradient: shape.stroke?.gradient,
+        ),
+        blendMode: shape.blendMode,
+        paintRole: _roughStrokeRole(shape.paintRole),
       ),
-      blendMode: shape.blendMode,
-      paintRole: _roughStrokeRole(shape.paintRole),
-    ));
+    );
   }
 
   return out;
@@ -502,17 +613,17 @@ List<SceneNode> _roughenShape(SceneShape shape, int seed) {
 /// Role for the hachure pass that replaces a filled primitive. Arrowheads
 /// ([ScenePaintRole.edgeMarker]) never reach here — they are copied verbatim.
 ScenePaintRole _roughFillRole(ScenePaintRole role) => switch (role) {
-      ScenePaintRole.nodeBody => ScenePaintRole.nodeFill,
-      ScenePaintRole.nodeLabel => ScenePaintRole.nodeLabelFill,
-      _ => role,
-    };
+  ScenePaintRole.nodeBody => ScenePaintRole.nodeFill,
+  ScenePaintRole.nodeLabel => ScenePaintRole.nodeLabelFill,
+  _ => role,
+};
 
 /// Role for the sketch pass that replaces a stroked primitive.
 ScenePaintRole _roughStrokeRole(ScenePaintRole role) => switch (role) {
-      ScenePaintRole.nodeBody => ScenePaintRole.nodeStroke,
-      ScenePaintRole.nodeLabel => ScenePaintRole.nodeLabelStroke,
-      _ => role,
-    };
+  ScenePaintRole.nodeBody => ScenePaintRole.nodeStroke,
+  ScenePaintRole.nodeLabel => ScenePaintRole.nodeLabelStroke,
+  _ => role,
+};
 
 /// Roughen an open path (e.g. a flowchart edge): flatten beziers to points,
 /// then sketch the polyline with doubled lines.
@@ -559,43 +670,59 @@ List<_Op> _roughPath(PathGeometry g, _Opts o) {
 }
 
 bool _isClosed(ShapeGeometry g) => switch (g) {
-      RectGeometry() => true,
-      CircleGeometry() => true,
-      EllipseGeometry() => true,
-      PolygonGeometry() => true,
-      PathGeometry() => false,
-    };
+  RectGeometry() => true,
+  CircleGeometry() => true,
+  EllipseGeometry() => true,
+  PolygonGeometry() => true,
+  PathGeometry() => false,
+};
 
 List<Point> _outlinePoints(ShapeGeometry g) => switch (g) {
-      RectGeometry(:final rect) => [
-          Point(rect.left, rect.top),
-          Point(rect.right, rect.top),
-          Point(rect.right, rect.bottom),
-          Point(rect.left, rect.bottom),
-        ],
-      CircleGeometry(:final center, :final radius) =>
-        _polyEllipse(center, radius, radius),
-      EllipseGeometry(:final center, :final rx, :final ry) =>
-        _polyEllipse(center, rx, ry),
-      PolygonGeometry(:final points) => points,
-      PathGeometry() => const [],
-    };
+  RectGeometry(:final rect) => [
+    Point(rect.left, rect.top),
+    Point(rect.right, rect.top),
+    Point(rect.right, rect.bottom),
+    Point(rect.left, rect.bottom),
+  ],
+  CircleGeometry(:final center, :final radius) => _polyEllipse(
+    center,
+    radius,
+    radius,
+  ),
+  EllipseGeometry(:final center, :final rx, :final ry) => _polyEllipse(
+    center,
+    rx,
+    ry,
+  ),
+  PolygonGeometry(:final points) => points,
+  PathGeometry() => const [],
+};
 
 (double, double, double, double) _ellipseBox(ShapeGeometry g) => switch (g) {
-      CircleGeometry(:final center, :final radius) =>
-        (center.x, center.y, radius * 2, radius * 2),
-      EllipseGeometry(:final center, :final rx, :final ry) =>
-        (center.x, center.y, rx * 2, ry * 2),
-      _ => (0, 0, 0, 0),
-    };
+  CircleGeometry(:final center, :final radius) => (
+    center.x,
+    center.y,
+    radius * 2,
+    radius * 2,
+  ),
+  EllipseGeometry(:final center, :final rx, :final ry) => (
+    center.x,
+    center.y,
+    rx * 2,
+    ry * 2,
+  ),
+  _ => (0, 0, 0, 0),
+};
 
 /// A polygon ring approximating an ellipse, used only for hachure clipping.
 List<Point> _polyEllipse(Point c, double rx, double ry) {
   const n = 24;
   return [
     for (var i = 0; i < n; i++)
-      Point(c.x + rx * math.cos(2 * math.pi * i / n),
-          c.y + ry * math.sin(2 * math.pi * i / n)),
+      Point(
+        c.x + rx * math.cos(2 * math.pi * i / n),
+        c.y + ry * math.sin(2 * math.pi * i / n),
+      ),
   ];
 }
 
@@ -642,12 +769,16 @@ List<Point> _flattenPath(PathGeometry g) {
 Point _cubic(Point p0, Point p1, Point p2, Point p3, double t) {
   final u = 1 - t;
   final a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
-  return Point(a * p0.x + b * p1.x + c * p2.x + d * p3.x,
-      a * p0.y + b * p1.y + c * p2.y + d * p3.y);
+  return Point(
+    a * p0.x + b * p1.x + c * p2.x + d * p3.x,
+    a * p0.y + b * p1.y + c * p2.y + d * p3.y,
+  );
 }
 
 Point _quad(Point p0, Point p1, Point p2, double t) {
   final u = 1 - t;
-  return Point(u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
-      u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y);
+  return Point(
+    u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
+    u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y,
+  );
 }

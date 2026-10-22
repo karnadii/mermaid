@@ -191,8 +191,7 @@ class C4Rel {
     Color? lineColor,
     double? offsetX,
     double? offsetY,
-  }) =>
-      C4Rel(
+  }) => C4Rel(
     from: from,
     to: to,
     label: label,
@@ -469,8 +468,9 @@ String _c4StyleKey(String functionName) {
   final base = external
       ? functionName.substring(0, functionName.length - 4)
       : functionName;
-  final snake =
-      base.replaceAllMapped(_c4CamelBoundary, (_) => '_').toLowerCase();
+  final snake = base
+      .replaceAllMapped(_c4CamelBoundary, (_) => '_')
+      .toLowerCase();
   return external ? 'external_$snake' : snake;
 }
 
@@ -504,45 +504,44 @@ Map<String, String> _styleArgs(Iterable<String> args) {
   if (n.external) {
     return switch (n.kind) {
       C4Kind.personExt || C4Kind.person => (
-          fill: theme.c4ExternalPersonFill,
-          border: theme.c4ExternalPersonBorder,
-        ),
+        fill: theme.c4ExternalPersonFill,
+        border: theme.c4ExternalPersonBorder,
+      ),
       C4Kind.systemExt || C4Kind.system || C4Kind.db || C4Kind.queue => (
-          fill: theme.c4ExternalSystemFill,
-          border: theme.c4ExternalSystemBorder,
-        ),
+        fill: theme.c4ExternalSystemFill,
+        border: theme.c4ExternalSystemBorder,
+      ),
       C4Kind.container => (
-          fill: theme.c4ExternalContainerFill,
-          border: theme.c4ExternalContainerBorder,
-        ),
+        fill: theme.c4ExternalContainerFill,
+        border: theme.c4ExternalContainerBorder,
+      ),
       C4Kind.component => (
-          fill: theme.c4ExternalComponentFill,
-          border: theme.c4ExternalComponentBorder,
-        ),
+        fill: theme.c4ExternalComponentFill,
+        border: theme.c4ExternalComponentBorder,
+      ),
     };
   }
   return switch (n.kind) {
     C4Kind.person => (fill: theme.c4PersonFill, border: theme.c4PersonBorder),
     C4Kind.personExt => (
-        fill: theme.c4PersonExtFill,
-        border: theme.c4PersonExtBorder,
-      ),
+      fill: theme.c4PersonExtFill,
+      border: theme.c4PersonExtBorder,
+    ),
     C4Kind.systemExt => (
-        fill: theme.c4SystemExtFill,
-        border: theme.c4SystemExtBorder,
-      ),
-    C4Kind.system || C4Kind.db || C4Kind.queue => (
-        fill: theme.c4SystemFill,
-        border: theme.c4SystemBorder
-      ),
+      fill: theme.c4SystemExtFill,
+      border: theme.c4SystemExtBorder,
+    ),
+    C4Kind.system ||
+    C4Kind.db ||
+    C4Kind.queue => (fill: theme.c4SystemFill, border: theme.c4SystemBorder),
     C4Kind.container => (
-        fill: theme.c4ContainerFill,
-        border: theme.c4ContainerBorder,
-      ),
+      fill: theme.c4ContainerFill,
+      border: theme.c4ContainerBorder,
+    ),
     C4Kind.component => (
-        fill: theme.c4ComponentFill,
-        border: theme.c4ComponentBorder,
-      ),
+      fill: theme.c4ComponentFill,
+      border: theme.c4ComponentBorder,
+    ),
   };
 }
 
@@ -648,8 +647,9 @@ class C4Config {
         '${prefix}FontFamily',
         '"Open Sans", sans-serif',
       ),
-      fontSize:
-          parsedSize != null && parsedSize >= 0 ? parsedSize : defaultSize,
+      fontSize: parsedSize != null && parsedSize >= 0
+          ? parsedSize
+          : defaultSize,
       fontWeight: parsedWeight ?? 400,
     );
   }
@@ -690,8 +690,7 @@ RenderScene layoutC4Diagram(
     double sizeDelta = 0,
     int? weight,
     bool italic = false,
-  }) =>
-      TextStyleSpec(
+  }) => TextStyleSpec(
     fontFamily: base.fontFamily,
     fontSize: math.max(0, base.fontSize + sizeDelta),
     fontWeight: weight ?? base.fontWeight,
@@ -721,7 +720,8 @@ RenderScene layoutC4Diagram(
           measurer.measure('[${boundary.type}]', boundaryTypeStyle).height + 2;
     }
     if (boundary.description.isNotEmpty) {
-      height += measurer
+      height +=
+          measurer
               .measure(
                 boundary.description,
                 boundaryTypeStyle,
@@ -763,7 +763,8 @@ RenderScene layoutC4Diagram(
       desc.width,
     ].reduce(math.max);
     final w = math.max(config.width, contentW + config.c4ShapePadding * 2);
-    final contentH = config.c4ShapePadding + // top padding above stereotype
+    final contentH =
+        config.c4ShapePadding + // top padding above stereotype
         stereo.height +
         imageH +
         8 +
@@ -864,7 +865,8 @@ RenderScene layoutC4Diagram(
     final subs = childBoundaries[boundaryId] ?? const [];
     if (subs.isNotEmpty) {
       // Boundaries are laid out c4BoundaryInRow per row, below the shapes.
-      var rowStartY = (acc?.bottom ?? originY) +
+      var rowStartY =
+          (acc?.bottom ?? originY) +
           (shapeRect != null ? config.c4ShapeMargin : 0);
       var x = originX + config.diagramMarginX;
       var rowMaxBottom = rowStartY;
@@ -885,8 +887,9 @@ RenderScene layoutC4Diagram(
           x + _boundaryPadding,
           rowStartY + _boundaryPadding,
         );
-        final width =
-            packed == null ? config.width : packed.width + 2 * _boundaryPadding;
+        final width = packed == null
+            ? config.width
+            : packed.width + 2 * _boundaryPadding;
         final headerHeight = boundaryHeaderHeight(subs[bi], width);
         Rect rect;
         if (packed == null) {
@@ -1144,8 +1147,9 @@ RenderScene layoutC4Diagram(
 
     // Label at the midpoint (no background rect; C4Dynamic auto-numbers).
     final textColor = r.textColor ?? theme.c4TextColor;
-    final labelText =
-        diagram.subtype == C4Subtype.dynamic ? '${i + 1}: ${r.label}' : r.label;
+    final labelText = diagram.subtype == C4Subtype.dynamic
+        ? '${i + 1}: ${r.label}'
+        : r.label;
     var mid = Point((start.x + tip.x) / 2, (start.y + tip.y) / 2);
     if (labelText.isNotEmpty || r.technology.isNotEmpty) {
       final labelSize = labelText.isEmpty
@@ -1201,9 +1205,11 @@ RenderScene layoutC4Diagram(
       final candidates =
           <({Point mid, Rect bounds, double distance, int priority})>[];
       ({Point mid, Rect bounds, double distance, int priority})? fallback;
-      for (var directionIndex = 0;
+      for (
+        var directionIndex = 0;
         directionIndex < directions.length;
-          directionIndex++) {
+        directionIndex++
+      ) {
         final direction = directions[directionIndex];
         final xProjection = math.min(
           direction.x * -annotationWidth / 2,
@@ -1216,9 +1222,11 @@ RenderScene layoutC4Diagram(
         final baseDistance = 4 - xProjection - yProjection;
         var found = false;
         for (var radius = 0; radius < 40 && !found; radius++) {
-          for (var normalPass = 0;
+          for (
+            var normalPass = 0;
             normalPass <= radius && !found;
-              normalPass++) {
+            normalPass++
+          ) {
             final slidePass = radius - normalPass;
             final slideOffsets = slidePass == 0
                 ? const [0.0]
@@ -1252,7 +1260,8 @@ RenderScene layoutC4Diagram(
                   ),
                 ),
               );
-              final insideBoundary = containingBoundary == null ||
+              final insideBoundary =
+                  containingBoundary == null ||
                   rectContainsRect(containingBoundary, candidateBounds);
               if (!crossesStroke &&
                   !overlapsObstruction(candidateBounds) &&

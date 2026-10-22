@@ -168,8 +168,7 @@ TimelineDiagram parseTimeline(String source) {
   );
 }
 
-String _normalize(String s) =>
-    s.replaceAll(_lineBreakTag, '\n').trim();
+String _normalize(String s) => s.replaceAll(_lineBreakTag, '\n').trim();
 
 // Section/task/event fills are upstream's `cScale<i>` and the per-node bottom
 // underline uses `cScaleInv<i>` (`.section-<i> {rect,path,circle} fill:

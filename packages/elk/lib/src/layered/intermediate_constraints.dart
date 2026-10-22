@@ -91,23 +91,31 @@ enum PortConstraints {
 
 /// Layer constraint on a node.
 /// ELK: `LayeredOptions.LAYERING_LAYER_CONSTRAINT`.
-const layerConstraint =
-    Property<LayerConstraint>('layerConstraint', LayerConstraint.none);
+const layerConstraint = Property<LayerConstraint>(
+  'layerConstraint',
+  LayerConstraint.none,
+);
 
 /// In-layer placement constraint on a node.
 /// ELK: `InternalProperties.IN_LAYER_CONSTRAINT`.
-const inLayerConstraint =
-    Property<InLayerConstraint>('inLayerConstraint', InLayerConstraint.none);
+const inLayerConstraint = Property<InLayerConstraint>(
+  'inLayerConstraint',
+  InLayerConstraint.none,
+);
 
 /// Edge constraint set on a node by the reverser.
 /// ELK: `InternalProperties.EDGE_CONSTRAINT`.
-const edgeConstraint =
-    Property<EdgeConstraint>('edgeConstraint', EdgeConstraint.none);
+const edgeConstraint = Property<EdgeConstraint>(
+  'edgeConstraint',
+  EdgeConstraint.none,
+);
 
 /// Port-order / side-fixedness constraint on a node.
 /// ELK: `LayeredOptions.PORT_CONSTRAINTS`.
-const portConstraints =
-    Property<PortConstraints>('portConstraints', PortConstraints.free);
+const portConstraints = Property<PortConstraints>(
+  'portConstraints',
+  PortConstraints.free,
+);
 
 // ---------------------------------------------------------------------------
 // Private (file-local) Property constants used between pre- and postprocessor
@@ -119,15 +127,15 @@ const _hiddenNodes = Property<List<LNode>?>('layerConstraints.hiddenNodes');
 
 /// Saved opposite port when an edge is partially disconnected during hiding.
 /// ELK: `InternalProperties.ORIGINAL_OPPOSITE_PORT`.
-const _originalOppositePort =
-    Property<LPort?>('layerConstraints.oppositePort');
+const _originalOppositePort = Property<LPort?>('layerConstraints.oppositePort');
 
 /// Tracks which kinds of hidden nodes a normal node was connected to.
 /// Used during hide to decide if a spare layer constraint should be added.
 /// ELK: file-private `HIDDEN_NODE_CONNECTIONS` property.
-const _hiddenNodeConnections =
-    Property<_HiddenNodeConnections>(
-        'separateLayerConnections', _HiddenNodeConnections.none);
+const _hiddenNodeConnections = Property<_HiddenNodeConnections>(
+  'separateLayerConnections',
+  _HiddenNodeConnections.none,
+);
 
 // ---------------------------------------------------------------------------
 // _HiddenNodeConnections helper (file-private)
@@ -427,7 +435,9 @@ class LayerConstraintPreprocessor implements ILayoutProcessor {
   }
 
   void _updateOppositeNodeLayerConstraints(
-      LNode hiddenNode, LNode oppositeNode) {
+    LNode hiddenNode,
+    LNode oppositeNode,
+  ) {
     // If the opposite node already has a layer constraint, leave it alone.
     if (oppositeNode.hasProperty(layerConstraint as Property<Object?>)) return;
 
@@ -508,7 +518,12 @@ class LayerConstraintPostprocessor implements ILayoutProcessor {
       final lastLabelLayer = Layer(graph);
 
       _moveFirstAndLastNodes(
-          graph, firstLayer, lastLayer, firstLabelLayer, lastLabelLayer);
+        graph,
+        firstLayer,
+        lastLayer,
+        firstLabelLayer,
+        lastLabelLayer,
+      );
 
       if (firstLabelLayer.nodes.isNotEmpty) {
         layers.insert(0, firstLabelLayer);
@@ -569,12 +584,10 @@ class LayerConstraintPostprocessor implements ILayoutProcessor {
     graph.layers.removeWhere((l) => l.nodes.isEmpty);
   }
 
-  void _moveLabelsToLabelLayer(
-      LNode node, bool incoming, Layer labelLayer) {
+  void _moveLabelsToLabelLayer(LNode node, bool incoming, Layer labelLayer) {
     final edges = incoming ? node.incomingEdges : node.outgoingEdges;
     for (final edge in edges) {
-      final candidate =
-          incoming ? edge.source?.node : edge.target?.node;
+      final candidate = incoming ? edge.source?.node : edge.target?.node;
       if (candidate != null && candidate.type == NodeType.label) {
         _setLayer(candidate, labelLayer);
       }
@@ -584,7 +597,10 @@ class LayerConstraintPostprocessor implements ILayoutProcessor {
   // ---- FIRST_SEPARATE / LAST_SEPARATE restoration -------------------------
 
   void _restoreHiddenNodes(
-      LGraph graph, Layer firstSepLayer, Layer lastSepLayer) {
+    LGraph graph,
+    Layer firstSepLayer,
+    Layer lastSepLayer,
+  ) {
     final hidden = graph.getProperty(_hiddenNodes) ?? [];
     for (final node in hidden) {
       final lc = node.getProperty(layerConstraint);

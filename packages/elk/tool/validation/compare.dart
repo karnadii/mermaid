@@ -15,12 +15,15 @@ import 'package:elk/elk.dart';
 
 void main() {
   final dir = File(Platform.script.toFilePath()).parent.path;
-  final cases = (jsonDecode(File('$dir/graphs.json').readAsStringSync())
-      as List).cast<Map<String, dynamic>>();
+  final cases =
+      (jsonDecode(File('$dir/graphs.json').readAsStringSync()) as List)
+          .cast<Map<String, dynamic>>();
   final elkjsFile = File('$dir/elkjs_golden.json');
   if (!elkjsFile.existsSync()) {
-    stderr.writeln('Missing elkjs_golden.json — run `cd $dir && npm install && '
-        'node run_elkjs.mjs` first.');
+    stderr.writeln(
+      'Missing elkjs_golden.json — run `cd $dir && npm install && '
+      'node run_elkjs.mjs` first.',
+    );
     exit(1);
   }
   final elkjs = (jsonDecode(elkjsFile.readAsStringSync()) as Map)
@@ -29,17 +32,20 @@ void main() {
   final outDir = Directory('$dir/output')..createSync(recursive: true);
 
   print('Structural agreement: elk (Dart) vs elkjs 0.9.3\n');
-  print('${'graph'.padRight(26)}  flow-order  cross-order  '
-      'overlaps(us/elk)  aspect(us/elk)');
+  print(
+    '${'graph'.padRight(26)}  flow-order  cross-order  '
+    'overlaps(us/elk)  aspect(us/elk)',
+  );
   print('-' * 92);
 
   var flowSum = 0.0, crossSum = 0.0, n = 0;
   for (final c in cases) {
     final name = c['name'] as String;
     final graphJson = (c['graph'] as Map).cast<String, dynamic>();
-    final vertical = '${(graphJson['layoutOptions'] as Map?)?['elk.direction']}'
-            .toUpperCase() !=
-        'RIGHT' &&
+    final vertical =
+        '${(graphJson['layoutOptions'] as Map?)?['elk.direction']}'
+                .toUpperCase() !=
+            'RIGHT' &&
         '${(graphJson['layoutOptions'] as Map?)?['elk.direction']}'
                 .toUpperCase() !=
             'LEFT';
@@ -47,8 +53,9 @@ void main() {
     // Our layout.
     final res = const ElkLayered().layout(ElkGraph.fromJson(graphJson));
     final ours = <String, _R>{};
-    res.nodesById.forEach((id, p) =>
-        ours[id] = _R(p.x, p.y, p.width, p.height));
+    res.nodesById.forEach(
+      (id, p) => ours[id] = _R(p.x, p.y, p.width, p.height),
+    );
 
     // elkjs layout (absolute rects).
     final theirsRaw = ((elkjs[name] as Map)['nodes'] as Map)
@@ -64,12 +71,24 @@ void main() {
     };
 
     // Compare over leaf ids present in both (leaves = no children in JSON).
-    final leafIds = _leafIds(graphJson)
-        .where((id) => ours.containsKey(id) && theirs.containsKey(id))
-        .toList();
+    final leafIds = _leafIds(
+      graphJson,
+    ).where((id) => ours.containsKey(id) && theirs.containsKey(id)).toList();
 
-    final flow = _orderAgreement(leafIds, ours, theirs, alongFlow: true, vertical: vertical);
-    final cross = _orderAgreement(leafIds, ours, theirs, alongFlow: false, vertical: vertical);
+    final flow = _orderAgreement(
+      leafIds,
+      ours,
+      theirs,
+      alongFlow: true,
+      vertical: vertical,
+    );
+    final cross = _orderAgreement(
+      leafIds,
+      ours,
+      theirs,
+      alongFlow: false,
+      vertical: vertical,
+    );
     final ovUs = _overlaps(ours.values.toList());
     final ovElk = _overlaps(theirs.values.toList());
     final arUs = _aspect(ours.values);
@@ -78,15 +97,18 @@ void main() {
     crossSum += cross;
     n++;
 
-    print('${name.padRight(26)}  '
-        '${_pct(flow).padRight(10)}  '
-        '${_pct(cross).padRight(11)}  '
-        '${'$ovUs / $ovElk'.padRight(16)}  '
-        '${arUs.toStringAsFixed(2)} / ${arElk.toStringAsFixed(2)}');
+    print(
+      '${name.padRight(26)}  '
+      '${_pct(flow).padRight(10)}  '
+      '${_pct(cross).padRight(11)}  '
+      '${'$ovUs / $ovElk'.padRight(16)}  '
+      '${arUs.toStringAsFixed(2)} / ${arElk.toStringAsFixed(2)}',
+    );
 
     // --- Visual diff: write a side-by-side SVG (ours | elkjs). ---
-    final clusterIds =
-        ours.keys.where((id) => !_leafIds(graphJson).contains(id)).toSet();
+    final clusterIds = ours.keys
+        .where((id) => !_leafIds(graphJson).contains(id))
+        .toSet();
     final oursEdges = [
       for (final e in res.edges)
         if (e.sections.isNotEmpty)
@@ -94,11 +116,16 @@ void main() {
     ];
     final elkEdges = [
       for (final e in ((elkjs[name] as Map)['edges'] as List? ?? const []))
-        [for (final p in (e as List)) ((p['x'] as num).toDouble(), (p['y'] as num).toDouble())],
+        [
+          for (final p in (e as List))
+            ((p['x'] as num).toDouble(), (p['y'] as num).toDouble()),
+        ],
     ];
     final svg = _sideBySideSvg(
-      ours: ours, oursEdges: oursEdges,
-      theirs: theirs, theirsEdges: elkEdges,
+      ours: ours,
+      oursEdges: oursEdges,
+      theirs: theirs,
+      theirsEdges: elkEdges,
       clusters: clusterIds,
     );
     final slug = name.replaceAll(RegExp(r'[^a-z0-9]+'), '_').toLowerCase();
@@ -107,9 +134,11 @@ void main() {
   print('-' * 92);
   print('mean flow-order agreement:  ${_pct(flowSum / n)}');
   print('mean cross-order agreement: ${_pct(crossSum / n)}');
-  print('\nflow-order = % of leaf pairs both engines order the same along the '
-      'flow axis (layering).\ncross-order = same, across the flow axis '
-      '(within-layer order). overlaps should be 0/0.');
+  print(
+    '\nflow-order = % of leaf pairs both engines order the same along the '
+    'flow axis (layering).\ncross-order = same, across the flow axis '
+    '(within-layer order). overlaps should be 0/0.',
+  );
   print('\nSide-by-side SVGs (ours | elkjs) written to ${outDir.path}/');
 }
 
@@ -125,23 +154,38 @@ String _sideBySideSvg({
   const pad = 24.0, gap = 80.0, titleH = 28.0;
   final lw = _spanW(ours.values), lh = _spanH(ours.values);
   final rw = _spanW(theirs.values);
-  final h = titleH + pad + (lh > _spanH(theirs.values) ? lh : _spanH(theirs.values)) + pad;
+  final h =
+      titleH +
+      pad +
+      (lh > _spanH(theirs.values) ? lh : _spanH(theirs.values)) +
+      pad;
   final w = pad + lw + gap + rw + pad;
   final b = StringBuffer();
-  b.writeln('<svg viewBox="0 0 $w $h" xmlns="http://www.w3.org/2000/svg" '
-      'style="background:white" font-family="Inter,sans-serif">');
-  b.writeln('<text x="$pad" y="18" font-size="14" font-weight="600" '
-      'fill="#4a3a8a">elk (ours)</text>');
-  b.writeln('<text x="${pad + lw + gap}" y="18" font-size="14" '
-      'font-weight="600" fill="#888">elkjs 0.9.3</text>');
+  b.writeln(
+    '<svg viewBox="0 0 $w $h" xmlns="http://www.w3.org/2000/svg" '
+    'style="background:white" font-family="Inter,sans-serif">',
+  );
+  b.writeln(
+    '<text x="$pad" y="18" font-size="14" font-weight="600" '
+    'fill="#4a3a8a">elk (ours)</text>',
+  );
+  b.writeln(
+    '<text x="${pad + lw + gap}" y="18" font-size="14" '
+    'font-weight="600" fill="#888">elkjs 0.9.3</text>',
+  );
   b.write(_panel(ours, oursEdges, clusters, pad, titleH));
   b.write(_panel(theirs, theirsEdges, clusters, pad + lw + gap, titleH));
   b.writeln('</svg>');
   return b.toString();
 }
 
-String _panel(Map<String, _R> nodes, List<List<(double, double)>> edges,
-    Set<String> clusters, double ox, double oy) {
+String _panel(
+  Map<String, _R> nodes,
+  List<List<(double, double)>> edges,
+  Set<String> clusters,
+  double ox,
+  double oy,
+) {
   // Normalize so the panel's own min is at (ox, oy).
   final minX = nodes.values.map((r) => r.x).reduce((a, b) => a < b ? a : b);
   final minY = nodes.values.map((r) => r.y).reduce((a, b) => a < b ? a : b);
@@ -150,24 +194,34 @@ String _panel(Map<String, _R> nodes, List<List<(double, double)>> edges,
   // Clusters behind leaves.
   for (final e in nodes.entries.where((e) => clusters.contains(e.key))) {
     final r = e.value;
-    b.writeln('<rect x="${r.x + dx}" y="${r.y + dy}" width="${r.w}" '
-        'height="${r.h}" rx="4" fill="#eef0fb" stroke="#b9c0e8"/>');
-    b.writeln('<text x="${r.x + dx + 6}" y="${r.y + dy + 14}" font-size="11" '
-        'fill="#6a6a9a">${_esc(e.key)}</text>');
+    b.writeln(
+      '<rect x="${r.x + dx}" y="${r.y + dy}" width="${r.w}" '
+      'height="${r.h}" rx="4" fill="#eef0fb" stroke="#b9c0e8"/>',
+    );
+    b.writeln(
+      '<text x="${r.x + dx + 6}" y="${r.y + dy + 14}" font-size="11" '
+      'fill="#6a6a9a">${_esc(e.key)}</text>',
+    );
   }
   for (final e in nodes.entries.where((e) => !clusters.contains(e.key))) {
     final r = e.value;
-    b.writeln('<rect x="${r.x + dx}" y="${r.y + dy}" width="${r.w}" '
-        'height="${r.h}" rx="3" fill="#c9cef0" stroke="#5b63b0"/>');
-    b.writeln('<text x="${r.x + dx + r.w / 2}" y="${r.y + dy + r.h / 2 + 4}" '
-        'font-size="11" text-anchor="middle" fill="#22224a">'
-        '${_esc(e.key)}</text>');
+    b.writeln(
+      '<rect x="${r.x + dx}" y="${r.y + dy}" width="${r.w}" '
+      'height="${r.h}" rx="3" fill="#c9cef0" stroke="#5b63b0"/>',
+    );
+    b.writeln(
+      '<text x="${r.x + dx + r.w / 2}" y="${r.y + dy + r.h / 2 + 4}" '
+      'font-size="11" text-anchor="middle" fill="#22224a">'
+      '${_esc(e.key)}</text>',
+    );
   }
   for (final poly in edges) {
     if (poly.length < 2) continue;
     final pts = poly.map((p) => '${p.$1 + dx},${p.$2 + dy}').join(' ');
-    b.writeln('<polyline points="$pts" fill="none" stroke="#444" '
-        'stroke-width="1.3"/>');
+    b.writeln(
+      '<polyline points="$pts" fill="none" stroke="#444" '
+      'stroke-width="1.3"/>',
+    );
   }
   return b.toString();
 }
@@ -196,15 +250,22 @@ class _R {
 
 /// % of unordered leaf pairs whose relative order along the chosen axis agrees
 /// between the two layouts (ties within 4px ignored on either side).
-double _orderAgreement(List<String> ids, Map<String, _R> a, Map<String, _R> b,
-    {required bool alongFlow, required bool vertical}) {
+double _orderAgreement(
+  List<String> ids,
+  Map<String, _R> a,
+  Map<String, _R> b, {
+  required bool alongFlow,
+  required bool vertical,
+}) {
   double coord(_R r, bool flow) =>
       (flow == vertical) ? r.cy : r.cx; // flow axis is Y when vertical
   var agree = 0, total = 0;
   for (var i = 0; i < ids.length; i++) {
     for (var j = i + 1; j < ids.length; j++) {
-      final ai = coord(a[ids[i]]!, alongFlow), aj = coord(a[ids[j]]!, alongFlow);
-      final bi = coord(b[ids[i]]!, alongFlow), bj = coord(b[ids[j]]!, alongFlow);
+      final ai = coord(a[ids[i]]!, alongFlow),
+          aj = coord(a[ids[j]]!, alongFlow);
+      final bi = coord(b[ids[i]]!, alongFlow),
+          bj = coord(b[ids[j]]!, alongFlow);
       if ((ai - aj).abs() < 4 || (bi - bj).abs() < 4) continue;
       total++;
       if ((ai < aj) == (bi < bj)) agree++;
@@ -218,7 +279,10 @@ int _overlaps(List<_R> rs) {
   for (var i = 0; i < rs.length; i++) {
     for (var j = i + 1; j < rs.length; j++) {
       final a = rs[i], b = rs[j];
-      if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) {
+      if (a.x < b.x + b.w &&
+          b.x < a.x + a.w &&
+          a.y < b.y + b.h &&
+          b.y < a.y + a.h) {
         n++;
       }
     }

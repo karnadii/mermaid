@@ -337,11 +337,9 @@ void main() {
           fontSize: 16,
         ),
       ).fontFamilyFallback!;
-      expect(
-        withCss.take(1),
-        ['verdana'],
-        reason: 'the source list keeps priority over platform symbol fonts',
-      );
+      expect(withCss.take(1), [
+        'verdana',
+      ], reason: 'the source list keeps priority over platform symbol fonts');
       expect(withCss, containsAll(symbols));
       expect(
         withCss.toSet(),

@@ -57,10 +57,7 @@ class ElkFlutterApp extends StatelessWidget {
         colorSchemeSeed: const Color(0xFF4a3a8a),
         fontFamily: 'Inter',
       ),
-      home: const Scaffold(
-        backgroundColor: Colors.white,
-        body: _ElkCanvas(),
-      ),
+      home: const Scaffold(backgroundColor: Colors.white, body: _ElkCanvas()),
     );
   }
 }
@@ -79,17 +76,23 @@ class _ElkCanvasState extends State<_ElkCanvas> {
   @override
   void initState() {
     super.initState();
-    _result = const ElkLayered().layout(ElkGraph(
-      layoutOptions: const ElkLayoutOptions(direction: ElkDirection.down),
-      children: [
-        for (final n in _nodes)
-          ElkNode(id: n.id, width: _nodeW, height: _nodeH),
-      ],
-      edges: [
-        for (var i = 0; i < _edges.length; i++)
-          ElkEdge(id: 'e$i', sources: [_edges[i].$1], targets: [_edges[i].$2]),
-      ],
-    ));
+    _result = const ElkLayered().layout(
+      ElkGraph(
+        layoutOptions: const ElkLayoutOptions(direction: ElkDirection.down),
+        children: [
+          for (final n in _nodes)
+            ElkNode(id: n.id, width: _nodeW, height: _nodeH),
+        ],
+        edges: [
+          for (var i = 0; i < _edges.length; i++)
+            ElkEdge(
+              id: 'e$i',
+              sources: [_edges[i].$1],
+              targets: [_edges[i].$2],
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -110,9 +113,7 @@ class _ElkCanvasState extends State<_ElkCanvas> {
             children: [
               // Edges behind the nodes.
               Positioned.fill(
-                child: CustomPaint(
-                  painter: _EdgePainter(_result.edges),
-                ),
+                child: CustomPaint(painter: _EdgePainter(_result.edges)),
               ),
               // Each node is a real, tappable Flutter card.
               for (final spec in _nodes)
@@ -126,7 +127,8 @@ class _ElkCanvasState extends State<_ElkCanvas> {
                       spec: spec,
                       selected: _selected == spec.id,
                       onTap: () => setState(
-                          () => _selected = _selected == spec.id ? null : spec.id),
+                        () => _selected = _selected == spec.id ? null : spec.id,
+                      ),
                     ),
                   ),
             ],
@@ -165,8 +167,11 @@ class _NodeCard extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(spec.icon,
-                  size: 20, color: selected ? Colors.white : accent),
+              Icon(
+                spec.icon,
+                size: 20,
+                color: selected ? Colors.white : accent,
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(

@@ -21,21 +21,21 @@ class SweepCopy {
 
   /// Copies the current node + port order out of [currentOrder].
   SweepCopy(List<List<LNode>> currentOrder)
-      : nodeOrder = [
-          for (final layer in currentOrder) List<LNode>.from(layer),
-        ],
-        portOrders = [
-          for (final layer in currentOrder)
-            [for (final node in layer) List<LPort>.from(node.ports)],
-        ];
+    : nodeOrder = [for (final layer in currentOrder) List<LNode>.from(layer)],
+      portOrders = [
+        for (final layer in currentOrder)
+          [for (final node in layer) List<LPort>.from(node.ports)],
+      ];
 
   /// Copy constructor.
   SweepCopy.from(SweepCopy other)
-      : nodeOrder = [for (final layer in other.nodeOrder) List<LNode>.from(layer)],
-        portOrders = [
-          for (final layer in other.portOrders)
-            [for (final ports in layer) List<LPort>.from(ports)],
-        ];
+    : nodeOrder = [
+        for (final layer in other.nodeOrder) List<LNode>.from(layer),
+      ],
+      portOrders = [
+        for (final layer in other.portOrders)
+          [for (final ports in layer) List<LPort>.from(ports)],
+      ];
 
   /// Restores this saved order onto [graph]: reorders each [Layer.nodes] list
   /// and each node's port list to the saved order, and re-assigns `node.id` to

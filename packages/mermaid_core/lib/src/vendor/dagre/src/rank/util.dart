@@ -28,7 +28,7 @@ Graph longestPath(Graph g) {
 
   dfs2(String v) {
     List<dynamic> stack = [
-      [v, false]
+      [v, false],
     ];
     while (stack.isNotEmpty) {
       var cur = stack.removeLast();

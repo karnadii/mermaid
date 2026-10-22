@@ -18,9 +18,9 @@ import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
 final _cynefinTransition = RegExp(
-    r'^(clear|complicated|complex|chaotic|confusion|disorder)\s*-->\s*'
-    r'(clear|complicated|complex|chaotic|confusion|disorder)'
-    r'(?:\s*:\s*"?(.+?)"?)?$',
+  r'^(clear|complicated|complex|chaotic|confusion|disorder)\s*-->\s*'
+  r'(clear|complicated|complex|chaotic|confusion|disorder)'
+  r'(?:\s*:\s*"?(.+?)"?)?$',
 );
 final _cynefinHeader = RegExp(r'^\s*cynefin(-beta)?\b');
 final _cynefinTitle = RegExp(r'^title\s+(.+)$');

@@ -24,30 +24,40 @@ class _R {
 }
 
 void main() {
-  final packageRoot = [
-    Directory.current,
-    Directory('${Directory.current.path}/packages/elk'),
-    File.fromUri(Platform.script).parent.parent,
-  ].firstWhere(
-      (dir) => File('${dir.path}/tool/validation/graphs.json').existsSync(),
-      orElse: () => Directory.current);
+  final packageRoot =
+      [
+        Directory.current,
+        Directory('${Directory.current.path}/packages/elk'),
+        File.fromUri(Platform.script).parent.parent,
+      ].firstWhere(
+        (dir) => File('${dir.path}/tool/validation/graphs.json').existsSync(),
+        orElse: () => Directory.current,
+      );
   final graphsFile = File('${packageRoot.path}/tool/validation/graphs.json');
-  final goldenFile = File('${packageRoot.path}/tool/validation/elkjs_golden.json');
+  final goldenFile = File(
+    '${packageRoot.path}/tool/validation/elkjs_golden.json',
+  );
 
   group('elk vs elkjs 0.9.3 (structural parity)', () {
     if (!graphsFile.existsSync() || !goldenFile.existsSync()) {
       test('validation fixtures are available', () {
-        expect(graphsFile.existsSync(), isTrue,
-            reason: 'missing ${graphsFile.path}');
-        expect(goldenFile.existsSync(), isTrue,
-            reason: 'run tool/validation/run_elkjs.mjs');
+        expect(
+          graphsFile.existsSync(),
+          isTrue,
+          reason: 'missing ${graphsFile.path}',
+        );
+        expect(
+          goldenFile.existsSync(),
+          isTrue,
+          reason: 'run tool/validation/run_elkjs.mjs',
+        );
       });
       return;
     }
     final cases = (jsonDecode(graphsFile.readAsStringSync()) as List)
         .cast<Map<String, dynamic>>();
-    final golden =
-        (jsonDecode(goldenFile.readAsStringSync()) as Map).cast<String, dynamic>();
+    final golden = (jsonDecode(goldenFile.readAsStringSync()) as Map)
+        .cast<String, dynamic>();
 
     for (final c in cases) {
       final name = c['name'] as String;
@@ -57,10 +67,11 @@ void main() {
         final res = const ElkLayered().layout(ElkGraph.fromJson(graphJson));
         final ours = <String, _R>{};
         res.nodesById.forEach(
-            (id, p) => ours[id] = _R(p.x, p.y, p.width, p.height));
+          (id, p) => ours[id] = _R(p.x, p.y, p.width, p.height),
+        );
 
-        final theirsRaw =
-            ((golden[name] as Map)['nodes'] as Map).cast<String, dynamic>();
+        final theirsRaw = ((golden[name] as Map)['nodes'] as Map)
+            .cast<String, dynamic>();
         final theirs = <String, _R>{
           for (final e in theirsRaw.entries)
             e.key: _R(
@@ -80,12 +91,18 @@ void main() {
 
         // 1. Layer assignment matches elkjs exactly (every leaf pair is ordered
         //    the same way along the flow axis).
-        expect(_flowOrderAgreement(ids, ours, theirs, vertical), 1.0,
-            reason: 'flow-axis (layer) order must match elkjs');
+        expect(
+          _flowOrderAgreement(ids, ours, theirs, vertical),
+          1.0,
+          reason: 'flow-axis (layer) order must match elkjs',
+        );
 
         // 2. Our layout has no node overlaps.
-        expect(_overlaps([for (final id in ids) ours[id]!]), 0,
-            reason: 'no leaf overlaps');
+        expect(
+          _overlaps([for (final id in ids) ours[id]!]),
+          0,
+          reason: 'no leaf overlaps',
+        );
 
         // 3. No more edge crossings than elkjs (it produces crossing-free
         //    layouts on these graphs; so must we). This counts geometric
@@ -99,17 +116,23 @@ void main() {
           for (final e in ((golden[name] as Map)['edges'] as List? ?? const []))
             [
               for (final p in (e as List))
-                ((p['x'] as num).toDouble(), (p['y'] as num).toDouble())
+                ((p['x'] as num).toDouble(), (p['y'] as num).toDouble()),
             ],
         ];
-        expect(_geoCrossings(oursPolys), lessThanOrEqualTo(_geoCrossings(elkPolys)),
-            reason: 'edge crossings must not exceed elkjs');
+        expect(
+          _geoCrossings(oursPolys),
+          lessThanOrEqualTo(_geoCrossings(elkPolys)),
+          reason: 'edge crossings must not exceed elkjs',
+        );
 
         // 4. Overall proportions are in the same ballpark as elkjs.
         final ar = _aspect(ours.values), arElk = _aspect(theirs.values);
         if (arElk > 0 && ar > 0) {
-          expect(ar / arElk, inInclusiveRange(0.45, 2.2),
-              reason: 'aspect ratio within ~2x of elkjs');
+          expect(
+            ar / arElk,
+            inInclusiveRange(0.45, 2.2),
+            reason: 'aspect ratio within ~2x of elkjs',
+          );
         }
       });
     }
@@ -117,7 +140,11 @@ void main() {
 }
 
 double _flowOrderAgreement(
-    List<String> ids, Map<String, _R> a, Map<String, _R> b, bool vertical) {
+  List<String> ids,
+  Map<String, _R> a,
+  Map<String, _R> b,
+  bool vertical,
+) {
   double coord(_R r) => vertical ? r.cy : r.cx;
   var agree = 0, total = 0;
   for (var i = 0; i < ids.length; i++) {
@@ -150,8 +177,12 @@ int _overlaps(List<_R> rs) {
 
 /// Number of edge pairs whose routed polylines geometrically cross.
 int _geoCrossings(List<List<(double, double)>> polys) {
-  bool segsCross((double, double) p1, (double, double) p2, (double, double) q1,
-      (double, double) q2) {
+  bool segsCross(
+    (double, double) p1,
+    (double, double) p2,
+    (double, double) q1,
+    (double, double) q2,
+  ) {
     double cr((double, double) a, (double, double) b, (double, double) c) =>
         (b.$1 - a.$1) * (c.$2 - a.$2) - (b.$2 - a.$2) * (c.$1 - a.$1);
     final d1 = cr(q1, q2, p1), d2 = cr(q1, q2, p2);

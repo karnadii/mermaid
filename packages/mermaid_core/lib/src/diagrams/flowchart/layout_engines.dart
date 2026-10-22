@@ -37,7 +37,10 @@ Map<String, Point> tidyTreeLayout(
   double siblingGap = 30,
   double levelGap = 60,
 }) {
-  final nodes = {for (final id in ids) id: _TreeNode(id, sizes[id]!.width, sizes[id]!.height)};
+  final nodes = {
+    for (final id in ids)
+      id: _TreeNode(id, sizes[id]!.width, sizes[id]!.height),
+  };
   final indeg = {for (final id in ids) id: 0};
   final childrenOf = {for (final id in ids) id: <String>[]};
   final seen = <String>{};
@@ -51,7 +54,10 @@ Map<String, Point> tidyTreeLayout(
     seen.add(b);
   }
   // Roots: no incoming tree edge.
-  final roots = [for (final id in ids) if (indeg[id] == 0) id];
+  final roots = [
+    for (final id in ids)
+      if (indeg[id] == 0) id,
+  ];
   if (roots.isEmpty && ids.isNotEmpty) roots.add(ids.first);
 
   // Wire up the _TreeNode children in declaration order.

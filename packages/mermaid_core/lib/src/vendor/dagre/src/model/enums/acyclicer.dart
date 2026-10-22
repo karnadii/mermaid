@@ -1,4 +1,1 @@
-enum Acyclicer{
-  greedy,
-  none,
-}
+enum Acyclicer { greedy, none }

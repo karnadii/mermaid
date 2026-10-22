@@ -47,8 +47,13 @@ class _CommandProxy extends PathProxy {
 
   @override
   void cubicTo(
-          double x1, double y1, double x2, double y2, double x3, double y3) =>
-      commands.add(CubicTo(Point(x1, y1), Point(x2, y2), Point(x3, y3)));
+    double x1,
+    double y1,
+    double x2,
+    double y2,
+    double x3,
+    double y3,
+  ) => commands.add(CubicTo(Point(x1, y1), Point(x2, y2), Point(x3, y3)));
 
   @override
   void close() => commands.add(const ClosePath());

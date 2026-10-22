@@ -66,11 +66,17 @@ final _anyArrow = RegExp(r'(<<-->>|<<->>|-->>|->>|--[x)>]|-[x)>])');
 final _createDecl = RegExp(r'^create\s+(participant|actor)\s+(.+)$');
 final _destroyDecl = RegExp(r'^destroy\s+(.+)$');
 final _activationDecl = RegExp(r'^(de)?activate\s+(.+)$');
-final _noteDecl = RegExp(r'^[Nn]ote\s+(right of|left of|over)\s+([^:]+):\s*(.*)$');
-final _blockStart = RegExp(r'^(loop|opt|alt|par|critical|break|rect)\b\s*(.*)$');
+final _noteDecl = RegExp(
+  r'^[Nn]ote\s+(right of|left of|over)\s+([^:]+):\s*(.*)$',
+);
+final _blockStart = RegExp(
+  r'^(loop|opt|alt|par|critical|break|rect)\b\s*(.*)$',
+);
 final _blockDivider = RegExp(r'^(else|and|option)\b\s*(.*)$');
 final _boxStart = RegExp(r'^box\b\s*(.*)$');
-final _boxColor = RegExp(r'^(rgba?\([^)]*\)|#[0-9a-fA-F]+|transparent|[Aa]qua|[Ll]ightgreen|[Ll]ightblue|[Ll]ightyellow)\s+');
+final _boxColor = RegExp(
+  r'^(rgba?\([^)]*\)|#[0-9a-fA-F]+|transparent|[Aa]qua|[Ll]ightgreen|[Ll]ightblue|[Ll]ightyellow)\s+',
+);
 final _autonumber = RegExp(r'^autonumber\b\s*(.*)$');
 final _number = RegExp(r'\d+');
 final _titleDecl = RegExp(r'^title\s*:?\s+(.*)$');
@@ -101,7 +107,8 @@ class _SequenceParser {
   final _boxes = <SeqBox>[];
 
   /// Stack of open boxes being filled (label, color, members).
-  final _openBoxStack = <({String label, String? color, List<String> members})>[];
+  final _openBoxStack =
+      <({String label, String? color, List<String> members})>[];
 
   SequenceDiagram parse() {
     title = frontTitle;
@@ -117,8 +124,10 @@ class _SequenceParser {
       if (line.isEmpty) continue;
       if (!seenHeader) {
         if (!_header.hasMatch(line)) {
-          throw MermaidParseException('expected "sequenceDiagram" header',
-              line: i + 1);
+          throw MermaidParseException(
+            'expected "sequenceDiagram" header',
+            line: i + 1,
+          );
         }
         seenHeader = true;
         continue;
@@ -129,8 +138,7 @@ class _SequenceParser {
       throw const MermaidParseException('empty sequence diagram source');
     }
     if (_blockStack.isNotEmpty) {
-      throw MermaidParseException(
-          'unclosed "${_blockStack.last.name}" block');
+      throw MermaidParseException('unclosed "${_blockStack.last.name}" block');
     }
     return SequenceDiagram(
       participants: participants,
@@ -157,8 +165,10 @@ class _SequenceParser {
     // to begin at this point.
     m = line.startsWith('create') ? _createDecl.firstMatch(line) : null;
     if (m != null) {
-      final id =
-          _declareParticipant(m.group(2)!.trim(), isActor: m.group(1) == 'actor');
+      final id = _declareParticipant(
+        m.group(2)!.trim(),
+        isActor: m.group(1) == 'actor',
+      );
       events.add(SeqCreate(id));
       return;
     }
@@ -190,20 +200,24 @@ class _SequenceParser {
       final targets = m.group(2)!.split(',').map((s) => s.trim()).toList();
       if (placement != NotePlacement.over && targets.length > 1) {
         throw MermaidParseException(
-            'only "Note over" may span two participants', line: n);
+          'only "Note over" may span two participants',
+          line: n,
+        );
       }
       for (final t in targets) {
         _ensureParticipant(t);
       }
       final content = _parseWrappedText(m.group(3)!);
-      events.add(SeqNote(
-        placement: placement,
-        target: targets[0],
-        target2: targets.length > 1 ? targets[1] : null,
-        text: content.text,
-        wrap: content.wrap,
-        wrapSpecified: content.wrapSpecified,
-      ));
+      events.add(
+        SeqNote(
+          placement: placement,
+          target: targets[0],
+          target2: targets.length > 1 ? targets[1] : null,
+          text: content.text,
+          wrap: content.wrap,
+          wrapSpecified: content.wrapSpecified,
+        ),
+      );
       return;
     }
 
@@ -222,9 +236,11 @@ class _SequenceParser {
       };
       final rest = _normalizeText(m.group(2)!);
       _blockStack.add(kind);
-      events.add(kind == SeqBlockKind.rect
-          ? SeqBlockStart(kind, '', color: rest.isEmpty ? null : rest)
-          : SeqBlockStart(kind, rest));
+      events.add(
+        kind == SeqBlockKind.rect
+            ? SeqBlockStart(kind, '', color: rest.isEmpty ? null : rest)
+            : SeqBlockStart(kind, rest),
+      );
       return;
     }
 
@@ -240,7 +256,9 @@ class _SequenceParser {
       };
       if (_blockStack.isEmpty || _blockStack.last != expected) {
         throw MermaidParseException(
-            '"$keyword" outside of ${expected.name} block', line: n);
+          '"$keyword" outside of ${expected.name} block',
+          line: n,
+        );
       }
       events.add(SeqBlockDivider(_normalizeText(m.group(2)!)));
       return;
@@ -255,7 +273,11 @@ class _SequenceParser {
         color = cm.group(1);
         rest = rest.substring(cm.end).trim();
       }
-      _openBoxStack.add((label: _normalizeText(rest), color: color, members: []));
+      _openBoxStack.add((
+        label: _normalizeText(rest),
+        color: color,
+        members: [],
+      ));
       return;
     }
 
@@ -263,7 +285,9 @@ class _SequenceParser {
       if (_openBoxStack.isNotEmpty) {
         final b = _openBoxStack.removeLast();
         if (b.members.isNotEmpty) {
-          _boxes.add(SeqBox(label: b.label, members: b.members, color: b.color));
+          _boxes.add(
+            SeqBox(label: b.label, members: b.members, color: b.color),
+          );
         }
         return;
       }
@@ -282,11 +306,13 @@ class _SequenceParser {
         events.add(const SeqAutonumber(on: false));
       } else {
         final nums = _number.allMatches(rest).toList();
-        events.add(SeqAutonumber(
-          on: true,
-          start: nums.isNotEmpty ? int.parse(nums[0].group(0)!) : null,
-          step: nums.length > 1 ? int.parse(nums[1].group(0)!) : null,
-        ));
+        events.add(
+          SeqAutonumber(
+            on: true,
+            start: nums.isNotEmpty ? int.parse(nums[0].group(0)!) : null,
+            step: nums.length > 1 ? int.parse(nums[1].group(0)!) : null,
+          ),
+        );
       }
       return;
     }
@@ -335,20 +361,24 @@ class _SequenceParser {
         msg = '';
       }
       if (to.isEmpty || _hasActorTerminator(to)) {
-        throw MermaidParseException('expected participant after arrow',
-            line: n);
+        throw MermaidParseException(
+          'expected participant after arrow',
+          line: n,
+        );
       }
       _ensureParticipant(from);
       _ensureParticipant(to);
       final content = _parseWrappedText(msg);
-      events.add(SeqMessage(
-        from: from,
-        to: to,
-        arrow: arrow,
-        text: content.text,
-        wrap: content.wrap,
-        wrapSpecified: content.wrapSpecified,
-      ));
+      events.add(
+        SeqMessage(
+          from: from,
+          to: to,
+          arrow: arrow,
+          text: content.text,
+          wrap: content.wrap,
+          wrapSpecified: content.wrapSpecified,
+        ),
+      );
       // `A->>+B` activates the receiver, `B-->>-A` deactivates the sender
       // (upstream signal rules).
       if (suffix == '+') _activation(to, active: true, lineNo: n);
@@ -364,7 +394,9 @@ class _SequenceParser {
     if (depth < 0) {
       // Mirrors upstream's "Trying to inactivate an inactive participant".
       throw MermaidParseException(
-          'trying to deactivate inactive participant "$id"', line: lineNo);
+        'trying to deactivate inactive participant "$id"',
+        line: lineNo,
+      );
     }
     _activationDepth[id] = depth;
     events.add(SeqActivation(id, active: active));
@@ -373,8 +405,9 @@ class _SequenceParser {
   String _declareParticipant(String decl, {required bool isActor}) {
     final asMatch = _alias.firstMatch(decl);
     final id = (asMatch != null ? asMatch.group(1)! : decl).trim();
-    final label =
-        _normalizeText((asMatch != null ? asMatch.group(2)! : decl).trim());
+    final label = _normalizeText(
+      (asMatch != null ? asMatch.group(2)! : decl).trim(),
+    );
     final existing = participants[id];
     participants[id] = SeqParticipant(
       id: id,
@@ -388,7 +421,9 @@ class _SequenceParser {
   String _ensureParticipant(String id) {
     final isNew = !participants.containsKey(id);
     participants.putIfAbsent(
-        id, () => SeqParticipant(id: id, label: _normalizeText(id)));
+      id,
+      () => SeqParticipant(id: id, label: _normalizeText(id)),
+    );
     if (isNew) _addToOpenBox(id);
     return id;
   }
@@ -405,9 +440,7 @@ class _SequenceParser {
       out = out.substring(1, out.length - 1);
     }
     if (!out.contains('<')) return out.trim();
-    return out
-        .replaceAll(_lineBreak, '\n')
-        .trim();
+    return out.replaceAll(_lineBreak, '\n').trim();
   }
 
   ({String text, bool wrap, bool wrapSpecified}) _parseWrappedText(

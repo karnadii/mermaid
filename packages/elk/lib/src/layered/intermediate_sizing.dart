@@ -40,12 +40,17 @@ const longEdgeTarget = Property<LPort?>('longEdgeTarget');
 
 /// Whether any long-edge dummy in this chain has a label dummy.
 /// ELK `InternalProperties.LONG_EDGE_HAS_LABEL_DUMMIES`.
-const longEdgeHasLabelDummies = Property<bool>('longEdgeHasLabelDummies', false);
+const longEdgeHasLabelDummies = Property<bool>(
+  'longEdgeHasLabelDummies',
+  false,
+);
 
 /// Whether this long-edge dummy comes *before* the label dummy in its chain.
 /// ELK `InternalProperties.LONG_EDGE_BEFORE_LABEL_DUMMY`.
-const longEdgeBeforeLabelDummy =
-    Property<bool>('longEdgeBeforeLabelDummy', false);
+const longEdgeBeforeLabelDummy = Property<bool>(
+  'longEdgeBeforeLabelDummy',
+  false,
+);
 
 /// Per-port ratio or absolute position used by fixed-ratio port placement.
 /// ELK `PortPlacementCalculator.PORT_RATIO_OR_POSITION`.
@@ -61,10 +66,14 @@ const preserveNodeMinimumSize = Property<bool>('preserveNodeMinimumSize', true);
 
 /// Extra clearance before and after the external-port dummies on a graph's
 /// first and last layer. Mirrors `CoreOptions.SPACING_PORTS_SURROUNDING`.
-const spacingPortsSurroundingTop =
-    Property<double>('spacingPortsSurrounding.top', 0.0);
-const spacingPortsSurroundingBottom =
-    Property<double>('spacingPortsSurrounding.bottom', 0.0);
+const spacingPortsSurroundingTop = Property<double>(
+  'spacingPortsSurrounding.top',
+  0.0,
+);
+const spacingPortsSurroundingBottom = Property<double>(
+  'spacingPortsSurrounding.bottom',
+  0.0,
+);
 
 // ---------------------------------------------------------------------------
 // 1.  InnermostNodeMarginCalculator
@@ -142,11 +151,9 @@ class InnermostNodeMarginCalculator implements ILayoutProcessor {
     // Convert the absolute bounding box back to per-side margins (clamped to 0
     // to guard against floating-point noise, matching ELK's `Math.max(0, ...)`).
     node.margin.top = _max(0, node.position.y - bbTop);
-    node.margin.bottom =
-        _max(0, bbBottom - (node.position.y + node.size.y));
+    node.margin.bottom = _max(0, bbBottom - (node.position.y + node.size.y));
     node.margin.left = _max(0, node.position.x - bbLeft);
-    node.margin.right =
-        _max(0, bbRight - (node.position.x + node.size.x));
+    node.margin.right = _max(0, bbRight - (node.position.x + node.size.x));
   }
 }
 
@@ -181,40 +188,65 @@ class LabelAndNodeSizeProcessor implements ILayoutProcessor {
   void _processNode(LNode node, LGraph graph) {
     final portPortSpacing = graph.getProperty(spacingPortPort);
     if (!node.getProperty(nodeSizeFixed)) {
-      final explicitSources = node.getProperty(nodeSizeForLabels) ||
+      final explicitSources =
+          node.getProperty(nodeSizeForLabels) ||
           node.getProperty(nodeSizeForPorts);
-      final growLabels = node.getProperty(nodeSizeForLabels) || !explicitSources;
+      final growLabels =
+          node.getProperty(nodeSizeForLabels) || !explicitSources;
       final growPorts = node.getProperty(nodeSizeForPorts) || !explicitSources;
       double extent(PortSide side, bool horizontal) {
         final ports = node.ports.where((port) => port.side == side).toList();
         if (ports.isEmpty) return 0;
-        final sizes = ports.map((port) => horizontal ? port.size.x : port.size.y);
+        final sizes = ports.map(
+          (port) => horizontal ? port.size.x : port.size.y,
+        );
         return sizes.reduce((a, b) => a + b) +
             (ports.length - 1) * portPortSpacing;
       }
-      final horizontal = _max(extent(PortSide.north, true),
-          extent(PortSide.south, true));
-      final vertical = _max(extent(PortSide.east, false),
-          extent(PortSide.west, false));
+
+      final horizontal = _max(
+        extent(PortSide.north, true),
+        extent(PortSide.south, true),
+      );
+      final vertical = _max(
+        extent(PortSide.east, false),
+        extent(PortSide.west, false),
+      );
       final transposeLabels = graph.getProperty(labelTranspose);
       final stackGap = graph.getProperty(labelStackSpacing);
       final nodeGap = graph.getProperty(nodeLabelSpacing) * 2;
       final labelWidth = transposeLabels
-          ? node.labels.fold<double>(0, (value, label) => value + label.size.x) +
-              _max(0, node.labels.length - 1) * stackGap + nodeGap
-          : node.labels.fold<double>(0,
-                  (value, label) => _max(value, label.size.x)) +
-              nodeGap;
+          ? node.labels.fold<double>(
+                  0,
+                  (value, label) => value + label.size.x,
+                ) +
+                _max(0, node.labels.length - 1) * stackGap +
+                nodeGap
+          : node.labels.fold<double>(
+                  0,
+                  (value, label) => _max(value, label.size.x),
+                ) +
+                nodeGap;
       final labelHeight = transposeLabels
-          ? node.labels.fold<double>(0,
-                  (value, label) => _max(value, label.size.y)) +
-              nodeGap
-          : node.labels.fold<double>(0, (value, label) => value + label.size.y) +
-              _max(0, node.labels.length - 1) * stackGap + nodeGap;
+          ? node.labels.fold<double>(
+                  0,
+                  (value, label) => _max(value, label.size.y),
+                ) +
+                nodeGap
+          : node.labels.fold<double>(
+                  0,
+                  (value, label) => value + label.size.y,
+                ) +
+                _max(0, node.labels.length - 1) * stackGap +
+                nodeGap;
       final contentWidth = _max(
-          growPorts ? horizontal : 0, growLabels ? labelWidth : 0);
+        growPorts ? horizontal : 0,
+        growLabels ? labelWidth : 0,
+      );
       final contentHeight = _max(
-          growPorts ? vertical : 0, growLabels ? labelHeight : 0);
+        growPorts ? vertical : 0,
+        growLabels ? labelHeight : 0,
+      );
       node.size.x = node.getProperty(preserveNodeMinimumSize)
           ? _max(node.size.x, contentWidth)
           : contentWidth;
@@ -224,21 +256,20 @@ class LabelAndNodeSizeProcessor implements ILayoutProcessor {
     }
 
     // Place E and W ports (vertical free placement = CENTER alignment).
-    _placeVerticalFreePorts(
-        node, PortSide.east, portPortSpacing);
-    _placeVerticalFreePorts(
-        node, PortSide.west, portPortSpacing);
-    _placeHorizontalFreePorts(
-        node, PortSide.north, portPortSpacing);
-    _placeHorizontalFreePorts(
-        node, PortSide.south, portPortSpacing);
+    _placeVerticalFreePorts(node, PortSide.east, portPortSpacing);
+    _placeVerticalFreePorts(node, PortSide.west, portPortSpacing);
+    _placeHorizontalFreePorts(node, PortSide.north, portPortSpacing);
+    _placeHorizontalFreePorts(node, PortSide.south, portPortSpacing);
     placePortLabels(node);
   }
 
   /// Horizontal counterpart of [_placeVerticalFreePorts]. North and south
   /// ports are ordered left-to-right and centred as a group on the node.
   void _placeHorizontalFreePorts(
-      LNode node, PortSide side, double portPortSpacing) {
+    LNode node,
+    PortSide side,
+    double portPortSpacing,
+  ) {
     final ports = node.ports
         .where((p) => p.side == side && !p.getProperty(crossHierarchyFixedPort))
         .toList();
@@ -270,7 +301,10 @@ class LabelAndNodeSizeProcessor implements ILayoutProcessor {
   /// Port y-coordinate: ports are stacked top-to-bottom, centred vertically
   ///   in the node height with [portPortSpacing] between them.
   void _placeVerticalFreePorts(
-      LNode node, PortSide side, double portPortSpacing) {
+    LNode node,
+    PortSide side,
+    double portPortSpacing,
+  ) {
     // Cross-hierarchy external ports carry a fixed position (set from the inner
     // boundary dummy after the nested layout) so the outer edge segment meets
     // the inner one orthogonally; never re-distribute those.
@@ -340,8 +374,7 @@ class LabelAndNodeSizeProcessor implements ILayoutProcessor {
     for (final port in ports) {
       // x: east ports flush with the right edge; west ports flush with the
       // left edge (negative, i.e. outside the node box).
-      port.position.x =
-          side == PortSide.east ? nodeWidth : -port.size.x;
+      port.position.x = side == PortSide.east ? nodeWidth : -port.size.x;
       port.position.y = currentY;
 
       // Anchor = centre of the port face that connects to edges.
@@ -514,28 +547,26 @@ class HyperedgeDummyMerger implements ILayoutProcessor {
 
   /// Mirrors `HyperedgeDummyMerger.checkMergeAllowed`.
   _MergeState _checkMergeAllowed(LNode currNode, LNode lastNode) {
-    final currHasLabel =
-        currNode.getProperty(longEdgeHasLabelDummies);
-    final lastHasLabel =
-        lastNode.getProperty(longEdgeHasLabelDummies);
+    final currHasLabel = currNode.getProperty(longEdgeHasLabelDummies);
+    final lastHasLabel = lastNode.getProperty(longEdgeHasLabelDummies);
 
     final currSource = currNode.getProperty(longEdgeSource);
     final lastSource = lastNode.getProperty(longEdgeSource);
     final currTarget = currNode.getProperty(longEdgeTarget);
     final lastTarget = lastNode.getProperty(longEdgeTarget);
 
-    final sameSource =
-        currSource != null && identical(currSource, lastSource);
-    final sameTarget =
-        currTarget != null && identical(currTarget, lastTarget);
+    final sameSource = currSource != null && identical(currSource, lastSource);
+    final sameTarget = currTarget != null && identical(currTarget, lastTarget);
 
     if (!currHasLabel && !lastHasLabel) {
       // No label dummies in either chain: merge when the ports share the same
       // hyperedge id (ELK: "both ports have the same id").
-      final currFirstPortId =
-          currNode.ports.isNotEmpty ? currNode.ports.first.id : -2;
-      final lastFirstPortId =
-          lastNode.ports.isNotEmpty ? lastNode.ports.first.id : -3;
+      final currFirstPortId = currNode.ports.isNotEmpty
+          ? currNode.ports.first.id
+          : -2;
+      final lastFirstPortId = lastNode.ports.isNotEmpty
+          ? lastNode.ports.first.id
+          : -3;
       return _MergeState(
         allowMerge: currFirstPortId == lastFirstPortId,
         sameSource: sameSource,
@@ -558,7 +589,8 @@ class HyperedgeDummyMerger implements ILayoutProcessor {
             !lastNode.getProperty(longEdgeBeforeLabelDummy));
 
     return _MergeState(
-      allowMerge: (sameSource && eligibleForSourceMerging) ||
+      allowMerge:
+          (sameSource && eligibleForSourceMerging) ||
           (sameTarget && eligibleForTargetMerging),
       sameSource: sameSource,
       sameTarget: sameTarget,
@@ -571,13 +603,19 @@ class HyperedgeDummyMerger implements ILayoutProcessor {
   ///
   /// Mirrors `HyperedgeDummyMerger.mergeNodes`.
   void _mergeNodes(
-      LNode mergeSource, LNode mergeTarget, bool keepSource, bool keepTarget) {
+    LNode mergeSource,
+    LNode mergeTarget,
+    bool keepSource,
+    bool keepTarget,
+  ) {
     // Long-edge dummies always have exactly one west (input) and one east
     // (output) port.
-    final targetIn = mergeTarget.ports
-        .firstWhere((p) => p.side == PortSide.west);
-    final targetOut = mergeTarget.ports
-        .firstWhere((p) => p.side == PortSide.east);
+    final targetIn = mergeTarget.ports.firstWhere(
+      (p) => p.side == PortSide.west,
+    );
+    final targetOut = mergeTarget.ports.firstWhere(
+      (p) => p.side == PortSide.east,
+    );
 
     for (final port in mergeSource.ports) {
       while (port.incomingEdges.isNotEmpty) {

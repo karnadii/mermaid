@@ -2,13 +2,19 @@ import 'package:mermaid_core/src/vendor/dagre/src/model/tmp/split.dart';
 import '../model/tmp/resolve_conflicts_result.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util.dart' as util;
 
-ResolveConflictsResult sort(List<ResolveConflictsResult> entries, bool biasRight) {
-  Split<ResolveConflictsResult> parts = util.partition<ResolveConflictsResult>(entries, (entry) {
-    return entry.barycenter != null;
-  });
+ResolveConflictsResult sort(
+  List<ResolveConflictsResult> entries,
+  bool biasRight,
+) {
+  Split<ResolveConflictsResult> parts = util.partition<ResolveConflictsResult>(
+    entries,
+    (entry) {
+      return entry.barycenter != null;
+    },
+  );
   List<ResolveConflictsResult> sortable = parts.lhs;
-  List<ResolveConflictsResult> unsortable=parts.rhs;
-  unsortable.sort((a,b){
+  List<ResolveConflictsResult> unsortable = parts.rhs;
+  unsortable.sort((a, b) {
     return (b.i).compareTo(a.i);
   });
 
@@ -26,14 +32,18 @@ ResolveConflictsResult sort(List<ResolveConflictsResult> entries, bool biasRight
   }
   ResolveConflictsResult result = ResolveConflictsResult();
   result.vs = List.from(vs);
-  if (weight!=0) {
+  if (weight != 0) {
     result.barycenter = sum / weight;
     result.weight = weight;
   }
   return result;
 }
 
-int _consumeUnsortable(List<String> vs, List<ResolveConflictsResult> unsortable, int index) {
+int _consumeUnsortable(
+  List<String> vs,
+  List<ResolveConflictsResult> unsortable,
+  int index,
+) {
   ResolveConflictsResult last;
   while (unsortable.isNotEmpty && (last = unsortable.last).i <= index) {
     unsortable.removeLast();
@@ -43,7 +53,9 @@ int _consumeUnsortable(List<String> vs, List<ResolveConflictsResult> unsortable,
   return index;
 }
 
-int Function(ResolveConflictsResult, ResolveConflictsResult) _compareWithBias(bool bias) {
+int Function(ResolveConflictsResult, ResolveConflictsResult) _compareWithBias(
+  bool bias,
+) {
   return (entryV, entryW) {
     if (entryV.barycenter! < entryW.barycenter!) {
       return -1;

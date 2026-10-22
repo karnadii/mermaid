@@ -34,7 +34,8 @@ class ApproximateTextMeasurer implements TextMeasurer {
     }
     final lines = <String>[];
     for (final hardLine in text.split('\n')) {
-      if (maxWidth == null || _lineWidth(hardLine, style) * boldFactor <= maxWidth) {
+      if (maxWidth == null ||
+          _lineWidth(hardLine, style) * boldFactor <= maxWidth) {
         lines.add(hardLine);
         continue;
       }
@@ -72,8 +73,8 @@ class ApproximateTextMeasurer implements TextMeasurer {
     final katex = fam == 'KaTeX_Math'
         ? katexMathMetrics
         : fam == 'KaTeX_Main'
-            ? katexMainMetrics
-            : null;
+        ? katexMainMetrics
+        : null;
     var w = 0.0;
     if (katex == null) {
       for (var i = 0; i < line.length; i++) {
@@ -115,7 +116,14 @@ class ApproximateTextMeasurer implements TextMeasurer {
 
   // Helvetica AFM advances (per mille of em) for ASCII 32..126, /1000.
   static const List<double> _asciiAdvances = [
-    0.278, 0.278, 0.355, 0.556, 0.556, 0.889, 0.667, 0.191, // space ! " # $ % & '
+    0.278,
+    0.278,
+    0.355,
+    0.556,
+    0.556,
+    0.889,
+    0.667,
+    0.191, // space ! " # $ % & '
     0.333, 0.333, 0.389, 0.584, 0.278, 0.333, 0.278, 0.278, // ( ) * + , - . /
     0.556, 0.556, 0.556, 0.556, 0.556, 0.556, 0.556, 0.556, // 0-7
     0.556, 0.556, 0.278, 0.278, 0.584, 0.584, 0.584, 0.556, // 8 9 : ; < = > ?

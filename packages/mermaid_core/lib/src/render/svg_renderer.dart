@@ -559,12 +559,7 @@ void _writeNode(_SvgWriter b, SceneNode node, _IdGen ids) {
         _writeNum(b, y);
         b
           ..write('">')
-          ..writeEscaped(
-            text,
-            attribute: false,
-            start: lineStart,
-            end: lineEnd,
-          )
+          ..writeEscaped(text, attribute: false, start: lineStart, end: lineEnd)
           ..write('</tspan>');
         lineStart = lineEnd + 1;
       }

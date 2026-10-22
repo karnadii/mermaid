@@ -30,18 +30,24 @@ void main() {
     });
     test('ganttActiveTaskBkgColor', () {
       expect(
-          MermaidTheme.defaultTheme.ganttActiveTaskBkgColor.value, 0xffbfc7ff);
+        MermaidTheme.defaultTheme.ganttActiveTaskBkgColor.value,
+        0xffbfc7ff,
+      );
     });
     test('ganttActiveTaskBorderColor', () {
-      expect(MermaidTheme.defaultTheme.ganttActiveTaskBorderColor.value,
-          0xff534fbc);
+      expect(
+        MermaidTheme.defaultTheme.ganttActiveTaskBorderColor.value,
+        0xff534fbc,
+      );
     });
     test('ganttDoneTaskBkgColor', () {
       expect(MermaidTheme.defaultTheme.ganttDoneTaskBkgColor.value, 0xffd3d3d3);
     });
     test('ganttDoneTaskBorderColor', () {
       expect(
-          MermaidTheme.defaultTheme.ganttDoneTaskBorderColor.value, 0xff808080);
+        MermaidTheme.defaultTheme.ganttDoneTaskBorderColor.value,
+        0xff808080,
+      );
     });
     test('ganttCritBkgColor', () {
       expect(MermaidTheme.defaultTheme.ganttCritBkgColor.value, 0xffff0000);
@@ -54,19 +60,27 @@ void main() {
     });
     test('ganttActiveTaskTextColor', () {
       expect(
-          MermaidTheme.defaultTheme.ganttActiveTaskTextColor.value, 0xff000000);
+        MermaidTheme.defaultTheme.ganttActiveTaskTextColor.value,
+        0xff000000,
+      );
     });
     test('ganttDoneTaskTextColor', () {
       expect(
-          MermaidTheme.defaultTheme.ganttDoneTaskTextColor.value, 0xff000000);
+        MermaidTheme.defaultTheme.ganttDoneTaskTextColor.value,
+        0xff000000,
+      );
     });
     test('ganttCritTaskTextColor', () {
       expect(
-          MermaidTheme.defaultTheme.ganttCritTaskTextColor.value, 0xff000000);
+        MermaidTheme.defaultTheme.ganttCritTaskTextColor.value,
+        0xff000000,
+      );
     });
     test('ganttTaskTextOutsideColor', () {
-      expect(MermaidTheme.defaultTheme.ganttTaskTextOutsideColor.value,
-          0xff000000);
+      expect(
+        MermaidTheme.defaultTheme.ganttTaskTextOutsideColor.value,
+        0xff000000,
+      );
     });
     test('ganttExcludeBkgColor', () {
       expect(MermaidTheme.defaultTheme.ganttExcludeBkgColor.value, 0xffeeeeee);
@@ -79,12 +93,9 @@ void main() {
     });
     test('ganttSectionBkgColors', () {
       expect(
-          MermaidTheme.defaultTheme.ganttSectionBkgColors.map((c) => c.value), [
-        0x196666ff,
-        0x33ffffff,
-        0x33fff400,
-        0x33ffffff,
-      ]);
+        MermaidTheme.defaultTheme.ganttSectionBkgColors.map((c) => c.value),
+        [0x196666ff, 0x33ffffff, 0x33fff400, 0x33ffffff],
+      );
     });
     test('sequenceAltFrameColor', () {
       expect(MermaidTheme.defaultTheme.sequenceAltFrameColor.value, 0x11888888);
@@ -112,7 +123,9 @@ void main() {
     });
     test('kanbanPriorityVeryHigh', () {
       expect(
-          MermaidTheme.defaultTheme.kanbanPriorityVeryHigh.value, 0xffff0000);
+        MermaidTheme.defaultTheme.kanbanPriorityVeryHigh.value,
+        0xffff0000,
+      );
     });
     test('kanbanPriorityHigh', () {
       expect(MermaidTheme.defaultTheme.kanbanPriorityHigh.value, 0xffffa500);
@@ -170,30 +183,42 @@ void main() {
     });
     test('c4ExternalPersonBorder', () {
       expect(
-          MermaidTheme.defaultTheme.c4ExternalPersonBorder.value, 0xff8a8a8a);
+        MermaidTheme.defaultTheme.c4ExternalPersonBorder.value,
+        0xff8a8a8a,
+      );
     });
     test('c4ExternalSystemFill', () {
       expect(MermaidTheme.defaultTheme.c4ExternalSystemFill.value, 0xff999999);
     });
     test('c4ExternalSystemBorder', () {
       expect(
-          MermaidTheme.defaultTheme.c4ExternalSystemBorder.value, 0xff8a8a8a);
+        MermaidTheme.defaultTheme.c4ExternalSystemBorder.value,
+        0xff8a8a8a,
+      );
     });
     test('c4ExternalContainerFill', () {
       expect(
-          MermaidTheme.defaultTheme.c4ExternalContainerFill.value, 0xffb3b3b3);
+        MermaidTheme.defaultTheme.c4ExternalContainerFill.value,
+        0xffb3b3b3,
+      );
     });
     test('c4ExternalContainerBorder', () {
-      expect(MermaidTheme.defaultTheme.c4ExternalContainerBorder.value,
-          0xffa6a6a6);
+      expect(
+        MermaidTheme.defaultTheme.c4ExternalContainerBorder.value,
+        0xffa6a6a6,
+      );
     });
     test('c4ExternalComponentFill', () {
       expect(
-          MermaidTheme.defaultTheme.c4ExternalComponentFill.value, 0xffcccccc);
+        MermaidTheme.defaultTheme.c4ExternalComponentFill.value,
+        0xffcccccc,
+      );
     });
     test('c4ExternalComponentBorder', () {
-      expect(MermaidTheme.defaultTheme.c4ExternalComponentBorder.value,
-          0xffbfbfbf);
+      expect(
+        MermaidTheme.defaultTheme.c4ExternalComponentBorder.value,
+        0xffbfbfbf,
+      );
     });
     test('c4BoundaryColor', () {
       expect(MermaidTheme.defaultTheme.c4BoundaryColor.value, 0xff444444);
@@ -212,22 +237,30 @@ void main() {
     });
     test('wardleyComponentStroke', () {
       expect(
-          MermaidTheme.defaultTheme.wardleyComponentStroke.value, 0xff000000);
+        MermaidTheme.defaultTheme.wardleyComponentStroke.value,
+        0xff000000,
+      );
     });
     test('wardleyComponentLabelColor', () {
-      expect(MermaidTheme.defaultTheme.wardleyComponentLabelColor.value,
-          0xff222222);
+      expect(
+        MermaidTheme.defaultTheme.wardleyComponentLabelColor.value,
+        0xff222222,
+      );
     });
     test('wardleyLinkStroke', () {
       expect(MermaidTheme.defaultTheme.wardleyLinkStroke.value, 0xff000000);
     });
     test('wardleyEvolutionStroke', () {
       expect(
-          MermaidTheme.defaultTheme.wardleyEvolutionStroke.value, 0xffdc3545);
+        MermaidTheme.defaultTheme.wardleyEvolutionStroke.value,
+        0xffdc3545,
+      );
     });
     test('wardleyAnnotationStroke', () {
       expect(
-          MermaidTheme.defaultTheme.wardleyAnnotationStroke.value, 0xff000000);
+        MermaidTheme.defaultTheme.wardleyAnnotationStroke.value,
+        0xff000000,
+      );
     });
     test('wardleyOutsourceFill', () {
       expect(MermaidTheme.defaultTheme.wardleyOutsourceFill.value, 0xff666666);
@@ -273,11 +306,15 @@ void main() {
     });
     test('emSwimlaneBackgroundOdd', () {
       expect(
-          MermaidTheme.defaultTheme.emSwimlaneBackgroundOdd.value, 0xfffafafa);
+        MermaidTheme.defaultTheme.emSwimlaneBackgroundOdd.value,
+        0xfffafafa,
+      );
     });
     test('emSwimlaneBackgroundStroke', () {
-      expect(MermaidTheme.defaultTheme.emSwimlaneBackgroundStroke.value,
-          0xfff0f0f0);
+      expect(
+        MermaidTheme.defaultTheme.emSwimlaneBackgroundStroke.value,
+        0xfff0f0f0,
+      );
     });
     test('journeyFaceFill', () {
       expect(MermaidTheme.defaultTheme.journeyFaceFill.value, 0xfffff8dc);
@@ -317,7 +354,9 @@ void main() {
     });
     test('cynefinComplicatedFill', () {
       expect(
-          MermaidTheme.defaultTheme.cynefinComplicatedFill.value, 0xffe3f2fd);
+        MermaidTheme.defaultTheme.cynefinComplicatedFill.value,
+        0xffe3f2fd,
+      );
     });
     test('cynefinClearFill', () {
       expect(MermaidTheme.defaultTheme.cynefinClearFill.value, 0xfffff8e1);
@@ -439,56 +478,120 @@ void main() {
       expect(overridden.textOnLightFill, probe, reason: 'textOnLightFill');
       expect(overridden.tertiaryColor, probe, reason: 'tertiaryColor');
       expect(overridden.ganttTaskBkgColor, probe, reason: 'ganttTaskBkgColor');
-      expect(overridden.ganttTaskBorderColor, probe,
-          reason: 'ganttTaskBorderColor');
-      expect(overridden.ganttActiveTaskBkgColor, probe,
-          reason: 'ganttActiveTaskBkgColor');
-      expect(overridden.ganttActiveTaskBorderColor, probe,
-          reason: 'ganttActiveTaskBorderColor');
-      expect(overridden.ganttDoneTaskBkgColor, probe,
-          reason: 'ganttDoneTaskBkgColor');
-      expect(overridden.ganttDoneTaskBorderColor, probe,
-          reason: 'ganttDoneTaskBorderColor');
+      expect(
+        overridden.ganttTaskBorderColor,
+        probe,
+        reason: 'ganttTaskBorderColor',
+      );
+      expect(
+        overridden.ganttActiveTaskBkgColor,
+        probe,
+        reason: 'ganttActiveTaskBkgColor',
+      );
+      expect(
+        overridden.ganttActiveTaskBorderColor,
+        probe,
+        reason: 'ganttActiveTaskBorderColor',
+      );
+      expect(
+        overridden.ganttDoneTaskBkgColor,
+        probe,
+        reason: 'ganttDoneTaskBkgColor',
+      );
+      expect(
+        overridden.ganttDoneTaskBorderColor,
+        probe,
+        reason: 'ganttDoneTaskBorderColor',
+      );
       expect(overridden.ganttCritBkgColor, probe, reason: 'ganttCritBkgColor');
-      expect(overridden.ganttCritBorderColor, probe,
-          reason: 'ganttCritBorderColor');
-      expect(overridden.ganttTaskTextColor, probe,
-          reason: 'ganttTaskTextColor');
-      expect(overridden.ganttActiveTaskTextColor, probe,
-          reason: 'ganttActiveTaskTextColor');
-      expect(overridden.ganttDoneTaskTextColor, probe,
-          reason: 'ganttDoneTaskTextColor');
-      expect(overridden.ganttCritTaskTextColor, probe,
-          reason: 'ganttCritTaskTextColor');
-      expect(overridden.ganttTaskTextOutsideColor, probe,
-          reason: 'ganttTaskTextOutsideColor');
-      expect(overridden.ganttExcludeBkgColor, probe,
-          reason: 'ganttExcludeBkgColor');
+      expect(
+        overridden.ganttCritBorderColor,
+        probe,
+        reason: 'ganttCritBorderColor',
+      );
+      expect(
+        overridden.ganttTaskTextColor,
+        probe,
+        reason: 'ganttTaskTextColor',
+      );
+      expect(
+        overridden.ganttActiveTaskTextColor,
+        probe,
+        reason: 'ganttActiveTaskTextColor',
+      );
+      expect(
+        overridden.ganttDoneTaskTextColor,
+        probe,
+        reason: 'ganttDoneTaskTextColor',
+      );
+      expect(
+        overridden.ganttCritTaskTextColor,
+        probe,
+        reason: 'ganttCritTaskTextColor',
+      );
+      expect(
+        overridden.ganttTaskTextOutsideColor,
+        probe,
+        reason: 'ganttTaskTextOutsideColor',
+      );
+      expect(
+        overridden.ganttExcludeBkgColor,
+        probe,
+        reason: 'ganttExcludeBkgColor',
+      );
       expect(overridden.ganttGridColor, probe, reason: 'ganttGridColor');
-      expect(overridden.ganttTodayLineColor, probe,
-          reason: 'ganttTodayLineColor');
-      expect(overridden.ganttSectionBkgColors, const [probe],
-          reason: 'ganttSectionBkgColors');
-      expect(overridden.sequenceAltFrameColor, probe,
-          reason: 'sequenceAltFrameColor');
-      expect(overridden.gitMergeInnerColor, probe,
-          reason: 'gitMergeInnerColor');
-      expect(overridden.railroadSpecialFill, probe,
-          reason: 'railroadSpecialFill');
-      expect(overridden.railroadSpecialStroke, probe,
-          reason: 'railroadSpecialStroke');
-      expect(overridden.radarGraticuleColor, probe,
-          reason: 'radarGraticuleColor');
+      expect(
+        overridden.ganttTodayLineColor,
+        probe,
+        reason: 'ganttTodayLineColor',
+      );
+      expect(overridden.ganttSectionBkgColors, const [
+        probe,
+      ], reason: 'ganttSectionBkgColors');
+      expect(
+        overridden.sequenceAltFrameColor,
+        probe,
+        reason: 'sequenceAltFrameColor',
+      );
+      expect(
+        overridden.gitMergeInnerColor,
+        probe,
+        reason: 'gitMergeInnerColor',
+      );
+      expect(
+        overridden.railroadSpecialFill,
+        probe,
+        reason: 'railroadSpecialFill',
+      );
+      expect(
+        overridden.railroadSpecialStroke,
+        probe,
+        reason: 'railroadSpecialStroke',
+      );
+      expect(
+        overridden.radarGraticuleColor,
+        probe,
+        reason: 'radarGraticuleColor',
+      );
       expect(overridden.packetBlockFill, probe, reason: 'packetBlockFill');
       expect(overridden.packetBlockBorder, probe, reason: 'packetBlockBorder');
       expect(overridden.packetTextColor, probe, reason: 'packetTextColor');
-      expect(overridden.kanbanPriorityVeryHigh, probe,
-          reason: 'kanbanPriorityVeryHigh');
-      expect(overridden.kanbanPriorityHigh, probe,
-          reason: 'kanbanPriorityHigh');
+      expect(
+        overridden.kanbanPriorityVeryHigh,
+        probe,
+        reason: 'kanbanPriorityVeryHigh',
+      );
+      expect(
+        overridden.kanbanPriorityHigh,
+        probe,
+        reason: 'kanbanPriorityHigh',
+      );
       expect(overridden.kanbanPriorityLow, probe, reason: 'kanbanPriorityLow');
-      expect(overridden.kanbanPriorityVeryLow, probe,
-          reason: 'kanbanPriorityVeryLow');
+      expect(
+        overridden.kanbanPriorityVeryLow,
+        probe,
+        reason: 'kanbanPriorityVeryLow',
+      );
       expect(overridden.c4PersonFill, probe, reason: 'c4PersonFill');
       expect(overridden.c4PersonBorder, probe, reason: 'c4PersonBorder');
       expect(overridden.c4PersonExtFill, probe, reason: 'c4PersonExtFill');
@@ -503,40 +606,85 @@ void main() {
       expect(overridden.c4ContainerBorder, probe, reason: 'c4ContainerBorder');
       expect(overridden.c4ComponentFill, probe, reason: 'c4ComponentFill');
       expect(overridden.c4ComponentBorder, probe, reason: 'c4ComponentBorder');
-      expect(overridden.c4ExternalPersonFill, probe,
-          reason: 'c4ExternalPersonFill');
-      expect(overridden.c4ExternalPersonBorder, probe,
-          reason: 'c4ExternalPersonBorder');
-      expect(overridden.c4ExternalSystemFill, probe,
-          reason: 'c4ExternalSystemFill');
-      expect(overridden.c4ExternalSystemBorder, probe,
-          reason: 'c4ExternalSystemBorder');
-      expect(overridden.c4ExternalContainerFill, probe,
-          reason: 'c4ExternalContainerFill');
-      expect(overridden.c4ExternalContainerBorder, probe,
-          reason: 'c4ExternalContainerBorder');
-      expect(overridden.c4ExternalComponentFill, probe,
-          reason: 'c4ExternalComponentFill');
-      expect(overridden.c4ExternalComponentBorder, probe,
-          reason: 'c4ExternalComponentBorder');
+      expect(
+        overridden.c4ExternalPersonFill,
+        probe,
+        reason: 'c4ExternalPersonFill',
+      );
+      expect(
+        overridden.c4ExternalPersonBorder,
+        probe,
+        reason: 'c4ExternalPersonBorder',
+      );
+      expect(
+        overridden.c4ExternalSystemFill,
+        probe,
+        reason: 'c4ExternalSystemFill',
+      );
+      expect(
+        overridden.c4ExternalSystemBorder,
+        probe,
+        reason: 'c4ExternalSystemBorder',
+      );
+      expect(
+        overridden.c4ExternalContainerFill,
+        probe,
+        reason: 'c4ExternalContainerFill',
+      );
+      expect(
+        overridden.c4ExternalContainerBorder,
+        probe,
+        reason: 'c4ExternalContainerBorder',
+      );
+      expect(
+        overridden.c4ExternalComponentFill,
+        probe,
+        reason: 'c4ExternalComponentFill',
+      );
+      expect(
+        overridden.c4ExternalComponentBorder,
+        probe,
+        reason: 'c4ExternalComponentBorder',
+      );
       expect(overridden.c4BoundaryColor, probe, reason: 'c4BoundaryColor');
       expect(overridden.c4TextColor, probe, reason: 'c4TextColor');
       expect(overridden.wardleyAxisColor, probe, reason: 'wardleyAxisColor');
-      expect(overridden.wardleyAxisTextColor, probe,
-          reason: 'wardleyAxisTextColor');
-      expect(overridden.wardleyComponentFill, probe,
-          reason: 'wardleyComponentFill');
-      expect(overridden.wardleyComponentStroke, probe,
-          reason: 'wardleyComponentStroke');
-      expect(overridden.wardleyComponentLabelColor, probe,
-          reason: 'wardleyComponentLabelColor');
+      expect(
+        overridden.wardleyAxisTextColor,
+        probe,
+        reason: 'wardleyAxisTextColor',
+      );
+      expect(
+        overridden.wardleyComponentFill,
+        probe,
+        reason: 'wardleyComponentFill',
+      );
+      expect(
+        overridden.wardleyComponentStroke,
+        probe,
+        reason: 'wardleyComponentStroke',
+      );
+      expect(
+        overridden.wardleyComponentLabelColor,
+        probe,
+        reason: 'wardleyComponentLabelColor',
+      );
       expect(overridden.wardleyLinkStroke, probe, reason: 'wardleyLinkStroke');
-      expect(overridden.wardleyEvolutionStroke, probe,
-          reason: 'wardleyEvolutionStroke');
-      expect(overridden.wardleyAnnotationStroke, probe,
-          reason: 'wardleyAnnotationStroke');
-      expect(overridden.wardleyOutsourceFill, probe,
-          reason: 'wardleyOutsourceFill');
+      expect(
+        overridden.wardleyEvolutionStroke,
+        probe,
+        reason: 'wardleyEvolutionStroke',
+      );
+      expect(
+        overridden.wardleyAnnotationStroke,
+        probe,
+        reason: 'wardleyAnnotationStroke',
+      );
+      expect(
+        overridden.wardleyOutsourceFill,
+        probe,
+        reason: 'wardleyOutsourceFill',
+      );
       expect(overridden.wardleyBuyFill, probe, reason: 'wardleyBuyFill');
       expect(overridden.wardleyBuildFill, probe, reason: 'wardleyBuildFill');
       expect(overridden.emUiFill, probe, reason: 'emUiFill');
@@ -550,27 +698,50 @@ void main() {
       expect(overridden.emEventFill, probe, reason: 'emEventFill');
       expect(overridden.emEventStroke, probe, reason: 'emEventStroke');
       expect(overridden.emUnknownTypeFill, probe, reason: 'emUnknownTypeFill');
-      expect(overridden.emSwimlaneBackgroundOdd, probe,
-          reason: 'emSwimlaneBackgroundOdd');
-      expect(overridden.emSwimlaneBackgroundStroke, probe,
-          reason: 'emSwimlaneBackgroundStroke');
+      expect(
+        overridden.emSwimlaneBackgroundOdd,
+        probe,
+        reason: 'emSwimlaneBackgroundOdd',
+      );
+      expect(
+        overridden.emSwimlaneBackgroundStroke,
+        probe,
+        reason: 'emSwimlaneBackgroundStroke',
+      );
       expect(overridden.journeyFaceFill, probe, reason: 'journeyFaceFill');
       expect(overridden.journeyFaceBorder, probe, reason: 'journeyFaceBorder');
-      expect(overridden.journeyFaceEyeColor, probe,
-          reason: 'journeyFaceEyeColor');
-      expect(overridden.journeyActorColors, const [probe],
-          reason: 'journeyActorColors');
-      expect(overridden.sankeyColorPalette, const [probe],
-          reason: 'sankeyColorPalette');
-      expect(overridden.cynefinComplexFill, probe,
-          reason: 'cynefinComplexFill');
-      expect(overridden.cynefinComplicatedFill, probe,
-          reason: 'cynefinComplicatedFill');
+      expect(
+        overridden.journeyFaceEyeColor,
+        probe,
+        reason: 'journeyFaceEyeColor',
+      );
+      expect(overridden.journeyActorColors, const [
+        probe,
+      ], reason: 'journeyActorColors');
+      expect(overridden.sankeyColorPalette, const [
+        probe,
+      ], reason: 'sankeyColorPalette');
+      expect(
+        overridden.cynefinComplexFill,
+        probe,
+        reason: 'cynefinComplexFill',
+      );
+      expect(
+        overridden.cynefinComplicatedFill,
+        probe,
+        reason: 'cynefinComplicatedFill',
+      );
       expect(overridden.cynefinClearFill, probe, reason: 'cynefinClearFill');
-      expect(overridden.cynefinChaoticFill, probe,
-          reason: 'cynefinChaoticFill');
-      expect(overridden.cynefinConfusionFill, probe,
-          reason: 'cynefinConfusionFill');
+      expect(
+        overridden.cynefinChaoticFill,
+        probe,
+        reason: 'cynefinChaoticFill',
+      );
+      expect(
+        overridden.cynefinConfusionFill,
+        probe,
+        reason: 'cynefinConfusionFill',
+      );
       expect(overridden.cynefinCliffColor, probe, reason: 'cynefinCliffColor');
     });
   });

@@ -59,17 +59,16 @@ class ClassNode {
     List<String>? cssClasses,
     Map<String, String>? styles,
     String? link,
-  }) =>
-      ClassNode(
-        id: id,
-        label: label ?? this.label,
-        annotations: annotations ?? this.annotations,
-        attributes: attributes ?? this.attributes,
-        methods: methods ?? this.methods,
-        cssClasses: cssClasses ?? this.cssClasses,
-        styles: styles ?? this.styles,
-        link: link ?? this.link,
-      );
+  }) => ClassNode(
+    id: id,
+    label: label ?? this.label,
+    annotations: annotations ?? this.annotations,
+    attributes: attributes ?? this.attributes,
+    methods: methods ?? this.methods,
+    cssClasses: cssClasses ?? this.cssClasses,
+    styles: styles ?? this.styles,
+    link: link ?? this.link,
+  );
 }
 
 class ClassMember {
@@ -137,8 +136,11 @@ class ClassRelation {
 }
 
 class ClassNamespace {
-  const ClassNamespace({required this.id, required this.classIds, String? label})
-      : label = label ?? id;
+  const ClassNamespace({
+    required this.id,
+    required this.classIds,
+    String? label,
+  }) : label = label ?? id;
 
   final String id;
 

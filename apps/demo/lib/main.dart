@@ -228,8 +228,9 @@ class _EditorPageState extends State<EditorPage> {
           ),
           const SizedBox(width: 8),
           IconButton(
-            tooltip:
-                widget.dark ? 'Switch to light theme' : 'Switch to dark theme',
+            tooltip: widget.dark
+                ? 'Switch to light theme'
+                : 'Switch to dark theme',
             icon: Icon(widget.dark ? Icons.light_mode : Icons.dark_mode),
             onPressed: widget.onToggleDark,
           ),
@@ -389,30 +390,28 @@ class _EditorPageState extends State<EditorPage> {
   Map<String, core.FlowNodePaintOverride> _nodeOverrides(
     String? selectedNode,
     ColorScheme colors,
-  ) =>
-      selectedNode == null
-          ? const {}
-          : {
-              selectedNode: core.FlowNodePaintOverride(
-                fill: core.Color(colors.primaryContainer.toARGB32()),
-                stroke: core.Color(colors.primary.toARGB32()),
-                strokeWidth: 4,
-                textColor: core.Color(colors.onPrimaryContainer.toARGB32()),
-              ),
-            };
+  ) => selectedNode == null
+      ? const {}
+      : {
+          selectedNode: core.FlowNodePaintOverride(
+            fill: core.Color(colors.primaryContainer.toARGB32()),
+            stroke: core.Color(colors.primary.toARGB32()),
+            strokeWidth: 4,
+            textColor: core.Color(colors.onPrimaryContainer.toARGB32()),
+          ),
+        };
 
   Map<int, core.FlowLinkPaintOverride> _linkOverrides(
     (String, String, int)? selectedEdge,
     ColorScheme colors,
-  ) =>
-      selectedEdge == null
-          ? const {}
-          : {
-              selectedEdge.$3: core.FlowLinkPaintOverride(
-                stroke: core.Color(colors.primary.toARGB32()),
-                strokeWidth: 5,
-              ),
-            };
+  ) => selectedEdge == null
+      ? const {}
+      : {
+          selectedEdge.$3: core.FlowLinkPaintOverride(
+            stroke: core.Color(colors.primary.toARGB32()),
+            strokeWidth: 5,
+          ),
+        };
 
   Future<void> _openFullscreen() async {
     final fullscreenController = MermaidViewController();
@@ -553,9 +552,9 @@ class _SelectionCard extends StatelessWidget {
               selectedNode != null
                   ? 'Node: $selectedNode · focused and restyled'
                   : selectedEdge != null
-                      ? 'Edge ${selectedEdge!.$3}: '
-                          '${selectedEdge!.$1} → ${selectedEdge!.$2}'
-                      : 'Hover for node ids · tap to focus · tap edges to inspect',
+                  ? 'Edge ${selectedEdge!.$3}: '
+                        '${selectedEdge!.$1} → ${selectedEdge!.$2}'
+                  : 'Hover for node ids · tap to focus · tap edges to inspect',
             ),
             if (hasSelection)
               IconButton(
@@ -578,29 +577,29 @@ class _ViewportStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: controller,
-        builder: (context, _) {
-          final matrix = controller.transformation;
-          final zoom = (matrix.getMaxScaleOnAxis() * 100).round();
-          final x = matrix.storage[12].round();
-          final y = matrix.storage[13].round();
-          return Tooltip(
-            message: 'Observed through MermaidViewController.transformation',
-            child: Material(
-              elevation: 1,
-              color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                child: Text(
-                  'Viewport $zoom% · pan $x, $y',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-              ),
+    animation: controller,
+    builder: (context, _) {
+      final matrix = controller.transformation;
+      final zoom = (matrix.getMaxScaleOnAxis() * 100).round();
+      final x = matrix.storage[12].round();
+      final y = matrix.storage[13].round();
+      return Tooltip(
+        message: 'Observed through MermaidViewController.transformation',
+        child: Material(
+          elevation: 1,
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Text(
+              'Viewport $zoom% · pan $x, $y',
+              style: Theme.of(context).textTheme.labelMedium,
             ),
-          );
-        },
+          ),
+        ),
       );
+    },
+  );
 }
 
 class _NodeTooltip extends StatelessWidget {
@@ -698,38 +697,53 @@ class ThemeEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = <(String, core.Color, core.MermaidTheme Function(core.Color))>[
-      ('Node fill', theme.mainBkg, (c) => theme.copyWith(mainBkg: c)),
-      ('Node border', theme.nodeBorder, (c) => theme.copyWith(nodeBorder: c)),
-      ('Text', theme.textColor, (c) => theme.copyWith(textColor: c)),
-      ('Lines', theme.lineColor, (c) => theme.copyWith(lineColor: c)),
-      (
-        'Arrowheads',
-        theme.arrowheadColor,
-        (c) => theme.copyWith(arrowheadColor: c)
-      ),
-      ('Cluster fill', theme.clusterBkg, (c) => theme.copyWith(clusterBkg: c)),
-      (
-        'Cluster border',
-        theme.clusterBorder,
-        (c) => theme.copyWith(clusterBorder: c)
-      ),
-      (
-        'Edge label bg',
-        theme.edgeLabelBackground,
-        (c) => theme.copyWith(edgeLabelBackground: c)
-      ),
-      ('Title', theme.titleColor, (c) => theme.copyWith(titleColor: c)),
-      ('Background', theme.background, (c) => theme.copyWith(background: c)),
-    ];
+    final entries =
+        <(String, core.Color, core.MermaidTheme Function(core.Color))>[
+          ('Node fill', theme.mainBkg, (c) => theme.copyWith(mainBkg: c)),
+          (
+            'Node border',
+            theme.nodeBorder,
+            (c) => theme.copyWith(nodeBorder: c),
+          ),
+          ('Text', theme.textColor, (c) => theme.copyWith(textColor: c)),
+          ('Lines', theme.lineColor, (c) => theme.copyWith(lineColor: c)),
+          (
+            'Arrowheads',
+            theme.arrowheadColor,
+            (c) => theme.copyWith(arrowheadColor: c),
+          ),
+          (
+            'Cluster fill',
+            theme.clusterBkg,
+            (c) => theme.copyWith(clusterBkg: c),
+          ),
+          (
+            'Cluster border',
+            theme.clusterBorder,
+            (c) => theme.copyWith(clusterBorder: c),
+          ),
+          (
+            'Edge label bg',
+            theme.edgeLabelBackground,
+            (c) => theme.copyWith(edgeLabelBackground: c),
+          ),
+          ('Title', theme.titleColor, (c) => theme.copyWith(titleColor: c)),
+          (
+            'Background',
+            theme.background,
+            (c) => theme.copyWith(background: c),
+          ),
+        ];
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Row(
           children: [
-            Text('Diagram styles',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Diagram styles',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const Spacer(),
             TextButton.icon(
               onPressed: modified ? onReset : null,
@@ -757,8 +771,10 @@ class ThemeEditor extends StatelessWidget {
             onColor: (c) => onChanged(apply(c)),
           ),
         const SizedBox(height: 16),
-        Text('Font size: ${theme.fontSize.round()}',
-            style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          'Font size: ${theme.fontSize.round()}',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         Slider(
           value: theme.fontSize.clamp(10, 24),
           min: 10,
@@ -794,8 +810,9 @@ class _ColorRow extends StatefulWidget {
 }
 
 class _ColorRowState extends State<_ColorRow> {
-  late final TextEditingController _controller =
-      TextEditingController(text: _hex(widget.color));
+  late final TextEditingController _controller = TextEditingController(
+    text: _hex(widget.color),
+  );
   bool _invalid = false;
 
   static String _hex(core.Color c) {
@@ -846,8 +863,10 @@ class _ColorRowState extends State<_ColorRow> {
               decoration: InputDecoration(
                 isDense: true,
                 errorText: _invalid ? 'invalid' : null,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 8,
+                ),
                 border: const OutlineInputBorder(),
               ),
             ),

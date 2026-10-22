@@ -394,7 +394,6 @@ class IndexedOrder {
     ];
   }
 
-
   int crossCount(List<List<int>> layering) {
     var cc = 0;
     final southPos = List<int>.filled(nodeCount, 0);

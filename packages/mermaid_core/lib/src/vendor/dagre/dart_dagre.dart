@@ -38,10 +38,11 @@ export 'src/model/enums/ranker.dart';
 ///[multiGraph] 是否为多边图(同一对节点之间可以有多个边的图)
 ///[compoundGraph] 是否为复合图(一个节点可以是其它节点的父节点)
 ///[directedGraph] 是否为有向图(如果是，那么边上节点的顺序是有效的)
-DagreResult layout(DagreGraph inputGraph,
-    DagreConfig config, {
-      Props Function(String)? nodeLabelFun,
-      Props Function(String, String, String?)? edgeLabelFun,
+DagreResult layout(
+  DagreGraph inputGraph,
+  DagreConfig config, {
+  Props Function(String)? nodeLabelFun,
+  Props Function(String, String, String?)? edgeLabelFun,
 }) {
   if (!useReferenceLayout && nodeLabelFun == null && edgeLabelFun == null) {
     final result = layoutIndexed(inputGraph, config);
@@ -53,7 +54,10 @@ DagreResult layout(DagreGraph inputGraph,
   edgeLabelFun = edgeLabelFun ?? (v, w, id) => Props();
   layoutGraph.setDefaultEdgeLabelFun(edgeLabelFun);
   for (var ele in inputGraph.nodeMap.values) {
-    layoutGraph.setNode(ele.id, {widthK: ele.width, heightK: ele.height}.toProps);
+    layoutGraph.setNode(
+      ele.id,
+      {widthK: ele.width, heightK: ele.height}.toProps,
+    );
   }
   for (var ele in inputGraph.nodeMap.values) {
     if (ele.parent != null) {
@@ -69,7 +73,12 @@ DagreResult layout(DagreGraph inputGraph,
       labelOffsetK: edge.labelOffset,
       labelPosK: edge.labelPos,
     };
-    layoutGraph.setEdge2(edge.source, edge.target, value: props.toProps, name: edge.id);
+    layoutGraph.setEdge2(
+      edge.source,
+      edge.target,
+      value: props.toProps,
+      name: edge.id,
+    );
   }
 
   GraphLabel label = GraphLabel();
@@ -104,7 +113,11 @@ DagreResult layout(DagreGraph inputGraph,
     resultEdge.labelX = edge.getD2(xK);
     resultEdge.labelY = edge.getD2(yK);
   }
-  return DagreResult(layoutGraph.label.width!, layoutGraph.label.height!, inputGraph);
+  return DagreResult(
+    layoutGraph.label.width!,
+    layoutGraph.label.height!,
+    inputGraph,
+  );
 }
 
 class DagreGraph {
@@ -198,12 +211,7 @@ class DagreNode {
   /// Id of the enclosing compound (cluster) node, if any.
   final String? parent;
 
-  DagreNode(
-    this.id, {
-    this.width = 0,
-    this.height = 0,
-    this.parent,
-  });
+  DagreNode(this.id, {this.width = 0, this.height = 0, this.parent});
 
   @override
   int get hashCode {
@@ -290,7 +298,9 @@ class DagreEdge {
     map["labelPos"] = labelPos.toString();
     map["width"] = width.toStringAsFixed(2);
     map["height"] = height.toStringAsFixed(2);
-    map['points'] = points.map((e) => "[${e.x.toStringAsFixed(2)},${e.y.toStringAsFixed(2)}]").toList();
+    map['points'] = points
+        .map((e) => "[${e.x.toStringAsFixed(2)},${e.y.toStringAsFixed(2)}]")
+        .toList();
     return map;
   }
 }
@@ -335,7 +345,7 @@ class DagreConfig {
     this.nodeSep = 50,
     this.acyclicer = Acyclicer.none,
     this.ranker = Ranker.networkSimplex,
-    this.disableOptimalOrderHeuristic=false,
+    this.disableOptimalOrderHeuristic = false,
     this.customOrder,
   });
 }

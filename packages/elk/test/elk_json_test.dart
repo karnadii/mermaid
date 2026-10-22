@@ -6,7 +6,8 @@ import 'package:test/test.dart';
 void main() {
   group('ElkGraph.fromJson (elkjs JSON)', () {
     test('parses options, children, edges and lays out', () {
-      final graph = ElkGraph.fromJson(jsonDecode('''
+      final graph = ElkGraph.fromJson(
+        jsonDecode('''
         {
           "id": "root",
           "layoutOptions": { "elk.algorithm": "layered", "elk.direction": "RIGHT" },
@@ -16,7 +17,9 @@ void main() {
           ],
           "edges": [ { "id": "e1", "sources": ["a"], "targets": ["b"] } ]
         }
-      ''') as Map<String, dynamic>);
+      ''')
+            as Map<String, dynamic>,
+      );
 
       expect(graph.layoutOptions.direction, ElkDirection.right);
       expect(graph.children.map((n) => n.id), ['a', 'b']);
@@ -28,7 +31,8 @@ void main() {
     });
 
     test('parses nested children and ports', () {
-      final graph = ElkGraph.fromJson(jsonDecode('''
+      final graph = ElkGraph.fromJson(
+        jsonDecode('''
         {
           "children": [
             { "id": "g", "children": [ { "id": "c1", "width": 50, "height": 30 } ] },
@@ -37,7 +41,9 @@ void main() {
           ],
           "edges": [ { "id": "e", "sources": ["p"], "targets": ["c1"] } ]
         }
-      ''') as Map<String, dynamic>);
+      ''')
+            as Map<String, dynamic>,
+      );
 
       expect(graph.children.first.isCompound, isTrue);
       expect(graph.children[1].ports.single.side, ElkPortSide.east);
@@ -50,15 +56,19 @@ void main() {
       // Port "p" is declared with side EAST: it should appear on n's east border.
       expect(n.ports, hasLength(1));
       expect(n.ports.single.id, 'p');
-      expect(n.ports.single.x, closeTo(n.width, 0.5),
-          reason: 'declared EAST port should be on east border');
+      expect(
+        n.ports.single.x,
+        closeTo(n.width, 0.5),
+        reason: 'declared EAST port should be on east border',
+      );
       // The edge is routed (may have been skipped as cross-level if "c1" is
       // inside the compound "g" — the engine routes cross-level edges to the
       // cluster boundary, so the edge may or may not be present in the result,
       // but the graph itself must lay out without throwing).
 
       // The compound node ("g") on its own lays out: its child is nested.
-      final hierarchyOnly = ElkGraph.fromJson(jsonDecode('''
+      final hierarchyOnly = ElkGraph.fromJson(
+        jsonDecode('''
         {
           "children": [
             { "id": "g", "children": [
@@ -68,7 +78,9 @@ void main() {
           ],
           "edges": [ { "id": "e", "sources": ["c1"], "targets": ["c2"] } ]
         }
-      ''') as Map<String, dynamic>);
+      ''')
+            as Map<String, dynamic>,
+      );
       final res = const ElkLayered().layout(hierarchyOnly);
       expect(res.nodesById['c1'], isNotNull);
       final g = res.children.single;

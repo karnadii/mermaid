@@ -44,8 +44,7 @@ class NetworkSimplexLayerer implements ILayoutProcessor {
     final nodes = graph.layerlessNodes;
     if (nodes.isEmpty) return;
 
-    final thoroughness =
-        graph.getProperty(_thoroughness) * _iterLimitFactor;
+    final thoroughness = graph.getProperty(_thoroughness) * _iterLimitFactor;
 
     // Re-index all nodes so we can use node.id as an array index.
     for (var i = 0; i < nodes.length; i++) {
@@ -103,8 +102,7 @@ class NetworkSimplexLayerer implements ILayoutProcessor {
         current.clear();
         _ccDFS(node, visited, current);
         // Largest component first (like the Java: addFirst / addLast).
-        if (components.isEmpty ||
-            components.first.length < current.length) {
+        if (components.isEmpty || components.first.length < current.length) {
           components.insert(0, List<LNode>.of(current));
         } else {
           components.add(List<LNode>.of(current));
@@ -148,7 +146,8 @@ class NetworkSimplexLayerer implements ILayoutProcessor {
         final targetLNode = lEdge.target!.node;
         final src = nodeMap[lNode];
         final tgt = nodeMap[targetLNode];
-        if (src == null || tgt == null) continue; // cross-component (shouldn't happen)
+        if (src == null || tgt == null)
+          continue; // cross-component (shouldn't happen)
         final shortness = lEdge.getProperty(_priorityShortness);
         final nEdge = _NEdge()
           ..source = src
@@ -199,8 +198,7 @@ class _NEdge {
   int internalId = 0;
   bool treeEdge = false;
 
-  _NNode getOther(_NNode node) =>
-      node == source ? target : source;
+  _NNode getOther(_NNode node) => node == source ? target : source;
 }
 
 // ---------------------------------------------------------------------------
@@ -350,7 +348,8 @@ class _NetworkSimplex {
     _cutvalue = List.filled(numEdges, 0.0);
     _edgeVisited = List.filled(numEdges, false);
     _edges = theEdges;
-    _treeEdges = <_NEdge>{}; // insertion-order set (Dart's LinkedHashSet default)
+    _treeEdges =
+        <_NEdge>{}; // insertion-order set (Dart's LinkedHashSet default)
     _postOrder = 1;
   }
 
@@ -626,8 +625,10 @@ class _NetworkSimplex {
         if (span < minOut) minOut = span;
       }
     }
-    return (minIn == 0x7fffffff ? -1 : minIn,
-            minOut == 0x7fffffff ? -1 : minOut);
+    return (
+      minIn == 0x7fffffff ? -1 : minIn,
+      minOut == 0x7fffffff ? -1 : minOut,
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -636,4 +637,3 @@ class _NetworkSimplex {
 
   static int _min(int a, int b) => a < b ? a : b;
 }
-

@@ -44,10 +44,7 @@ void main() {
     final lightMaterialTheme = Theme.of(
       tester.element(find.byType(MermaidView)),
     );
-    expect(
-      lightView.theme,
-      MaterialMermaidTheme.fromTheme(lightMaterialTheme),
-    );
+    expect(lightView.theme, MaterialMermaidTheme.fromTheme(lightMaterialTheme));
   });
 
   testWidgets('demo focuses and highlights tapped flowchart nodes and edges', (
@@ -200,10 +197,7 @@ void main() {
     expect(find.text('Node id: B'), findsNothing);
 
     await tester.tap(
-      find.descendant(
-        of: dialog,
-        matching: find.bySemanticsIdentifier('B'),
-      ),
+      find.descendant(of: dialog, matching: find.bySemanticsIdentifier('B')),
     );
     await tester.pumpAndSettle();
 

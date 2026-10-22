@@ -23,7 +23,10 @@ Map<int, List<String>> nodesByRank(Graph g) {
     // both conditions for one rank is added once.
     final ranks = <int>{
       ?rank,
-      if (minRank != null && maxRank != null && minRank.isFinite && maxRank.isFinite)
+      if (minRank != null &&
+          maxRank != null &&
+          minRank.isFinite &&
+          maxRank.isFinite)
         for (var r = minRank.ceil(); r <= maxRank; r++) r,
     };
     for (final r in ranks) {
@@ -33,7 +36,12 @@ Map<int, List<String>> nodesByRank(Graph g) {
   return byRank;
 }
 
-Graph buildLayerGraph(Graph g, int rank, Relationship ship, [List<String>? nodesInRank]) {
+Graph buildLayerGraph(
+  Graph g,
+  int rank,
+  Relationship ship, [
+  List<String>? nodesInRank,
+]) {
   String root = createLayerRootName(g);
   Graph result = Graph(isCompound: true);
   GraphLabel gp = GraphLabel();
@@ -47,10 +55,12 @@ Graph buildLayerGraph(Graph g, int rank, Relationship ship, [List<String>? nodes
     Props node = g.node(v);
     String? parent = g.parent(v);
     if (node.getI2(rankK) == rank ||
-        (node.getD2(minRankK) ?? double.nan) <= rank && rank <= (node.getD2(maxRankK) ?? double.nan)) {
+        (node.getD2(minRankK) ?? double.nan) <= rank &&
+            rank <= (node.getD2(maxRankK) ?? double.nan)) {
       result.setNode(v);
       result.setParent(v, parent ?? root);
-      List<Edge> tmpList = (ship == Relationship.inEdges ? g.inEdges(v) : g.outEdges(v)) ?? [];
+      List<Edge> tmpList =
+          (ship == Relationship.inEdges ? g.inEdges(v) : g.outEdges(v)) ?? [];
 
       for (var e in tmpList) {
         String u = e.v == v ? e.w : e.v;

@@ -1,5 +1,10 @@
 class MermaidParseException implements Exception {
-  const MermaidParseException(this.message, {this.line, this.column, this.source});
+  const MermaidParseException(
+    this.message, {
+    this.line,
+    this.column,
+    this.source,
+  });
 
   final String message;
 
@@ -10,7 +15,9 @@ class MermaidParseException implements Exception {
 
   @override
   String toString() {
-    final loc = line != null ? ' at line $line${column != null ? ':$column' : ''}' : '';
+    final loc = line != null
+        ? ' at line $line${column != null ? ':$column' : ''}'
+        : '';
     return 'MermaidParseException$loc: $message';
   }
 }

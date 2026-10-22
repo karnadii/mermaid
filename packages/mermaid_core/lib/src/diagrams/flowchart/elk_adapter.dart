@@ -19,7 +19,12 @@ import 'flow_model.dart';
 /// Result of an ELK layout, in flowchart coordinate space (absolute).
 class ElkLayoutResult {
   ElkLayoutResult(
-      this._nodes, this._edges, this._labels, this.width, this.height);
+    this._nodes,
+    this._edges,
+    this._labels,
+    this.width,
+    this.height,
+  );
 
   final Map<String, Rect> _nodes; // node/cluster id → absolute rect
   final Map<String, List<Point>> _edges; // edge id (e$i) → orthogonal polyline
@@ -54,7 +59,9 @@ ElkLayoutResult layoutWithElk(
   for (final n in g.nodes) {
     (childrenOf[n.parent] ??= []).add(n);
   }
-  final isCompound = {for (final n in g.nodes) n.id: childrenOf.containsKey(n.id)};
+  final isCompound = {
+    for (final n in g.nodes) n.id: childrenOf.containsKey(n.id),
+  };
 
   elk.ElkNode toElkNode(dagre.DagreNode n) {
     final kids = childrenOf[n.id];
@@ -129,7 +136,12 @@ ElkLayoutResult layoutWithElk(
   _orderFanIn(edgePoints, targetOf, nodes);
 
   return ElkLayoutResult(
-      nodes, edgePoints, labelCenters, result.width, result.height);
+    nodes,
+    edgePoints,
+    labelCenters,
+    result.width,
+    result.height,
+  );
 }
 
 /// Reorders the border-attach lanes of edges that enter the *same node* on the
@@ -189,21 +201,33 @@ void _orderFanIn(
           ((vertical ? pts[t - 1].x : pts[t - 1].y) - attach).abs() <= eps) {
         t--;
       }
-      if (t - 1 < 0) { ok = false; break; } // no feed segment
+      if (t - 1 < 0) {
+        ok = false;
+        break;
+      } // no feed segment
       final turn = pts[t], feed = pts[t - 1];
       double approach;
       int lateral;
       if (vertical) {
-        if ((feed.y - turn.y).abs() > eps) { ok = false; break; } // feed not ∥
+        if ((feed.y - turn.y).abs() > eps) {
+          ok = false;
+          break;
+        } // feed not ∥
         approach = turn.y;
         lateral = feed.x < turn.x ? -1 : 1; // -1: feed comes from the left
       } else {
-        if ((feed.x - turn.x).abs() > eps) { ok = false; break; }
+        if ((feed.x - turn.x).abs() > eps) {
+          ok = false;
+          break;
+        }
         approach = turn.x;
         lateral = feed.y < turn.y ? -1 : 1; // -1: feed comes from the top
       }
       commonLateral ??= lateral;
-      if (lateral != commonLateral) { ok = false; break; }
+      if (lateral != commonLateral) {
+        ok = false;
+        break;
+      }
       infos.add((id, t, attach, approach, lateral));
     }
     if (!ok || infos.length < 2) continue;
@@ -211,9 +235,10 @@ void _orderFanIn(
     final lanes = [for (final i in infos) i.$3]..sort();
     // Deepest = feed line closest to the border. top/left: larger coord;
     // bottom/right: smaller coord.
-    int cmpDeep((String, int, double, double, int) a,
-            (String, int, double, double, int) b) =>
-        (side == 0 || side == 2) ? b.$4.compareTo(a.$4) : a.$4.compareTo(b.$4);
+    int cmpDeep(
+      (String, int, double, double, int) a,
+      (String, int, double, double, int) b,
+    ) => (side == 0 || side == 2) ? b.$4.compareTo(a.$4) : a.$4.compareTo(b.$4);
     final order = [...infos]..sort(cmpDeep); // deepest first
     // The deepest feed attaches to the lane nearest its lateral source side:
     // from-left (-1) → smallest coord first; from-right (1) → largest first.
@@ -231,8 +256,8 @@ void _orderFanIn(
 }
 
 elk.ElkDirection _direction(FlowDirection d) => switch (d) {
-      FlowDirection.tb => elk.ElkDirection.down,
-      FlowDirection.bt => elk.ElkDirection.up,
-      FlowDirection.lr => elk.ElkDirection.right,
-      FlowDirection.rl => elk.ElkDirection.left,
-    };
+  FlowDirection.tb => elk.ElkDirection.down,
+  FlowDirection.bt => elk.ElkDirection.up,
+  FlowDirection.lr => elk.ElkDirection.right,
+  FlowDirection.rl => elk.ElkDirection.left,
+};

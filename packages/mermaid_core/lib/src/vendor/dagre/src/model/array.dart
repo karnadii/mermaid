@@ -12,25 +12,27 @@ class Array<T> {
     return _map[index];
   }
 
-  bool has(int index){
-    return _map[index]!=null;
+  bool has(int index) {
+    return _map[index] != null;
   }
 
-  void forEach(void Function(T?,int) call){
-    if(_map.isEmpty){return;}
-    List<int> keys=List.from(_map.keys);
+  void forEach(void Function(T?, int) call) {
+    if (_map.isEmpty) {
+      return;
+    }
+    List<int> keys = List.from(_map.keys);
     keys.sort();
-    for(int i=keys[0];i<=keys[keys.length-1];i++){
-      call.call(this[i],i);
+    for (int i = keys[0]; i <= keys[keys.length - 1]; i++) {
+      call.call(this[i], i);
     }
   }
 
-  List<T> toList(){
-    List<int> keys=List.from(_map.keys);
+  List<T> toList() {
+    List<int> keys = List.from(_map.keys);
     keys.sort();
-    List<T> rl=[];
-    for(int i=0;i<keys.length;i++){
-      T t=this[keys[i]] as T;
+    List<T> rl = [];
+    for (int i = 0; i < keys.length; i++) {
+      T t = this[keys[i]] as T;
       rl.add(t);
     }
     return rl;

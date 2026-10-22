@@ -19,7 +19,9 @@ import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
 final _treemapHeader = RegExp(r'^\s*treemap(-beta)?\b');
-final _classDefLine = RegExp(r'^classDef\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(.*?);?\s*$');
+final _classDefLine = RegExp(
+  r'^classDef\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(.*?);?\s*$',
+);
 final _titleOptionalLine = RegExp(r'^title(?:\s+(.*))?$');
 final _accLine = RegExp(r'^(accTitle|accDescr)\b');
 final _quotedItem = RegExp(
@@ -530,10 +532,9 @@ RenderScene layoutTreemap(
         );
         // Ink follows the parent section pairing; a custom fill without
         // an explicit color takes ink from its own luminance.
-        final leafInk = customColor ??
-            (customFill != null
-                ? inkOn(customFill)
-                : labelColor(node.label));
+        final leafInk =
+            customColor ??
+            (customFill != null ? inkOn(customFill) : labelColor(node.label));
         _drawLeafText(
           nodes: nodes,
           measurer: measurer,
@@ -569,7 +570,8 @@ RenderScene layoutTreemap(
           ),
         );
 
-        final lblColor = customColor ??
+        final lblColor =
+            customColor ??
             (customFill != null ? inkOn(customFill) : labelColor(child.label));
         _drawSectionHeader(
           nodes: nodes,

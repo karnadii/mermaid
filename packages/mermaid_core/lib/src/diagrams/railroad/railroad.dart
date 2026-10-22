@@ -609,11 +609,11 @@ class _Layouter {
         c.luminance < 0.5 ? theme.textOnDarkFill : theme.textOnLightFill;
     final textColor = terminal
         ? config.terminalTextColor ??
-            (config.terminalFill != null ? inkFor(fill) : theme.textColor)
+              (config.terminalFill != null ? inkFor(fill) : theme.textColor)
         : config.nonTerminalTextColor ??
-            (config.nonTerminalFill != null
-                ? inkFor(fill)
-                : theme.primaryTextColor);
+              (config.nonTerminalFill != null
+                  ? inkFor(fill)
+                  : theme.primaryTextColor);
     return _Frag(
       nodes: [
         SceneShape(
@@ -663,8 +663,8 @@ class _Layouter {
           // A configured special fill without ink takes it from luminance.
           color: config.specialFill != null
               ? (specialFill.luminance < 0.5
-                  ? theme.textOnDarkFill
-                  : theme.textOnLightFill)
+                    ? theme.textOnDarkFill
+                    : theme.textOnLightFill)
               : (config.nonTerminalTextColor ?? theme.primaryTextColor),
         ),
       ],
@@ -710,8 +710,9 @@ class _Layouter {
     if (items.isEmpty) return _stub();
     final frags = [for (final it in items) layout(it)];
     // Baseline: align all fragment entry rails to a common y.
-    final entryAbove =
-        frags.map((f) => f.entryY).reduce(math.max); // space above baseline
+    final entryAbove = frags
+        .map((f) => f.entryY)
+        .reduce(math.max); // space above baseline
     final exitBelow = frags
         .map((f) => f.height - f.entryY)
         .reduce(math.max); // space below baseline
@@ -1101,7 +1102,8 @@ RenderScene layoutRailroad(
 
     // Advance below this rule (upstream: rule height + verticalSeparation).
     final ruleBottom = definitionY + frag.height;
-    y = math.max(
+    y =
+        math.max(
           baselineY + (config.showMarkers ? config.markerRadius : 0),
           ruleBottom,
         ) +

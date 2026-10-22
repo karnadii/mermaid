@@ -825,8 +825,9 @@ RenderScene layoutWardley(
     final fromName = centers.containsKey(link.from)
         ? link.from
         : _resolveId(centers, link.from);
-    final toName =
-        centers.containsKey(link.to) ? link.to : _resolveId(centers, link.to);
+    final toName = centers.containsKey(link.to)
+        ? link.to
+        : _resolveId(centers, link.to);
     final a = centers[fromName];
     final b = centers[toName];
     if (a == null || b == null) continue;

@@ -14,8 +14,12 @@ import 'class_model.dart';
 // Hoisted so each pattern compiles once instead of on every call.
 final _classHeader = RegExp(r'^classDiagram(-v2)?\b');
 final _annotationLine = RegExp(r'^<<\s*(.+?)\s*>>$');
-final _namespaceOpen = RegExp(r'^namespace\s+([^\s{\[]+)\s*(?:\["([^"]*)"\])?\s*\{$');
-final _classDecl = RegExp(r'^class\s+([^\s{:\[]+)\s*(\["([^"]*)"\])?\s*([^{]*?)\s*(\{)?\s*$');
+final _namespaceOpen = RegExp(
+  r'^namespace\s+([^\s{\[]+)\s*(?:\["([^"]*)"\])?\s*\{$',
+);
+final _classDecl = RegExp(
+  r'^class\s+([^\s{:\[]+)\s*(\["([^"]*)"\])?\s*([^{]*?)\s*(\{)?\s*$',
+);
 final _classCssShorthand = RegExp(r'^class\s+([^\s:]+):::(\S+)\s*$');
 final _directionLine = RegExp(r'^direction\s+(TB|TD|BT|LR|RL)\s*$');
 final _annotationFor = RegExp(r'^<<\s*(.+?)\s*>>\s+(\S+)\s*$');
@@ -73,8 +77,10 @@ class _ClassParser {
       if (line.isEmpty) continue;
       if (!seenHeader) {
         if (!_classHeader.hasMatch(line)) {
-          throw MermaidParseException('expected "classDiagram" header',
-              line: i + 1);
+          throw MermaidParseException(
+            'expected "classDiagram" header',
+            line: i + 1,
+          );
         }
         seenHeader = true;
         continue;
@@ -117,7 +123,8 @@ class _ClassParser {
     if (_namespaceStack.isNotEmpty && line == '}') {
       final (id, label, members) = _namespaceStack.removeLast();
       namespaces.add(
-          ClassNamespace(id: id, label: label, classIds: List.of(members)));
+        ClassNamespace(id: id, label: label, classIds: List.of(members)),
+      );
       // A nested namespace's classes also belong to the enclosing one for
       // cluster sizing purposes.
       if (_namespaceStack.isNotEmpty) {
@@ -130,8 +137,11 @@ class _ClassParser {
 
     m = _namespaceOpen.firstMatch(line);
     if (m != null) {
-      _namespaceStack.add(
-          (m.group(1)!, _normalize(m.group(2) ?? m.group(1)!), []));
+      _namespaceStack.add((
+        m.group(1)!,
+        _normalize(m.group(2) ?? m.group(1)!),
+        [],
+      ));
       return;
     }
 
@@ -145,8 +155,8 @@ class _ClassParser {
         // Trailing generic text: `class People List~List~Person~~` displays
         // the full converted text as the label.
         classes[id] = node.copyWith(
-            label:
-                _convertGenerics('${m.group(1)!} ${m.group(4)!}'.trim()));
+          label: _convertGenerics('${m.group(1)!} ${m.group(4)!}'.trim()),
+        );
       }
       if (m.group(5) != null) _openClass = id;
       if (_namespaceStack.isNotEmpty) _namespaceStack.last.$3.add(id);
@@ -157,8 +167,9 @@ class _ClassParser {
     m = _classCssShorthand.firstMatch(line);
     if (m != null) {
       final node = _ensure(m.group(1)!);
-      classes[node.id] =
-          node.copyWith(cssClasses: [...node.cssClasses, m.group(2)!]);
+      classes[node.id] = node.copyWith(
+        cssClasses: [...node.cssClasses, m.group(2)!],
+      );
       if (_namespaceStack.isNotEmpty) _namespaceStack.last.$3.add(node.id);
       return;
     }
@@ -182,9 +193,12 @@ class _ClassParser {
 
     m = _noteForClass.firstMatch(line);
     if (m != null) {
-      notes.add(ClassNote(
+      notes.add(
+        ClassNote(
           text: _normalize(m.group(2)!),
-          forClass: _stripGenerics(m.group(1)!)));
+          forClass: _stripGenerics(m.group(1)!),
+        ),
+      );
       return;
     }
     m = _noteLine.firstMatch(line);
@@ -206,8 +220,9 @@ class _ClassParser {
     if (m != null) {
       for (final id in m.group(1)!.split(',')) {
         final node = _ensure(id.trim());
-        classes[node.id] =
-            node.copyWith(cssClasses: [...node.cssClasses, m.group(2)!]);
+        classes[node.id] = node.copyWith(
+          cssClasses: [...node.cssClasses, m.group(2)!],
+        );
       }
       return;
     }
@@ -216,7 +231,8 @@ class _ClassParser {
     if (m != null) {
       final node = _ensure(m.group(1)!);
       classes[node.id] = node.copyWith(
-          styles: {...node.styles, ..._parseStyles(m.group(2)!)});
+        styles: {...node.styles, ..._parseStyles(m.group(2)!)},
+      );
       return;
     }
 
@@ -225,9 +241,9 @@ class _ClassParser {
     if (m != null) {
       final node = _ensure(m.group(2)!);
       final url = _quotedString.firstMatch(
-          m.group(3)!.replaceFirst(_hrefCallPrefix, ''));
-      if (url != null && m.group(3)!.contains('href') ||
-          m.group(1) == 'link') {
+        m.group(3)!.replaceFirst(_hrefCallPrefix, ''),
+      );
+      if (url != null && m.group(3)!.contains('href') || m.group(1) == 'link') {
         classes[node.id] = node.copyWith(link: url?.group(1));
       }
       return;
@@ -261,10 +277,10 @@ class _ClassParser {
   /// `A "card" <relation> "card" B : label` where relation is
   /// [type1]line[type2], line `--` or `..`.
   static final _relationRe = RegExp(
-      r'^(\S+)\s*(?:"([^"]*)")?\s*' // from + optional cardinality
-      r'(<\||[*o<]|\(\))?(--|\.\.)(\|>|[*o>]|\(\))?' // relation token
-      r'\s*(?:"([^"]*)")?\s*(\S+?)\s*(?::\s*(.+))?$' // cardinality + to + label
-      );
+    r'^(\S+)\s*(?:"([^"]*)")?\s*' // from + optional cardinality
+    r'(<\||[*o<]|\(\))?(--|\.\.)(\|>|[*o>]|\(\))?' // relation token
+    r'\s*(?:"([^"]*)")?\s*(\S+?)\s*(?::\s*(.+))?$', // cardinality + to + label
+  );
 
   bool _parseRelation(String line, int n) {
     final m = _relationRe.firstMatch(line);
@@ -290,16 +306,18 @@ class _ClassParser {
     };
     final from = _ensure(m.group(1)!);
     final to = _ensure(m.group(7)!);
-    relations.add(ClassRelation(
-      from: from.id,
-      to: to.id,
-      endFrom: endFrom,
-      endTo: endTo,
-      dotted: m.group(4) == '..',
-      cardFrom: m.group(2) == null ? null : _normalize(m.group(2)!),
-      cardTo: m.group(6) == null ? null : _normalize(m.group(6)!),
-      label: m.group(8) == null ? null : _normalize(m.group(8)!),
-    ));
+    relations.add(
+      ClassRelation(
+        from: from.id,
+        to: to.id,
+        endFrom: endFrom,
+        endTo: endTo,
+        dotted: m.group(4) == '..',
+        cardFrom: m.group(2) == null ? null : _normalize(m.group(2)!),
+        cardTo: m.group(6) == null ? null : _normalize(m.group(6)!),
+        label: m.group(8) == null ? null : _normalize(m.group(8)!),
+      ),
+    );
     return true;
   }
 
@@ -354,8 +372,9 @@ class _ClassParser {
 
   void _annotate(String id, String annotation) {
     final node = _ensure(id);
-    classes[node.id] =
-        node.copyWith(annotations: [...node.annotations, annotation]);
+    classes[node.id] = node.copyWith(
+      annotations: [...node.annotations, annotation],
+    );
   }
 
   ClassNode _ensure(String rawId) {
@@ -385,8 +404,7 @@ class _ClassParser {
         continue;
       }
       final next = i + 1 < s.length ? s[i + 1] : '';
-      final opens = depth == 0 ||
-          _identChar.hasMatch(next);
+      final opens = depth == 0 || _identChar.hasMatch(next);
       if (opens && next != '~' && next.isNotEmpty) {
         out.write('<');
         depth++;

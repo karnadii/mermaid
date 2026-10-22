@@ -51,6 +51,7 @@ int tightTree(Graph t, Graph g) {
       });
     }
   }
+
   t.nodes.forEach(dfs);
   return t.nodeCount;
 }

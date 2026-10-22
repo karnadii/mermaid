@@ -87,8 +87,13 @@ class _GanttParser {
   }
 
   static const _weekdayNames = {
-    'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
-    'friday': 5, 'saturday': 6, 'sunday': 7,
+    'monday': 1,
+    'tuesday': 2,
+    'wednesday': 3,
+    'thursday': 4,
+    'friday': 5,
+    'saturday': 6,
+    'sunday': 7,
   };
 
   void _parseStatement(String line, int n) {
@@ -148,15 +153,17 @@ class _GanttParser {
       return;
     }
     // Recognized-but-unsupported settings: parsed and ignored.
-    if (_ignoredSettingLine
-        .hasMatch(line)) {
+    if (_ignoredSettingLine.hasMatch(line)) {
       return;
     }
 
     final colon = line.indexOf(':');
     if (colon > 0) {
-      _parseTask(line.substring(0, colon).trim(),
-          line.substring(colon + 1).trim(), n);
+      _parseTask(
+        line.substring(0, colon).trim(),
+        line.substring(colon + 1).trim(),
+        n,
+      );
       return;
     }
 
@@ -168,8 +175,7 @@ class _GanttParser {
     final parts = meta.split(',').map((p) => p.trim()).toList();
     var active = false, done = false, crit = false, milestone = false;
     var vert = false;
-    while (parts.isNotEmpty &&
-        _taskTag.hasMatch(parts.first)) {
+    while (parts.isNotEmpty && _taskTag.hasMatch(parts.first)) {
       switch (parts.removeAt(0)) {
         case 'active':
           active = true;

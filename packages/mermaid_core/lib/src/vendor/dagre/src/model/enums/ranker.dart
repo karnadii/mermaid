@@ -1,5 +1,1 @@
-enum Ranker {
-  networkSimplex,
-  tightTree,
-  longestPath,
-}
+enum Ranker { networkSimplex, tightTree, longestPath }

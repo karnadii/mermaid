@@ -4,7 +4,6 @@ import 'package:mermaid_core/src/vendor/dagre/src/model/props.dart';
 import 'package:mermaid_core/src/vendor/dagre/src/util.dart' as util;
 import 'package:mermaid_core/src/vendor/dagre/src/util/list_util.dart';
 
-
 void run(Graph g) {
   var root = util.addDummyNode(g, Dummy.root, Props(), "_root");
   Map<String, int> depths = _treeDepths(g);
@@ -24,7 +23,15 @@ void run(Graph g) {
   g.label[nodeRankFactorK] = nodeSep;
 }
 
-void _dfs(Graph g, String root, double nodeSep, double weight, double height, Map<String, int> depths, String v) {
+void _dfs(
+  Graph g,
+  String root,
+  double nodeSep,
+  double weight,
+  double height,
+  Map<String, int> depths,
+  String v,
+) {
   var children = g.children(v);
   if (children == null || children.isEmpty) {
     if (v != root) {
@@ -49,7 +56,15 @@ void _dfs(Graph g, String root, double nodeSep, double weight, double height, Ma
     String childBottom = childNode[borderBottomK] ?? child;
     var thisWeight = childNode[borderTopK] != null ? weight : 2 * weight;
     double minlen = childTop != childBottom ? 1 : (height - depths[v]! + 1);
-    g.setEdge2(top, childTop, value: ({weightK: thisWeight, minLenK: minlen, nestingEdgeK: true}.toProps));
+    g.setEdge2(
+      top,
+      childTop,
+      value: ({
+        weightK: thisWeight,
+        minLenK: minlen,
+        nestingEdgeK: true,
+      }.toProps),
+    );
     g.setEdge2(
       childBottom,
       bottom,
@@ -58,25 +73,29 @@ void _dfs(Graph g, String root, double nodeSep, double weight, double height, Ma
   }
 
   if (g.parent(v) == null) {
-    g.setEdge2(root, top, value: {weightK: 0, minLenK: height + depths[v]!}.toProps);
+    g.setEdge2(
+      root,
+      top,
+      value: {weightK: 0, minLenK: height + depths[v]!}.toProps,
+    );
   }
 }
 
 Map<String, int> _treeDepths(Graph g) {
   Map<String, int> depths = {};
-  List<String>? children=g.children();
-  int depth=1;
+  List<String>? children = g.children();
+  int depth = 1;
   while (children != null && children.isNotEmpty) {
-    List<String> next=[];
-    for(var item in children){
-      depths[item]=depth;
+    List<String> next = [];
+    for (var item in children) {
+      depths[item] = depth;
       List<String>? tmp = g.children(item);
       if (tmp != null) {
         next.addAll(tmp);
       }
     }
-    children=next;
-    depth+=1;
+    children = next;
+    depth += 1;
   }
   return depths;
 }

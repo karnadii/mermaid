@@ -7,8 +7,13 @@ import '../model/tmp/resolve_conflicts_result.dart';
 import 'barycenter.dart';
 import '../model/tmp/order_inner_result.dart';
 
-ResolveConflictsResult sortSubgraph(Graph g, String v, Graph cg, bool biasRight) {
-  List<String> movable = g.children(v)??[];
+ResolveConflictsResult sortSubgraph(
+  Graph g,
+  String v,
+  Graph cg,
+  bool biasRight,
+) {
+  List<String> movable = g.children(v) ?? [];
   Props? node = g.nodeNull(v);
   // Vendored fix: dagre.js reads node.borderLeft as `undefined` when absent;
   // Props.get throws instead, so use the null-tolerant accessor.
@@ -33,8 +38,8 @@ ResolveConflictsResult sortSubgraph(Graph g, String v, Graph cg, bool biasRight)
 
   List<OrderInnerResult> barycenters = barycenter(g, movable);
   for (var entry in barycenters) {
-    var list=g.children(entry.v);
-    if (list!=null&&list.isNotEmpty) {
+    var list = g.children(entry.v);
+    if (list != null && list.isNotEmpty) {
       var subgraphResult = sortSubgraph(g, entry.v, cg, biasRight);
       subgraphs[entry.v] = subgraphResult;
       if (subgraphResult.barycenter != null) {
@@ -48,14 +53,18 @@ ResolveConflictsResult sortSubgraph(Graph g, String v, Graph cg, bool biasRight)
   ResolveConflictsResult result = sort(entries, biasRight);
   if (bl != null) {
     result.vs = [bl, ...result.vs, br!];
-    if ((g.predecessors(bl)??[]).isNotEmpty) {
+    if ((g.predecessors(bl) ?? []).isNotEmpty) {
       Props blPred = g.node(g.predecessors(bl)![0]);
       Props brPred = g.node(g.predecessors(br)![0]);
       if (result.barycenter == null) {
         result.barycenter = 0;
         result.weight = 0;
       }
-      result.barycenter = (result.barycenter! * result.weight + blPred.getD(orderK) + brPred.getD(orderK)) / (result.weight + 2);
+      result.barycenter =
+          (result.barycenter! * result.weight +
+              blPred.getD(orderK) +
+              brPred.getD(orderK)) /
+          (result.weight + 2);
 
       result.weight = result.weight + 2;
     }
@@ -63,7 +72,10 @@ ResolveConflictsResult sortSubgraph(Graph g, String v, Graph cg, bool biasRight)
   return result;
 }
 
-void _expandSubgraphs(List<ResolveConflictsResult> entries, Map<String, ResolveConflictsResult> subgraphs) {
+void _expandSubgraphs(
+  List<ResolveConflictsResult> entries,
+  Map<String, ResolveConflictsResult> subgraphs,
+) {
   for (var entry in entries) {
     List<String> rl = [];
     for (var v in entry.vs) {
@@ -79,8 +91,9 @@ void _expandSubgraphs(List<ResolveConflictsResult> entries, Map<String, ResolveC
 
 void _mergeBarycenters(OrderInnerResult target, ResolveConflictsResult other) {
   if (target.barycenter != null) {
-    target.barycenter = (target.barycenter! * target.weight! +
-        other.barycenter! * other.weight) /
+    target.barycenter =
+        (target.barycenter! * target.weight! +
+            other.barycenter! * other.weight) /
         (target.weight! + other.weight);
     target.weight = target.weight! + other.weight;
   } else {

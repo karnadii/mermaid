@@ -4,19 +4,24 @@ import 'package:test/test.dart';
 void main() {
   group('Phase 3 — hierarchy / clusters', () {
     test('children are placed inside the parent cluster rect', () {
-      final res = const ElkLayered().layout(ElkGraph(
-        children: [
-          ElkNode(id: 'outside', width: 80, height: 40),
-          ElkNode(id: 'cluster', children: [
-            ElkNode(id: 'c1', width: 80, height: 40),
-            ElkNode(id: 'c2', width: 80, height: 40),
-          ]),
-        ],
-        edges: [
-          ElkEdge(id: 'e1', sources: ['c1'], targets: ['c2']),
-          ElkEdge(id: 'e2', sources: ['outside'], targets: ['c1']),
-        ],
-      ));
+      final res = const ElkLayered().layout(
+        ElkGraph(
+          children: [
+            ElkNode(id: 'outside', width: 80, height: 40),
+            ElkNode(
+              id: 'cluster',
+              children: [
+                ElkNode(id: 'c1', width: 80, height: 40),
+                ElkNode(id: 'c2', width: 80, height: 40),
+              ],
+            ),
+          ],
+          edges: [
+            ElkEdge(id: 'e1', sources: ['c1'], targets: ['c2']),
+            ElkEdge(id: 'e2', sources: ['outside'], targets: ['c1']),
+          ],
+        ),
+      );
 
       final byId = res.nodesById;
       final cluster = byId['cluster']!;
@@ -31,24 +36,35 @@ void main() {
       for (final c in [c1, c2]) {
         expect(c.x, greaterThanOrEqualTo(cluster.x - 0.5));
         expect(c.y, greaterThanOrEqualTo(cluster.y - 0.5));
-        expect(c.x + c.width, lessThanOrEqualTo(cluster.x + cluster.width + 0.5));
-        expect(c.y + c.height, lessThanOrEqualTo(cluster.y + cluster.height + 0.5));
+        expect(
+          c.x + c.width,
+          lessThanOrEqualTo(cluster.x + cluster.width + 0.5),
+        );
+        expect(
+          c.y + c.height,
+          lessThanOrEqualTo(cluster.y + cluster.height + 0.5),
+        );
       }
     });
 
     test('cluster rect encloses all members', () {
-      final res = const ElkLayered().layout(ElkGraph(
-        children: [
-          ElkNode(id: 'g', children: [
-            for (final id in ['a', 'b', 'c'])
-              ElkNode(id: id, width: 60, height: 30),
-          ]),
-        ],
-        edges: [
-          ElkEdge(id: 'e1', sources: ['a'], targets: ['b']),
-          ElkEdge(id: 'e2', sources: ['b'], targets: ['c']),
-        ],
-      ));
+      final res = const ElkLayered().layout(
+        ElkGraph(
+          children: [
+            ElkNode(
+              id: 'g',
+              children: [
+                for (final id in ['a', 'b', 'c'])
+                  ElkNode(id: id, width: 60, height: 30),
+              ],
+            ),
+          ],
+          edges: [
+            ElkEdge(id: 'e1', sources: ['a'], targets: ['b']),
+            ElkEdge(id: 'e2', sources: ['b'], targets: ['c']),
+          ],
+        ),
+      );
       final g = res.nodesById['g']!;
       double minX = double.infinity, minY = double.infinity;
       double maxX = -double.infinity, maxY = -double.infinity;
@@ -66,13 +82,16 @@ void main() {
     });
 
     test('result tree nests children under the cluster node', () {
-      final res = const ElkLayered().layout(ElkGraph(
-        children: [
-          ElkNode(id: 'cluster', children: [
-            ElkNode(id: 'c1', width: 80, height: 40),
-          ]),
-        ],
-      ));
+      final res = const ElkLayered().layout(
+        ElkGraph(
+          children: [
+            ElkNode(
+              id: 'cluster',
+              children: [ElkNode(id: 'c1', width: 80, height: 40)],
+            ),
+          ],
+        ),
+      );
       final cluster = res.children.singleWhere((n) => n.id == 'cluster');
       expect(cluster.children.map((n) => n.id), contains('c1'));
       // Child coordinates are parent-relative: within [0, cluster.size].
@@ -82,26 +101,37 @@ void main() {
     });
 
     test('deep target reaches leaf and retains positioned label', () {
-      final res = const ElkLayered().layout(ElkGraph(
-        children: [
-          ElkNode(id: 'outside', width: 80, height: 40),
-          ElkNode(id: 'outer', children: [
-            ElkNode(id: 'inner', children: [
-              ElkNode(id: 'leaf', width: 80, height: 40),
-            ]),
-          ]),
-        ],
-        edges: [
-          ElkEdge(id: 'deep', sources: ['outside'], targets: ['leaf'], labels: [
-            ElkLabel(text: 'deep label', width: 64, height: 16),
-          ]),
-        ],
-      ));
+      final res = const ElkLayered().layout(
+        ElkGraph(
+          children: [
+            ElkNode(id: 'outside', width: 80, height: 40),
+            ElkNode(
+              id: 'outer',
+              children: [
+                ElkNode(
+                  id: 'inner',
+                  children: [ElkNode(id: 'leaf', width: 80, height: 40)],
+                ),
+              ],
+            ),
+          ],
+          edges: [
+            ElkEdge(
+              id: 'deep',
+              sources: ['outside'],
+              targets: ['leaf'],
+              labels: [ElkLabel(text: 'deep label', width: 64, height: 16)],
+            ),
+          ],
+        ),
+      );
 
       final edge = res.edges.singleWhere((e) => e.id == 'deep');
-      expect(_onBoundary(edge.sections.single.endPoint, res.nodesById['leaf']!),
-          isTrue,
-          reason: 'the target must reach leaf, not an enclosing cluster');
+      expect(
+        _onBoundary(edge.sections.single.endPoint, res.nodesById['leaf']!),
+        isTrue,
+        reason: 'the target must reach leaf, not an enclosing cluster',
+      );
       final label = edge.labels.single;
       expect((label.text, label.width, label.height), ('deep label', 64, 16));
       expect(label.x.isFinite && label.y.isFinite, isTrue);
@@ -110,26 +140,37 @@ void main() {
     });
 
     test('deep source starts at leaf through every cluster level', () {
-      final res = const ElkLayered().layout(ElkGraph(
-        children: [
-          ElkNode(id: 'outer', children: [
-            ElkNode(id: 'inner', children: [
-              ElkNode(id: 'leaf', width: 80, height: 40),
-            ]),
-          ]),
-          ElkNode(id: 'outside', width: 80, height: 40),
-        ],
-        edges: [
-          ElkEdge(id: 'deep', sources: ['leaf'], targets: ['outside']),
-        ],
-      ));
+      final res = const ElkLayered().layout(
+        ElkGraph(
+          children: [
+            ElkNode(
+              id: 'outer',
+              children: [
+                ElkNode(
+                  id: 'inner',
+                  children: [ElkNode(id: 'leaf', width: 80, height: 40)],
+                ),
+              ],
+            ),
+            ElkNode(id: 'outside', width: 80, height: 40),
+          ],
+          edges: [
+            ElkEdge(id: 'deep', sources: ['leaf'], targets: ['outside']),
+          ],
+        ),
+      );
 
       final edge = res.edges.singleWhere((e) => e.id == 'deep');
-      expect(_onBoundary(edge.sections.single.startPoint, res.nodesById['leaf']!),
-          isTrue,
-          reason: 'the source must start at leaf, not an enclosing cluster');
-      expect(edge.sections.single.points.length, greaterThanOrEqualTo(4),
-          reason: 'the stitched route must cross both cluster boundaries');
+      expect(
+        _onBoundary(edge.sections.single.startPoint, res.nodesById['leaf']!),
+        isTrue,
+        reason: 'the source must start at leaf, not an enclosing cluster',
+      );
+      expect(
+        edge.sections.single.points.length,
+        greaterThanOrEqualTo(4),
+        reason: 'the stitched route must cross both cluster boundaries',
+      );
     });
   });
 }

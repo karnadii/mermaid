@@ -1,4 +1,1 @@
-enum DFSOrder{
-  post,
-  pre,
-}
+enum DFSOrder { post, pre }

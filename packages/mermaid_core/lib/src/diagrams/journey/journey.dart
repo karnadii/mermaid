@@ -347,19 +347,22 @@ RenderScene layoutJourney(
         : config.sectionColours![sectionIndex % config.sectionColours!.length];
     // A lone custom `sectionFills` without `sectionColours` takes ink
     // from the fill luminance; defaults keep their designed pairs.
-    final sectionTitleColor = configuredTextColor ??
+    final sectionTitleColor =
+        configuredTextColor ??
         (config.sectionFills != null
             ? (fill.luminance < 0.5
-                ? theme.textOnDarkFill
-                : theme.textOnLightFill)
+                  ? theme.textOnDarkFill
+                  : theme.textOnLightFill)
             : theme.titleColor);
-    final textColor = configuredTextColor ??
+    final textColor =
+        configuredTextColor ??
         (config.sectionFills != null
             ? (fill.luminance < 0.5
-                ? theme.textOnDarkFill
-                : theme.textOnLightFill)
+                  ? theme.textOnDarkFill
+                  : theme.textOnLightFill)
             : theme.textColor);
-    final sectionX = globalIndex * config.taskMargin +
+    final sectionX =
+        globalIndex * config.taskMargin +
         globalIndex * config.width +
         leftMargin;
     if (section.name.isNotEmpty) {
@@ -395,7 +398,8 @@ RenderScene layoutJourney(
       );
     }
     for (final t in section.tasks) {
-      final taskX = globalIndex * config.taskMargin +
+      final taskX =
+          globalIndex * config.taskMargin +
           globalIndex * config.width +
           leftMargin;
       final cx = taskX + config.width / 2;

@@ -1,5 +1,1 @@
-enum LabelPosition{
-  left,
-  center,
-  right
-}
+enum LabelPosition { left, center, right }

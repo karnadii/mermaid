@@ -7,8 +7,8 @@ version: 0.0.1
 publish_to: none
 
 environment:
-  sdk: ^3.12.0
-  flutter: '>=3.35.0'
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
 resolution: workspace
 
 dependencies:
@@ -38,16 +38,3 @@ jaspr:
   mode: static
   # Port for the static-build crawl server (default 8080 is often taken).
   port: 8091
-  # `jaspr build` runs the Flutter web build internally and wires the embed —
-  # no standalone `flutter build web` / tracked main.dart.js artifact.
-  flutter: embedded
-
-flutter:
-  uses-material-design: true
-  fonts:
-    - family: KaTeX_Main
-      fonts:
-        - asset: fonts/KaTeX_Main-Regular.ttf
-    - family: KaTeX_Math
-      fonts:
-        - asset: fonts/KaTeX_Math-Italic.ttf

@@ -356,10 +356,12 @@ RenderScene layoutGitGraph(
       : 50.0;
   const commitLabelSize = 10.0;
   const tagLabelSize = 10.0;
-  final horizontal = graph.direction == GitDirection.leftRight ||
+  final horizontal =
+      graph.direction == GitDirection.leftRight ||
       graph.direction == GitDirection.rightLeft;
   final rl = graph.direction == GitDirection.rightLeft;
-  final tb = graph.direction == GitDirection.topBottom ||
+  final tb =
+      graph.direction == GitDirection.topBottom ||
       graph.direction == GitDirection.bottomTop;
   final bt = graph.direction == GitDirection.bottomTop;
 
@@ -414,8 +416,9 @@ RenderScene layoutGitGraph(
         final pt = timeOf[pid];
         if (pt != null && pt > parentMax) parentMax = pt;
       }
-      final fromParent =
-          parentMax.isFinite ? parentMax + commitStep : pos + layoutOffset;
+      final fromParent = parentMax.isFinite
+          ? parentMax + commitStep
+          : pos + layoutOffset;
       final cursor = pos + layoutOffset;
       t = config.parallelCommits
           ? fromParent + layoutOffset
@@ -663,10 +666,12 @@ RenderScene layoutGitGraph(
           // sticks out one LAYOUT_OFFSET to the left of the body edge:
           //   notch = cx - w/2 - 12, hole = cx - w/2 - 8, body = cx - w/2 - 4.
           final tagOrigin = cx + (rl ? layoutOffset : -layoutOffset);
-          final notchX =
-              rl ? tagOrigin + w / 2 + px / 2 : tagOrigin - w / 2 - px / 2;
-          final holeX =
-              rl ? tagOrigin + w / 2 - px / 2 : tagOrigin - w / 2 + px / 2;
+          final notchX = rl
+              ? tagOrigin + w / 2 + px / 2
+              : tagOrigin - w / 2 - px / 2;
+          final holeX = rl
+              ? tagOrigin + w / 2 - px / 2
+              : tagOrigin - w / 2 + px / 2;
           final bodyLeft = cx - w / 2 - px;
           final bodyRight = cx + w / 2 + px;
           final h2 = h / 2;

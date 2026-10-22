@@ -1,10 +1,9 @@
 import 'dart:math' as math;
 
 extension ListExt<T> on List<T> {
-
   List<T> concat(Iterable<T>? lists) {
     List<T> rl = [...this];
-    if(lists!=null){
+    if (lists != null) {
       rl.addAll(lists);
     }
     return rl;
@@ -37,7 +36,7 @@ extension ListExt<T> on List<T> {
   }
 
   void eachRight(void Function(T, int) call) {
-    for(int i=length-1;i>=0;i--){
+    for (int i = length - 1; i >= 0; i--) {
       call.call(this[i], i);
     }
   }
@@ -66,8 +65,8 @@ extension ListExt<T> on List<T> {
     List<O> rl = [];
     int i = 0;
     for (var n in this) {
-      O? r=call.call(n, i);
-      if(r!=null){
+      O? r = call.call(n, i);
+      if (r != null) {
         rl.add(r);
       }
       i++;
@@ -76,15 +75,13 @@ extension ListExt<T> on List<T> {
   }
 
   T? find(bool Function(T) call) {
-
-    for(var item in this){
-      if(call.call(item)){
+    for (var item in this) {
+      if (call.call(item)) {
         return item;
       }
     }
     return null;
   }
-
 }
 
 T? max<T extends num>(Iterable<T>? list) {
@@ -121,4 +118,3 @@ T minBy<T>(List<T> list, num? Function(T) by) {
   }
   return v;
 }
-

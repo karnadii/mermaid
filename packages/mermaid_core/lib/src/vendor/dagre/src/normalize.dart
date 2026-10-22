@@ -27,7 +27,13 @@ void _normalizeEdge(Graph g, Edge e) {
   int i = 0;
   for (++vRank; vRank < wRank; ++i, ++vRank) {
     edgeLabel[pointsK] = <GraphPoint>[];
-    attrs = {widthK: 0, heightK: 0, edgeLabelK: edgeLabel, edgeObjK: e, rankK: vRank}.toProps;
+    attrs = {
+      widthK: 0,
+      heightK: 0,
+      edgeLabelK: edgeLabel,
+      edgeObjK: e,
+      rankK: vRank,
+    }.toProps;
     dummy = util.addDummyNode(g, Dummy.edge, attrs, "_d");
     if (vRank == labelRank) {
       attrs['width'] = edgeLabel.getD('width');
@@ -37,7 +43,12 @@ void _normalizeEdge(Graph g, Edge e) {
       attrs[dummyK] = Dummy.edgeLabel;
       attrs[labelPosK] = edgeLabel.get2(labelPosK);
     }
-    g.setEdge2(v, dummy, name: name, value: {weightK: edgeLabel[weightK]}.toProps);
+    g.setEdge2(
+      v,
+      dummy,
+      name: name,
+      value: {weightK: edgeLabel[weightK]}.toProps,
+    );
     if (i == 0) {
       g.label.getL<String>(dummyChainsK).add(dummy);
     }
@@ -54,7 +65,9 @@ void undo(Graph g) {
     while (node != null && node[dummyK] != null) {
       var w = g.successors(v)![0];
       g.removeNode(v);
-      origLabel.getL<GraphPoint>(pointsK).add(GraphPoint(node.getD(xK), node.getD(yK)));
+      origLabel
+          .getL<GraphPoint>(pointsK)
+          .add(GraphPoint(node.getD(xK), node.getD(yK)));
       if (node[dummyK] == Dummy.edgeLabel) {
         origLabel[xK] = node[xK];
         origLabel[yK] = node[yK];

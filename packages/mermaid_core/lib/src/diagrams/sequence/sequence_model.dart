@@ -80,11 +80,13 @@ enum SeqArrow {
   dottedPoint;
 
   bool get dotted => switch (this) {
-        dottedOpen || dottedArrow || bidirectionalDotted || dottedCross ||
-        dottedPoint =>
-          true,
-        _ => false,
-      };
+    dottedOpen ||
+    dottedArrow ||
+    bidirectionalDotted ||
+    dottedCross ||
+    dottedPoint => true,
+    _ => false,
+  };
 
   bool get bidirectional =>
       this == bidirectionalSolid || this == bidirectionalDotted;

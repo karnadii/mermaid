@@ -95,10 +95,8 @@ class LNode extends LShape {
   /// Original input id, for mapping the result back out (port carries its own).
   String? identifier;
 
-  Iterable<LEdge> get incomingEdges =>
-      ports.expand((p) => p.incomingEdges);
-  Iterable<LEdge> get outgoingEdges =>
-      ports.expand((p) => p.outgoingEdges);
+  Iterable<LEdge> get incomingEdges => ports.expand((p) => p.incomingEdges);
+  Iterable<LEdge> get outgoingEdges => ports.expand((p) => p.outgoingEdges);
   Iterable<LEdge> get connectedEdges => [...incomingEdges, ...outgoingEdges];
 
   /// The index of this node within its layer (-1 if layerless).
@@ -133,9 +131,9 @@ class LPort extends LShape {
 
   /// Absolute anchor position = node.position + port.position + anchor.
   KVector get absoluteAnchor => KVector(
-        node.position.x + position.x + anchor.x,
-        node.position.y + position.y + anchor.y,
-      );
+    node.position.x + position.x + anchor.x,
+    node.position.y + position.y + anchor.y,
+  );
 }
 
 /// A directed edge between two ports — ELK's `LEdge`.
@@ -165,7 +163,8 @@ class LEdge extends LGraphElement {
     p?.incomingEdges.add(this);
   }
 
-  bool get isSelfLoop => _source?.node != null && _source?.node == _target?.node;
+  bool get isSelfLoop =>
+      _source?.node != null && _source?.node == _target?.node;
   bool get isInLayerEdge =>
       !isSelfLoop && _source?.node.layer == _target?.node.layer;
 

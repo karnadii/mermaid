@@ -55,11 +55,17 @@ void main() {
     final points = [
       for (final c in edgePath(relationGroup(s, 'C1', 'C1')).commands)
         switch (c) {
-          MoveTo(:final p) || LineTo(:final p) || CubicTo(:final p) || QuadTo(:final p) => p,
+          MoveTo(:final p) ||
+          LineTo(:final p) ||
+          CubicTo(:final p) ||
+          QuadTo(:final p) => p,
           _ => null,
         },
     ].nonNulls.toList();
-    expect(points.map((p) => p.x).reduce(math.max), greaterThan(box.right + 10));
+    expect(
+      points.map((p) => p.x).reduce(math.max),
+      greaterThan(box.right + 10),
+    );
     expect(points.first.x, closeTo(box.right, 1));
     expect(points.last.x, closeTo(box.right, 1));
   });

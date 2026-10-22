@@ -911,11 +911,12 @@ class _StateLayout {
     apply(s.styles);
     // A `fill:` without an explicit `color:` takes ink from the fill
     // luminance; an explicit `color:` always wins.
-    final ink = explicitColor ??
+    final ink =
+        explicitColor ??
         (fill != theme.mainBkg
             ? (fill.luminance < 0.5
-                ? theme.textOnDarkFill
-                : theme.textOnLightFill)
+                  ? theme.textOnDarkFill
+                  : theme.textOnLightFill)
             : theme.textColor);
 
     final children = <SceneNode>[];

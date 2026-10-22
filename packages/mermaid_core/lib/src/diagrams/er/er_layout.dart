@@ -440,11 +440,12 @@ class _ErLayout {
         style: headerStyle,
         // A `fill:` without an explicit `color:` takes ink from the
         // fill luminance; the themed pair stays as designed.
-        color: style.color ??
+        color:
+            style.color ??
             (style.fill != null
                 ? (style.fill!.luminance < 0.5
-                    ? theme.textOnDarkFill
-                    : theme.textOnLightFill)
+                      ? theme.textOnDarkFill
+                      : theme.textOnLightFill)
                 : theme.textColor),
       ),
     ];
@@ -573,8 +574,7 @@ class _ErLayout {
       double lx0,
       double cx,
       double wx,
-    ) =>
-        SceneShape(
+    ) => SceneShape(
       geometry: PathGeometry([
         MoveTo(p(refX, refY, lx0, refY)),
         QuadTo(p(refX, refY, cx, refY - 18), p(refX, refY, wx, refY)),

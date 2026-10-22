@@ -22,10 +22,10 @@ import '../../text/text_style.dart';
 import '../../theme/theme.dart';
 
 final _eventModelingFrame = RegExp(
-    r'^(?:tf|timeframe|rf|resetframe)\s+(\d{1,3})\s+'
-    r'(rmo|readmodel|ui|cmd|command|evt|event|pcr|processor)\s+'
-    r'([_a-zA-Z][\w]*(?:\.[_a-zA-Z][\w]*)?)\s*'
-    r'(.*)$',
+  r'^(?:tf|timeframe|rf|resetframe)\s+(\d{1,3})\s+'
+  r'(rmo|readmodel|ui|cmd|command|evt|event|pcr|processor)\s+'
+  r'([_a-zA-Z][\w]*(?:\.[_a-zA-Z][\w]*)?)\s*'
+  r'(.*)$',
 );
 final _eventModelingHeader = RegExp(r'^eventmodeling\b');
 final _eventModelingDataHead = RegExp(r'^data\s+([_a-zA-Z][\w]*)\s*\{?\s*$');
@@ -487,9 +487,11 @@ RenderScene layoutEventModeling(
     ].reduce((a, c) => a > c ? a : c);
 
     swimlane.r = x + width;
-    swimlane.maxHeight =
-        swimlane.maxHeight > height ? swimlane.maxHeight : height;
-    swimlane.height = (swimlane.maxHeight > minSwimlaneHeight
+    swimlane.maxHeight = swimlane.maxHeight > height
+        ? swimlane.maxHeight
+        : height;
+    swimlane.height =
+        (swimlane.maxHeight > minSwimlaneHeight
             ? swimlane.maxHeight
             : minSwimlaneHeight) +
         2 * _swimlanePadding;

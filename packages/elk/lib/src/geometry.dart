@@ -55,10 +55,10 @@ class Rect {
   const Rect.fromLTWH(this.left, this.top, this.width, this.height);
 
   const Rect.fromLTRB(double left, double top, double right, double bottom)
-      : this.fromLTWH(left, top, right - left, bottom - top);
+    : this.fromLTWH(left, top, right - left, bottom - top);
 
   Rect.fromCenter(Point center, double width, double height)
-      : this.fromLTWH(center.x - width / 2, center.y - height / 2, width, height);
+    : this.fromLTWH(center.x - width / 2, center.y - height / 2, width, height);
 
   final double left;
   final double top;
@@ -77,11 +77,11 @@ class Rect {
       Rect.fromLTWH(left + dx, top + dy, width, height);
 
   Rect union(Rect other) => Rect.fromLTRB(
-        math.min(left, other.left),
-        math.min(top, other.top),
-        math.max(right, other.right),
-        math.max(bottom, other.bottom),
-      );
+    math.min(left, other.left),
+    math.min(top, other.top),
+    math.max(right, other.right),
+    math.max(bottom, other.bottom),
+  );
 
   bool contains(Point p) =>
       p.x >= left && p.x <= right && p.y >= top && p.y <= bottom;

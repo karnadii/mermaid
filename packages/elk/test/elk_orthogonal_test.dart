@@ -16,10 +16,10 @@ bool _isOrthogonal(ElkEdgeSection s) {
 void main() {
   group('Phase 2 — orthogonal routing', () {
     test('routeOrthogonal turns a diagonal into axis-aligned bends', () {
-      final s = routeOrthogonal(
-        const [ElkPoint(0, 0), ElkPoint(40, 100)],
-        vertical: true,
-      );
+      final s = routeOrthogonal(const [
+        ElkPoint(0, 0),
+        ElkPoint(40, 100),
+      ], vertical: true);
       expect(_isOrthogonal(s), isTrue);
       expect(s.bendPoints, isNotEmpty);
       expect(s.startPoint.x, 0);
@@ -27,45 +27,54 @@ void main() {
     });
 
     test('collinear points are simplified away', () {
-      final s = routeOrthogonal(
-        const [ElkPoint(0, 0), ElkPoint(0, 50), ElkPoint(0, 100)],
-        vertical: true,
-      );
+      final s = routeOrthogonal(const [
+        ElkPoint(0, 0),
+        ElkPoint(0, 50),
+        ElkPoint(0, 100),
+      ], vertical: true);
       expect(s.points, hasLength(2)); // straight line, no bends
       expect(s.bendPoints, isEmpty);
     });
 
     test('engine produces orthogonal sections for every edge', () {
-      final res = const ElkLayered().layout(ElkGraph(
-        children: [
-          for (final id in ['a', 'b', 'c', 'd'])
-            ElkNode(id: id, width: 80, height: 40),
-        ],
-        edges: [
-          ElkEdge(id: 'e1', sources: ['a'], targets: ['b']),
-          ElkEdge(id: 'e2', sources: ['a'], targets: ['c']),
-          ElkEdge(id: 'e3', sources: ['b'], targets: ['d']),
-          ElkEdge(id: 'e4', sources: ['c'], targets: ['d']),
-        ],
-      ));
+      final res = const ElkLayered().layout(
+        ElkGraph(
+          children: [
+            for (final id in ['a', 'b', 'c', 'd'])
+              ElkNode(id: id, width: 80, height: 40),
+          ],
+          edges: [
+            ElkEdge(id: 'e1', sources: ['a'], targets: ['b']),
+            ElkEdge(id: 'e2', sources: ['a'], targets: ['c']),
+            ElkEdge(id: 'e3', sources: ['b'], targets: ['d']),
+            ElkEdge(id: 'e4', sources: ['c'], targets: ['d']),
+          ],
+        ),
+      );
       for (final e in res.edges) {
         for (final s in e.sections) {
-          expect(_isOrthogonal(s), isTrue, reason: 'edge ${e.id} not orthogonal');
+          expect(
+            _isOrthogonal(s),
+            isTrue,
+            reason: 'edge ${e.id} not orthogonal',
+          );
         }
       }
     });
 
     test('parallel edges between a pair occupy distinct lanes', () {
-      final res = const ElkLayered().layout(ElkGraph(
-        children: [
-          ElkNode(id: 'a', width: 80, height: 40),
-          ElkNode(id: 'b', width: 80, height: 40),
-        ],
-        edges: [
-          ElkEdge(id: 'e1', sources: ['a'], targets: ['b']),
-          ElkEdge(id: 'e2', sources: ['a'], targets: ['b']),
-        ],
-      ));
+      final res = const ElkLayered().layout(
+        ElkGraph(
+          children: [
+            ElkNode(id: 'a', width: 80, height: 40),
+            ElkNode(id: 'b', width: 80, height: 40),
+          ],
+          edges: [
+            ElkEdge(id: 'e1', sources: ['a'], targets: ['b']),
+            ElkEdge(id: 'e2', sources: ['a'], targets: ['b']),
+          ],
+        ),
+      );
       final s1 = res.edges[0].sections.first;
       final s2 = res.edges[1].sections.first;
       // Their midpoints should differ (distinct channels).

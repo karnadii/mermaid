@@ -28,12 +28,15 @@ void main() {
       expect(d.participants['Bob']!.isActor, isFalse);
     });
     test('create participant registers', () {
-      final d = parse('Alice->Bob: hi\ncreate participant Carl\nAlice->Carl: hi');
+      final d = parse(
+        'Alice->Bob: hi\ncreate participant Carl\nAlice->Carl: hi',
+      );
       expect(d.participants.keys, contains('Carl'));
     });
     test('box groups are tolerated', () {
       final d = parse(
-          'box Group A\nparticipant A\nparticipant B\nend\nA->B: hi');
+        'box Group A\nparticipant A\nparticipant B\nend\nA->B: hi',
+      );
       expect(d.participants.keys, ['A', 'B']);
       expect(d.events.whereType<SeqMessage>().length, 1);
     });
@@ -93,8 +96,10 @@ void main() {
     });
     test('statement order preserved', () {
       final d = parse('A->>B: one\nB-->>A: two\nA-xC: three');
-      final texts =
-          d.events.whereType<SeqMessage>().map((m) => m.text).toList();
+      final texts = d.events
+          .whereType<SeqMessage>()
+          .map((m) => m.text)
+          .toList();
       expect(texts, ['one', 'two', 'three']);
     });
   });
@@ -125,8 +130,10 @@ void main() {
       expect(d.events.whereType<SeqActivation>().length, 4);
     });
     test('deactivating inactive participant throws', () {
-      expect(() => parse('A->>B: go\ndeactivate B'),
-          throwsA(isA<MermaidParseException>()));
+      expect(
+        () => parse('A->>B: go\ndeactivate B'),
+        throwsA(isA<MermaidParseException>()),
+      );
     });
   });
 
@@ -177,34 +184,46 @@ void main() {
       expect(d.events.whereType<SeqBlockDivider>().single.label, 'two');
     });
     test('critical/option', () {
-      final d = parse('critical connect\nA->>B: a\noption timeout\nA->>B: b\nend');
+      final d = parse(
+        'critical connect\nA->>B: a\noption timeout\nA->>B: b\nend',
+      );
       expect((d.events.first as SeqBlockStart).kind, SeqBlockKind.critical);
     });
     test('opt and break', () {
-      expect((parse('opt maybe\nA->>B: a\nend').events.first as SeqBlockStart)
-          .kind, SeqBlockKind.opt);
-      expect((parse('break oops\nA->>B: a\nend').events.first as SeqBlockStart)
-          .kind, SeqBlockKind.breakBlock);
+      expect(
+        (parse('opt maybe\nA->>B: a\nend').events.first as SeqBlockStart).kind,
+        SeqBlockKind.opt,
+      );
+      expect(
+        (parse('break oops\nA->>B: a\nend').events.first as SeqBlockStart).kind,
+        SeqBlockKind.breakBlock,
+      );
     });
     test('rect with color', () {
-      final start = parse('rect rgb(200, 220, 255)\nA->>B: a\nend')
-          .events.first as SeqBlockStart;
+      final start =
+          parse('rect rgb(200, 220, 255)\nA->>B: a\nend').events.first
+              as SeqBlockStart;
       expect(start.kind, SeqBlockKind.rect);
       expect(start.color, 'rgb(200, 220, 255)');
     });
     test('nesting', () {
       final d = parse(
-          'loop outer\nalt x\nA->>B: a\nelse y\nA->>B: b\nend\nend');
+        'loop outer\nalt x\nA->>B: a\nelse y\nA->>B: b\nend\nend',
+      );
       expect(d.events.whereType<SeqBlockStart>().length, 2);
       expect(d.events.whereType<SeqBlockEnd>().length, 2);
     });
     test('else outside alt throws', () {
-      expect(() => parse('loop x\nelse y\nend'),
-          throwsA(isA<MermaidParseException>()));
+      expect(
+        () => parse('loop x\nelse y\nend'),
+        throwsA(isA<MermaidParseException>()),
+      );
     });
     test('unclosed block throws', () {
-      expect(() => parse('loop x\nA->>B: a'),
-          throwsA(isA<MermaidParseException>()));
+      expect(
+        () => parse('loop x\nA->>B: a'),
+        throwsA(isA<MermaidParseException>()),
+      );
     });
   });
 
@@ -229,7 +248,8 @@ Note over B:nowrap: a long unwrapped note
       expect(a.start, isNull);
     });
     test('autonumber with start and step', () {
-      final a = parse('autonumber 10 5\nA->>B: x').events.first as SeqAutonumber;
+      final a =
+          parse('autonumber 10 5\nA->>B: x').events.first as SeqAutonumber;
       expect(a.start, 10);
       expect(a.step, 5);
     });
@@ -242,7 +262,8 @@ Note over B:nowrap: a long unwrapped note
     });
     test('frontmatter title', () {
       final d = parseSequence(
-          '---\ntitle: Front Title\n---\nsequenceDiagram\nA->>B: x');
+        '---\ntitle: Front Title\n---\nsequenceDiagram\nA->>B: x',
+      );
       expect(d.title, 'Front Title');
     });
     test('comments ignored', () {
@@ -255,19 +276,23 @@ Note over B:nowrap: a long unwrapped note
     });
     test('init directive stripped', () {
       final d = parseSequence(
-          '%%{init: {"theme": "dark"}}%%\nsequenceDiagram\nA->>B: x');
+        '%%{init: {"theme": "dark"}}%%\nsequenceDiagram\nA->>B: x',
+      );
       expect(d.events.whereType<SeqMessage>().length, 1);
     });
     test('garbage statement throws with line number', () {
       expect(
         () => parse('A->>B: ok\nthis is nonsense'),
-        throwsA(isA<MermaidParseException>()
-            .having((e) => e.line, 'line', isNotNull)),
+        throwsA(
+          isA<MermaidParseException>().having((e) => e.line, 'line', isNotNull),
+        ),
       );
     });
     test('non-sequence source throws', () {
-      expect(() => parseSequence('graph TD\nA-->B'),
-          throwsA(isA<MermaidParseException>()));
+      expect(
+        () => parseSequence('graph TD\nA-->B'),
+        throwsA(isA<MermaidParseException>()),
+      );
     });
   });
 }

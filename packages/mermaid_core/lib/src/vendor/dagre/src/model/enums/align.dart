@@ -1,6 +1,4 @@
-
-
-enum GraphAlign{
+enum GraphAlign {
   //up to Left
   utl,
   // up to Right
@@ -11,18 +9,18 @@ enum GraphAlign{
   dtr,
 }
 
-GraphAlign fromStr(String s){
-  s=s.toLowerCase();
-  if(s=='utl'){
+GraphAlign fromStr(String s) {
+  s = s.toLowerCase();
+  if (s == 'utl') {
     return GraphAlign.utl;
   }
-  if(s=='utr'){
+  if (s == 'utr') {
     return GraphAlign.utr;
   }
-  if(s=='dtl'){
+  if (s == 'dtl') {
     return GraphAlign.dtl;
   }
-  if(s=='dtr'){
+  if (s == 'dtr') {
     return GraphAlign.dtr;
   }
   throw StateError('违法参数');

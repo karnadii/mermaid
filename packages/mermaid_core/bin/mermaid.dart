@@ -41,9 +41,8 @@ int main(List<String> args) {
 
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
-    String value() => ++i < args.length
-        ? args[i]
-        : _fail('missing value for "$a"');
+    String value() =>
+        ++i < args.length ? args[i] : _fail('missing value for "$a"');
     switch (a) {
       case '-h':
       case '--help':
@@ -73,8 +72,7 @@ int main(List<String> args) {
   };
   if (format != 'svg' && format != 'png') _fail('unknown format "$format"');
 
-  final src =
-      input != null ? File(input).readAsStringSync() : _readAllStdin();
+  final src = input != null ? File(input).readAsStringSync() : _readAllStdin();
 
   final String svg;
   try {
@@ -84,8 +82,10 @@ int main(List<String> args) {
     );
     svg = renderSceneToSvg(mermaid.render(src));
   } on MermaidParseException catch (e) {
-    return _fail('parse error: ${e.message}'
-        '${e.line != null ? ' (line ${e.line})' : ''}');
+    return _fail(
+      'parse error: ${e.message}'
+      '${e.line != null ? ' (line ${e.line})' : ''}',
+    );
   } catch (e) {
     return _fail('render failed: $e');
   }
@@ -102,12 +102,15 @@ int main(List<String> args) {
   // PNG: write SVG to a temp file and run a rasterizer.
   if (output == null) _fail('PNG output requires --output <file.png>');
   final tmp = File(
-      '${Directory.systemTemp.path}/mermaid_dart_${pid}_${DateTime.now().microsecondsSinceEpoch}.svg');
+    '${Directory.systemTemp.path}/mermaid_dart_${pid}_${DateTime.now().microsecondsSinceEpoch}.svg',
+  );
   tmp.writeAsStringSync(svg);
   try {
     if (!_rasterize(tmp.path, output)) {
-      return _fail('no SVG rasterizer found on PATH. Install one of: '
-          'rsvg-convert, resvg, or ImageMagick (magick/convert).');
+      return _fail(
+        'no SVG rasterizer found on PATH. Install one of: '
+        'rsvg-convert, resvg, or ImageMagick (magick/convert).',
+      );
     }
   } finally {
     if (tmp.existsSync()) tmp.deleteSync();

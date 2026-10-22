@@ -26,16 +26,22 @@ final _requirementHeader = RegExp(r'^requirementDiagram\b');
 final _requirementEntry = RegExp(r'^([\w]+)\s*:\s*(.+)$');
 final _requirementBlock = RegExp(r'^(\w+)\s+(.+?)\s*\{$');
 final _requirementTitle = RegExp(r'^title\s+(.+)$');
-final _requirementAccOrDirection = RegExp(r'^(acc(Title|Descr)\s*[:{]|direction\s)');
+final _requirementAccOrDirection = RegExp(
+  r'^(acc(Title|Descr)\s*[:{]|direction\s)',
+);
 final _requirementClassDef = RegExp(r'^classDef\s+([^\s]+)\s+(.+?);?$');
 final _requirementClassAssign = RegExp(r'^class\s+([^\s]+)\s+([^\s]+)\s*;?$');
 final _requirementStyle = RegExp(r'^style\s+([^\s]+)\s+(.+?);?$');
 final _requirementInlineClass = RegExp(r'^(\S+):::(\S+)\s*;?$');
-final _requirementLink = RegExp(r'^(link|callback)\s+(\S+)\s+"([^"]*)"(?:\s+"([^"]*)")?');
+final _requirementLink = RegExp(
+  r'^(link|callback)\s+(\S+)\s+"([^"]*)"(?:\s+"([^"]*)")?',
+);
 final _requirementClick = RegExp(r'^click\s+(\S+)\s+(.+)$');
 final _requirementClickQuotedAction = RegExp(r'^"([^"]*)"(?:\s+"([^"]*)")?');
 final _requirementClickCallPrefix = RegExp(r'^call\s+');
-final _requirementClickCallAction = RegExp(r'^(\w+)(?:\([^)]*\))?(?:\s+"([^"]*)")?');
+final _requirementClickCallAction = RegExp(
+  r'^(\w+)(?:\([^)]*\))?(?:\s+"([^"]*)")?',
+);
 final _requirementTrailingSemicolon = RegExp(r';$');
 
 class RequirementDiagram {
@@ -418,7 +424,10 @@ Map<String, String> _parseStyles(String source) {
   var depth = 0;
   final part = StringBuffer();
   void add() {
-    final value = part.toString().trim().replaceFirst(_requirementTrailingSemicolon, '');
+    final value = part.toString().trim().replaceFirst(
+      _requirementTrailingSemicolon,
+      '',
+    );
     part.clear();
     final colon = value.indexOf(':');
     if (colon > 0) {
@@ -457,9 +466,7 @@ Color? _styleColor(String? value) =>
 
 double? _styleWidth(String? value) => value == null
     ? null
-    : double.tryParse(
-        _requirementNumber.firstMatch(value)?.group(0) ?? '',
-      );
+    : double.tryParse(_requirementNumber.firstMatch(value)?.group(0) ?? '');
 
 RenderScene layoutRequirementDiagram(
   RequirementDiagram diagram, {
@@ -849,8 +856,8 @@ RenderScene layoutRequirementDiagram(
         customColor ??
         (customFill != null
             ? (customFill.luminance < 0.5
-                ? theme.textOnDarkFill
-                : theme.textOnLightFill)
+                  ? theme.textOnDarkFill
+                  : theme.textOnLightFill)
             : (config.textColor ?? theme.requirementTextColor));
     final strokeWidth =
         _styleWidth(styles['stroke-width']) ?? config.rectBorderSize;

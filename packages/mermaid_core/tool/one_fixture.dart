@@ -6,7 +6,9 @@ void main(List<String> args) {
   try {
     final g = parseFlowchart(src);
     stdout.writeln('parsed: ${g.nodes.length} nodes ${g.edges.length} edges');
-    final scene = const Mermaid(measurer: ApproximateTextMeasurer()).render(src);
+    final scene = const Mermaid(
+      measurer: ApproximateTextMeasurer(),
+    ).render(src);
     stdout.writeln('layout ok ${scene.size}');
   } catch (e, st) {
     stdout.writeln('ERROR: $e');

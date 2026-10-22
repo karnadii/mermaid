@@ -7,10 +7,10 @@ import 'bk.dart';
 void position(Graph g2) {
   Graph g = util.asNonCompoundGraph(g2);
   positionY(g);
-  Map<String,double> list = positionX(g);
-  for(var item in list.entries){
-    var x=item.key;
-    var v=item.value;
+  Map<String, double> list = positionX(g);
+  for (var item in list.entries) {
+    var x = item.key;
+    var v = item.value;
     g.node(x)[xK] = v;
   }
 }
@@ -20,9 +20,14 @@ void positionY(Graph g) {
   var rankSep = g.label.rankSep;
   num prevY = 0;
   for (var layer in layering) {
-    var maxHeight = max<num>(List.from(layer.map((v) {
-          return g.node(v).getD(heightK);
-        }))) ??
+    var maxHeight =
+        max<num>(
+          List.from(
+            layer.map((v) {
+              return g.node(v).getD(heightK);
+            }),
+          ),
+        ) ??
         0;
 
     for (var v in layer) {

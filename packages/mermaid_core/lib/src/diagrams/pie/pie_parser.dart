@@ -32,8 +32,7 @@ PieChart parsePieChart(String source) {
     if (line.isEmpty) continue;
 
     if (!seenHeader) {
-      final m =
-          _pieHeader.firstMatch(line);
+      final m = _pieHeader.firstMatch(line);
       if (m == null) {
         throw MermaidParseException('expected "pie" header', line: i + 1);
       }
@@ -59,8 +58,10 @@ PieChart parsePieChart(String source) {
     if (m != null) {
       final value = double.tryParse(m.group(2)!);
       if (value == null || value < 0) {
-        throw MermaidParseException('invalid pie value "${m.group(2)}"',
-            line: i + 1);
+        throw MermaidParseException(
+          'invalid pie value "${m.group(2)}"',
+          line: i + 1,
+        );
       }
       final label = m.group(1)!;
       if (seenLabels.add(label)) {

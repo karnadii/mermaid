@@ -62,7 +62,9 @@ void main() {
         final theme = MaterialMermaidTheme.fromColorScheme(scheme);
 
         expect(
-            theme.ganttTaskBkgColor.value, scheme.primaryContainer.toARGB32());
+          theme.ganttTaskBkgColor.value,
+          scheme.primaryContainer.toARGB32(),
+        );
         expect(theme.ganttTaskBorderColor.value, scheme.primary.toARGB32());
         expect(
           theme.ganttActiveTaskBkgColor.value,
@@ -80,19 +82,27 @@ void main() {
           theme.ganttTaskTextOutsideColor.value,
           scheme.onSurface.toARGB32(),
         );
-        expect(theme.railroadSpecialFill.value,
-            scheme.tertiaryContainer.toARGB32());
         expect(
-            theme.radarGraticuleColor.value, scheme.outlineVariant.toARGB32());
+          theme.railroadSpecialFill.value,
+          scheme.tertiaryContainer.toARGB32(),
+        );
+        expect(
+          theme.radarGraticuleColor.value,
+          scheme.outlineVariant.toARGB32(),
+        );
         expect(
           theme.packetBlockFill.value,
           scheme.surfaceContainerHighest.toARGB32(),
         );
         expect(theme.canvasColor.value, scheme.surface.toARGB32());
-        expect(theme.wardleyComponentFill.value,
-            scheme.surfaceContainer.toARGB32());
         expect(
-            theme.wardleyLinkStroke.value, scheme.onSurfaceVariant.toARGB32());
+          theme.wardleyComponentFill.value,
+          scheme.surfaceContainer.toARGB32(),
+        );
+        expect(
+          theme.wardleyLinkStroke.value,
+          scheme.onSurfaceVariant.toARGB32(),
+        );
       });
 
       test('a status keeps its identity in $brightness', () {
@@ -107,10 +117,7 @@ void main() {
         expect(theme.wardleyEvolutionStroke.value, scheme.error.toARGB32());
         expect(theme.cynefinCliffColor.value, scheme.error.toARGB32());
         expect(theme.emUnknownTypeFill.value, scheme.error.toARGB32());
-        expect(
-          theme.kanbanPriorityVeryHigh.value,
-          scheme.error.toARGB32(),
-        );
+        expect(theme.kanbanPriorityVeryHigh.value, scheme.error.toARGB32());
       });
 
       test('a data palette keeps its predefined colors in $brightness', () {
@@ -124,7 +131,9 @@ void main() {
         expect(theme.sankeyColorPalette, upstream.sankeyColorPalette);
         expect(theme.journeyActorColors, upstream.journeyActorColors);
         expect(
-            theme.cynefinComplexFill.value, upstream.cynefinComplexFill.value);
+          theme.cynefinComplexFill.value,
+          upstream.cynefinComplexFill.value,
+        );
         expect(theme.cynefinClearFill.value, upstream.cynefinClearFill.value);
         expect(theme.emUiFill.value, upstream.emUiFill.value);
         expect(theme.emEventFill.value, upstream.emEventFill.value);
@@ -173,18 +182,9 @@ void main() {
         light.c4BoundaryColor,
         core.MermaidTheme.defaultTheme.c4BoundaryColor,
       );
-      expect(
-        light.c4TextColor,
-        core.MermaidTheme.defaultTheme.c4TextColor,
-      );
-      expect(
-        dark.c4BoundaryColor,
-        core.MermaidTheme.darkTheme.c4BoundaryColor,
-      );
-      expect(
-        dark.c4TextColor,
-        core.MermaidTheme.darkTheme.c4TextColor,
-      );
+      expect(light.c4TextColor, core.MermaidTheme.defaultTheme.c4TextColor);
+      expect(dark.c4BoundaryColor, core.MermaidTheme.darkTheme.c4BoundaryColor);
+      expect(dark.c4TextColor, core.MermaidTheme.darkTheme.c4TextColor);
     });
   });
 

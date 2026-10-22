@@ -81,7 +81,13 @@ void _initLowLimValues(Graph tree, [String? root]) {
   _dfsAssignLowLim2(tree, {}, 1, root);
 }
 
-double _dfsAssignLowLim(Graph tree, Map<String, bool> visited, double nextLim, String v, [String? parent]) {
+double _dfsAssignLowLim(
+  Graph tree,
+  Map<String, bool> visited,
+  double nextLim,
+  String v, [
+  String? parent,
+]) {
   double low = nextLim;
   Props label = tree.node(v);
 
@@ -102,15 +108,21 @@ double _dfsAssignLowLim(Graph tree, Map<String, bool> visited, double nextLim, S
   return nextLim;
 }
 
-void _dfsAssignLowLim2(Graph tree, Map<String, bool> visited, double nextLim, String v, [String? parent]) {
+void _dfsAssignLowLim2(
+  Graph tree,
+  Map<String, bool> visited,
+  double nextLim,
+  String v, [
+  String? parent,
+]) {
   List<dynamic> stack = [
     [
       nextLim,
       {valueK: nextLim},
       v,
       parent,
-      false
-    ]
+      false,
+    ],
   ];
   while (stack.isNotEmpty) {
     var current = stack.removeLast();
@@ -167,7 +179,8 @@ Edge _enterEdge(Graph t, Graph g, Edge edge) {
   }
 
   var candidates = g.edges.filter((edge) {
-    return flip == _isDescendant(t, t.node(edge.v), tailLabel) && flip != _isDescendant(t, t.node(edge.w), tailLabel);
+    return flip == _isDescendant(t, t.node(edge.v), tailLabel) &&
+        flip != _isDescendant(t, t.node(edge.w), tailLabel);
   });
 
   return candidates.reduce((acc, edge) {
@@ -204,7 +217,9 @@ void _updateRanks(Graph t, Graph g) {
       edge = g.edge(parent, v);
       flipped = true;
     }
-    g.node(v)[rankK] = (g.node(parent).getD(rankK) + (flipped ? edge.getD(minLenK) : -edge.getD(minLenK)));
+    g.node(v)[rankK] =
+        (g.node(parent).getD(rankK) +
+        (flipped ? edge.getD(minLenK) : -edge.getD(minLenK)));
   }
 }
 
@@ -213,5 +228,6 @@ bool _isTreeEdge(Graph tree, String u, String v) {
 }
 
 bool _isDescendant(Graph tree, Props vLabel, Props rootLabel) {
-  return rootLabel.getD(lowK) <= vLabel.getD(limK) && vLabel.getD(limK) <= rootLabel.getD(limK);
+  return rootLabel.getD(lowK) <= vLabel.getD(limK) &&
+      vLabel.getD(limK) <= rootLabel.getD(limK);
 }

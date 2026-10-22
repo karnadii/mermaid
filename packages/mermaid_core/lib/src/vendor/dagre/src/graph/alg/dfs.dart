@@ -35,7 +35,9 @@ import '../graph.dart';
 // }
 
 List<String> dfs(Graph g, List<String> vs, DFSOrder order) {
-  var navigation = g.isDirected ? (String v) => g.successors(v) : (String v) => g.neighbors(v);
+  var navigation = g.isDirected
+      ? (String v) => g.successors(v)
+      : (String v) => g.neighbors(v);
   var orderFunc = order == DFSOrder.post ? _postOrderDfs : _preOrderDfs;
   List<String> acc = [];
   Map<String, bool> visited = {};
@@ -48,9 +50,14 @@ List<String> dfs(Graph g, List<String> vs, DFSOrder order) {
   return acc;
 }
 
-void _postOrderDfs(String v, List<String>? Function(String) navigation, Map<String, bool> visited, List<String> acc) {
+void _postOrderDfs(
+  String v,
+  List<String>? Function(String) navigation,
+  Map<String, bool> visited,
+  List<String> acc,
+) {
   List<dynamic> stack = [
-    [v, false]
+    [v, false],
   ];
   while (stack.isNotEmpty) {
     var curr = stack.removeLast();
@@ -68,7 +75,12 @@ void _postOrderDfs(String v, List<String>? Function(String) navigation, Map<Stri
   }
 }
 
-void _preOrderDfs(String v, List<String>? Function(String) navigation, Map<String, bool> visited, List<String> acc) {
+void _preOrderDfs(
+  String v,
+  List<String>? Function(String) navigation,
+  Map<String, bool> visited,
+  List<String> acc,
+) {
   var stack = [v];
   while (stack.isNotEmpty) {
     var curr = stack.removeLast();

@@ -38,7 +38,9 @@ String mesh(int n, int extra) {
     s.write('  n${(rnd() * i).floor()} --> n$i\n');
   }
   for (var i = 0; i < extra; i++) {
-    s.write('  n${(rnd() * n).floor()} -->|label $i| n${(rnd() * n).floor()}\n');
+    s.write(
+      '  n${(rnd() * n).floor()} -->|label $i| n${(rnd() * n).floor()}\n',
+    );
   }
   return s.toString();
 }
@@ -47,12 +49,12 @@ String mesh(int n, int extra) {
 /// (theme presets on the same flowchart) are kept: they are cheap and still
 /// valid Mermaid.
 List<BenchCase> buildCorpus() => [
-      for (final s in samples) BenchCase('sample: ${s.id}', [s.source]),
-      BenchCase('samples: all ${samples.length}',
-          [for (final s in samples) s.source]),
-      BenchCase('tree: 50 nodes', [tree(50, 3)]),
-      BenchCase('mesh: 50 nodes, 20 extra labelled edges', [mesh(50, 20)]),
-      BenchCase('tree: 500 nodes', [tree(500, 3)]),
-      BenchCase(
-          'mesh: 500 nodes, 200 extra labelled edges', [mesh(500, 200)]),
-    ];
+  for (final s in samples) BenchCase('sample: ${s.id}', [s.source]),
+  BenchCase('samples: all ${samples.length}', [
+    for (final s in samples) s.source,
+  ]),
+  BenchCase('tree: 50 nodes', [tree(50, 3)]),
+  BenchCase('mesh: 50 nodes, 20 extra labelled edges', [mesh(50, 20)]),
+  BenchCase('tree: 500 nodes', [tree(500, 3)]),
+  BenchCase('mesh: 500 nodes, 200 extra labelled edges', [mesh(500, 200)]),
+];

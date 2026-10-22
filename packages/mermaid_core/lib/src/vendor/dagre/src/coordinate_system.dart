@@ -5,18 +5,18 @@ import 'package:mermaid_core/src/vendor/dagre/src/model/props.dart';
 
 void adjust(Graph g) {
   var rankDir = g.label2?.rankDir;
-  if (rankDir ==RankDir.ltr || rankDir ==RankDir.rtl) {
+  if (rankDir == RankDir.ltr || rankDir == RankDir.rtl) {
     _swapWidthHeight(g);
   }
 }
 
 void undo(Graph g) {
   var rankDir = g.label2?.rankDir;
-  if (rankDir == RankDir.btt || rankDir ==RankDir.rtl) {
+  if (rankDir == RankDir.btt || rankDir == RankDir.rtl) {
     _reverseY(g);
   }
 
-  if (rankDir ==RankDir.ltr || rankDir ==RankDir.rtl) {
+  if (rankDir == RankDir.ltr || rankDir == RankDir.rtl) {
     _swapXY(g);
     _swapWidthHeight(g);
   }
@@ -47,10 +47,10 @@ void _reverseY(Graph g) {
   for (var e in g.edgesIterable) {
     var edge = g.edge2(e);
     for (var p in edge.get2<List<GraphPoint>>(pointsK) ?? const []) {
-      p.y=-p.y;
+      p.y = -p.y;
     }
-    var vv=edge.getD2(yK);
-    if(vv!=null&&vv!=0){
+    var vv = edge.getD2(yK);
+    if (vv != null && vv != 0) {
       edge[yK] = -vv;
     }
   }
@@ -66,7 +66,9 @@ void _swapXY(Graph g) {
     // Vendored fix: keep the points list typed as List<GraphPoint>.
     final points = edge.get2<List<GraphPoint>>(pointsK);
     if (points != null) {
-      edge[pointsK]=List<GraphPoint>.from(points.map((e) => GraphPoint(e.y, e.x)));
+      edge[pointsK] = List<GraphPoint>.from(
+        points.map((e) => GraphPoint(e.y, e.x)),
+      );
     }
     // An edge label centered on the unrotated layout can legitimately have
     // x == 0. Presence, rather than a non-zero value, determines whether the

@@ -41,7 +41,7 @@ void main() {
     final node = ElkNode.fromJson({
       'id': 'n',
       'layoutOptions': {
-        'elk.nodeSize.constraints': 'NODE_LABELS PORTS MINIMUM_SIZE'
+        'elk.nodeSize.constraints': 'NODE_LABELS PORTS MINIMUM_SIZE',
       },
     });
     final options = ElkLayoutOptions.fromElkJson({
@@ -55,20 +55,24 @@ void main() {
   });
 
   test('public layout returns the grown non-fixed node size', () {
-    final result = const ElkLayered().layout(const ElkGraph(children: [
-      ElkNode(
-        id: 'n',
-        width: 20,
-        height: 10,
-        fixedSize: false,
-        labels: [ElkLabel(text: 'wide', width: 90, height: 25)],
-        ports: [
-          ElkPort(id: 'p1', side: ElkPortSide.east, height: 12),
-          ElkPort(id: 'p2', side: ElkPortSide.east, height: 12),
-          ElkPort(id: 'p3', side: ElkPortSide.east, height: 12),
+    final result = const ElkLayered().layout(
+      const ElkGraph(
+        children: [
+          ElkNode(
+            id: 'n',
+            width: 20,
+            height: 10,
+            fixedSize: false,
+            labels: [ElkLabel(text: 'wide', width: 90, height: 25)],
+            ports: [
+              ElkPort(id: 'p1', side: ElkPortSide.east, height: 12),
+              ElkPort(id: 'p2', side: ElkPortSide.east, height: 12),
+              ElkPort(id: 'p3', side: ElkPortSide.east, height: 12),
+            ],
+          ),
         ],
       ),
-    ]));
+    );
     final node = result.nodesById['n']!;
     expect(node.width, greaterThanOrEqualTo(90));
     expect(node.height, greaterThanOrEqualTo(56));
@@ -84,12 +88,12 @@ void main() {
           {'text': 'second', 'width': 80, 'height': 20},
         ],
       });
-      final result = const ElkLayered().layout(ElkGraph(
-        layoutOptions: const ElkLayoutOptions(spacingLabelLabel: 3),
-        children: [
-          nodeInput,
-        ],
-      ).copyWithDirection(direction));
+      final result = const ElkLayered().layout(
+        ElkGraph(
+          layoutOptions: const ElkLayoutOptions(spacingLabelLabel: 3),
+          children: [nodeInput],
+        ).copyWithDirection(direction),
+      );
       final node = result.nodesById['n']!;
       expect(node.width, greaterThanOrEqualTo(80));
       expect(node.height, greaterThanOrEqualTo(40));
@@ -126,28 +130,45 @@ void main() {
     var changed = false;
     var straightened = false;
     for (final alignment in ElkFixedAlignment.values) {
-      final regular = const ElkLayered().layout(ElkGraph(
-        layoutOptions: ElkLayoutOptions(
-          direction: ElkDirection.right, fixedAlignment: alignment),
-        children: children, edges: edges));
-      final improved = const ElkLayered().layout(ElkGraph(
-        layoutOptions: ElkLayoutOptions(direction: ElkDirection.right,
-          fixedAlignment: alignment, improveStraightness: true),
-        children: children, edges: edges));
-      changed |= '${[for (final n in regular.children) (n.x, n.y)]}' !=
+      final regular = const ElkLayered().layout(
+        ElkGraph(
+          layoutOptions: ElkLayoutOptions(
+            direction: ElkDirection.right,
+            fixedAlignment: alignment,
+          ),
+          children: children,
+          edges: edges,
+        ),
+      );
+      final improved = const ElkLayered().layout(
+        ElkGraph(
+          layoutOptions: ElkLayoutOptions(
+            direction: ElkDirection.right,
+            fixedAlignment: alignment,
+            improveStraightness: true,
+          ),
+          children: children,
+          edges: edges,
+        ),
+      );
+      changed |=
+          '${[for (final n in regular.children) (n.x, n.y)]}' !=
           '${[for (final n in improved.children) (n.x, n.y)]}';
       int straight(ElkResult result) => result.edges.where((edge) {
         final points = edge.sections.single.points;
-        return points.every(
-          (point) => (point.y - points.first.y).abs() < 0.01,
-        );
+        return points.every((point) => (point.y - points.first.y).abs() < 0.01);
       }).length;
       straightened |= straight(improved) > straight(regular);
       for (var i = 0; i < improved.children.length; i++) {
         for (var j = i + 1; j < improved.children.length; j++) {
           final a = improved.children[i], b = improved.children[j];
-          expect(a.x + a.width <= b.x || b.x + b.width <= a.x ||
-              a.y + a.height <= b.y || b.y + b.height <= a.y, isTrue);
+          expect(
+            a.x + a.width <= b.x ||
+                b.x + b.width <= a.x ||
+                a.y + a.height <= b.y ||
+                b.y + b.height <= a.y,
+            isTrue,
+          );
         }
       }
     }
@@ -157,14 +178,21 @@ void main() {
 
   for (final direction in ElkDirection.values) {
     test('node-id self-loop defaults to NORTH in ${direction.name}', () {
-      final result = const ElkLayered().layout(ElkGraph(
-        children: [ElkNode(id: 'n', width: 80, height: 40)],
-        edges: [ElkEdge(id: 'loop', sources: ['n'], targets: ['n'])],
-      ).copyWithDirection(direction));
+      final result = const ElkLayered().layout(
+        ElkGraph(
+          children: [ElkNode(id: 'n', width: 80, height: 40)],
+          edges: [
+            ElkEdge(id: 'loop', sources: ['n'], targets: ['n']),
+          ],
+        ).copyWithDirection(direction),
+      );
       final node = result.nodesById['n']!;
       final section = result.edges.single.sections.single;
-      expect(section.points.every((point) => point.y <= node.y), isTrue,
-          reason: '${direction.name}: ${section.points}, node y=${node.y}');
+      expect(
+        section.points.every((point) => point.y <= node.y),
+        isTrue,
+        reason: '${direction.name}: ${section.points}, node y=${node.y}',
+      );
     });
 
     test('public layout routes multi-side self-loops in ${direction.name}', () {

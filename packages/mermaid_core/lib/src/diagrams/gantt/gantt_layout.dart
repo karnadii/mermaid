@@ -90,10 +90,7 @@ class GanttConfig {
         4,
       ).round(),
       displayMode: enumValue(values, 'displayMode', const {'compact'}, ''),
-      weekday: enumValue(
-          values,
-          'weekday',
-          const {
+      weekday: enumValue(values, 'weekday', const {
         'monday',
         'tuesday',
         'wednesday',
@@ -101,8 +98,7 @@ class GanttConfig {
         'friday',
         'saturday',
         'sunday',
-          },
-          'sunday'),
+      }, 'sunday'),
       titleTopMargin: nonNegativeDouble(values, 'titleTopMargin', 25),
     );
   }
@@ -183,8 +179,9 @@ RenderScene layoutGanttChart(
     final taskRows = config.displayMode == 'compact'
         ? _compactTaskRows(rowTasks)
         : {for (var i = 0; i < rowTasks.length; i++) rowTasks[i]: i};
-    final rowCount =
-        taskRows.isEmpty ? 0 : taskRows.values.reduce(math.max) + 1;
+    final rowCount = taskRows.isEmpty
+        ? 0
+        : taskRows.values.reduce(math.max) + 1;
     // Section band: spans the full width, `y = rowTop - 2`, one stride per row
     // (upstream drawRects band geometry). Vert markers don't occupy rows.
     final bandHeight = rowCount * rowStride;
@@ -199,9 +196,9 @@ RenderScene layoutGanttChart(
           ),
         ),
         fill: Fill(
-          theme.ganttSectionBkgColors[
-              (sectionIndex % config.numberSectionStyles) %
-                  theme.ganttSectionBkgColors.length],
+          theme.ganttSectionBkgColors[(sectionIndex %
+                  config.numberSectionStyles) %
+              theme.ganttSectionBkgColors.length],
         ),
       ),
     );
@@ -420,7 +417,8 @@ RenderScene layoutGanttChart(
     }
 
     while (!day.isAfter(maxDate)) {
-      final excluded = chart.excludeWeekdays.contains(day.weekday) ||
+      final excluded =
+          chart.excludeWeekdays.contains(day.weekday) ||
           chart.excludeDates.contains(day);
       if (excluded) {
         rangeStart ??= day;
@@ -456,14 +454,16 @@ RenderScene layoutGanttChart(
     interval: config.tickInterval,
     weekday: _weekdays[config.weekday] ?? DateTime.sunday,
   );
-  final fmt = chart.axisFormat ??
+  final fmt =
+      chart.axisFormat ??
       config.axisFormat ??
       _defaultAxisFormat(minDate, maxDate, chart.dateFormat);
   var labelEvery = 1;
   if (ticks.length > 1) {
     final spacing = xOf(ticks[1]) - xOf(ticks[0]);
-    final labelW =
-        measurer.measure(formatGanttDate(ticks.first, fmt), baseStyle).width;
+    final labelW = measurer
+        .measure(formatGanttDate(ticks.first, fmt), baseStyle)
+        .width;
     labelEvery = math.max(1, ((labelW + 12) / spacing).ceil());
   }
   final gridNodes = <SceneNode>[];
@@ -527,8 +527,9 @@ RenderScene layoutGanttChart(
       fontWeight: 700,
     );
     final size = measurer.measure(title, style);
-    final topAxisHeight =
-        config.topAxis ? measurer.measure('0', baseStyle).height + 18 : 0.0;
+    final topAxisHeight = config.topAxis
+        ? measurer.measure('0', baseStyle).height + 18
+        : 0.0;
     // Full chart width includes the right padding (mirrors leftPadding).
     final fullWidth = gutter + chartWidth + config.rightPadding;
     nodes.add(

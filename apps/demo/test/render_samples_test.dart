@@ -288,18 +288,18 @@ void main() {
       const scale = 2.0;
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder)..scale(scale);
-      ScenePainter(scene).paint(
-        canvas,
-        ui.Size(scene.size.width, scene.size.height),
-      );
+      ScenePainter(
+        scene,
+      ).paint(canvas, ui.Size(scene.size.width, scene.size.height));
       final image = await recorder.endRecording().toImage(
-            (scene.size.width * scale).ceil(),
-            (scene.size.height * scale).ceil(),
-          );
+        (scene.size.width * scale).ceil(),
+        (scene.size.height * scale).ceil(),
+      );
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
       outDir.createSync(recursive: true);
-      File('${outDir.path}/${entry.key}.png')
-          .writeAsBytesSync(png!.buffer.asUint8List());
+      File(
+        '${outDir.path}/${entry.key}.png',
+      ).writeAsBytesSync(png!.buffer.asUint8List());
     });
   }
 }

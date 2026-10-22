@@ -96,12 +96,7 @@ void main() {
     });
 
     test('a run beside Latin maths keeps both', () {
-      final ml = layoutMath(
-        r'x + \text{مرحبا}',
-        style,
-        measurer,
-        black,
-      );
+      final ml = layoutMath(r'x + \text{مرحبا}', style, measurer, black);
       final nodes = flattenScene(ml.render(const Point(0, 0))).toList();
       expect(
         nodes.whereType<SceneText>().map((n) => n.text),

@@ -83,7 +83,9 @@ class Graph {
     return this;
   }
 
-  Graph setDefaultEdgeLabelFun(Props Function(String, String, String?) newDefault) {
+  Graph setDefaultEdgeLabelFun(
+    Props Function(String, String, String?) newDefault,
+  ) {
     _defaultEdgeLabelFun = newDefault;
     return this;
   }
@@ -107,14 +109,14 @@ class Graph {
   Iterable<String> get nodesIterable => _nodes.keys;
 
   List<String> get sources => [
-        for (final e in _nodes.entries)
-          if (e.value.inEdges.isEmpty) e.key,
-      ];
+    for (final e in _nodes.entries)
+      if (e.value.inEdges.isEmpty) e.key,
+  ];
 
   List<String> get sinks => [
-        for (final e in _nodes.entries)
-          if (e.value.outEdges.isEmpty) e.key,
-      ];
+    for (final e in _nodes.entries)
+      if (e.value.outEdges.isEmpty) e.key,
+  ];
 
   Graph setNodes(List<String> vs, [Props? value]) {
     for (var v in vs) {
@@ -161,7 +163,9 @@ class Graph {
       while (ancestor != null) {
         ancestor = this.parent(ancestor);
         if (ancestor == id) {
-          throw StateError('Setting  $parent   as parent of $id  would create a cycle');
+          throw StateError(
+            'Setting  $parent   as parent of $id  would create a cycle',
+          );
         }
       }
       setNode(parent);
@@ -403,7 +407,11 @@ class Graph {
   }
 
   Graph filterNodes(bool Function(String) filter) {
-    var copy = Graph(isDirected: isDirected, isMultiGraph: isMultiGraph, isCompound: isCompound);
+    var copy = Graph(
+      isDirected: isDirected,
+      isMultiGraph: isMultiGraph,
+      isCompound: isCompound,
+    );
     copy.label = label;
 
     _nodes.forEach((v, value) {
@@ -484,7 +492,12 @@ class Graph {
     }
   }
 
-  EdgeKey edgeArgsToId(bool isDirected, String v_, String? w_, [String? edgeId]) {
+  EdgeKey edgeArgsToId(
+    bool isDirected,
+    String v_,
+    String? w_, [
+    String? edgeId,
+  ]) {
     String v = v_;
     String w = w_ ?? '';
     if (!isDirected && v.compareTo(w) > 0) {
@@ -524,7 +537,6 @@ class Edge {
 
   @override
   String toString() {
-
     return "id:$id,v:$v,w:$w";
   }
 }

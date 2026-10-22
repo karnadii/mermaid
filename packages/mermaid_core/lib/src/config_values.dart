@@ -47,10 +47,7 @@ double nonNegativeDouble(
 /// Reads [key] as a finite, non-negative double, or returns null when the
 /// value is absent or invalid. Use this when a caller must distinguish an
 /// explicit diagram override from an inherited layout-engine default.
-double? nonNegativeDoubleOrNull(
-  Map<String, Object?> values,
-  String key,
-) {
+double? nonNegativeDoubleOrNull(Map<String, Object?> values, String key) {
   final value = values[key];
   if (value is num) {
     final resolved = value.toDouble();

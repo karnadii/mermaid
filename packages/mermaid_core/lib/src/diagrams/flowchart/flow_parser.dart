@@ -1142,10 +1142,7 @@ class _FlowParser {
       hasFa = s.contains('fa');
     }
     if (!hasFa) return s.trim();
-    final withoutLegacyIcons = s.replaceAll(
-      _legacyIcon,
-      '',
-    );
+    final withoutLegacyIcons = s.replaceAll(_legacyIcon, '');
     if (withoutLegacyIcons != s) {
       s = withoutLegacyIcons.replaceAll(_blanks, ' ');
     }

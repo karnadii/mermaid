@@ -9,7 +9,9 @@ import 'dart:io';
 import 'package:markdown/markdown.dart' as md;
 
 void main() {
-  final scriptDir = File.fromUri(Platform.script).parent.path; // apps/website/tool
+  final scriptDir = File.fromUri(
+    Platform.script,
+  ).parent.path; // apps/website/tool
   final readme = File('$scriptDir/../../../packages/elk/README.md');
   if (!readme.existsSync()) {
     stderr.writeln('README not found at ${readme.path}');

@@ -23,7 +23,12 @@ class GraphLabel extends Props {
 
   @override
   GraphLabel copy() {
-    GraphLabel label = GraphLabel(nodeSep: nodeSep, edgeSep: edgeSep, rankSep: rankSep, rankDir: rankDir);
+    GraphLabel label = GraphLabel(
+      nodeSep: nodeSep,
+      edgeSep: edgeSep,
+      rankSep: rankSep,
+      rankDir: rankDir,
+    );
     label.putAll(getAll());
     label.align = align;
     label.marginX = marginX;

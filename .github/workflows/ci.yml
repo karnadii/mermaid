@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, mathnote]
   pull_request:
 
 permissions:
@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.44.9
+          flutter-version: 3.47.1
           channel: stable
           cache: true
       - name: Analyze, test, and check packages
@@ -31,7 +31,7 @@ jobs:
           bash tool/check.sh 2>&1 | tee build/ci-evidence/check.log
       - name: Retain validation log
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: validation-log
           path: build/ci-evidence/check.log

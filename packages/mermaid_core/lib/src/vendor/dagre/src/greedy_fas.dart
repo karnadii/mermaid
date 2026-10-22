@@ -12,7 +12,7 @@ List<Edge> greedyFAS(Graph g, double Function(Edge)? weightFn) {
   if (g.nodeCount <= 1) {
     return [];
   }
-  _InnerResult2 state = _buildState(g, weightFn??defaultWeightFun);
+  _InnerResult2 state = _buildState(g, weightFn ?? defaultWeightFun);
 
   List<Edge> results = _doGreedyFAS(state.graph, state.buckets, state.zeroIdx);
 
@@ -30,7 +30,7 @@ List<Edge> _doGreedyFAS(Graph g, List<List<Props>> buckets, int zeroIdx) {
   Props? entry;
   while (g.nodeCount > 0) {
     while (sinks.isNotEmpty) {
-      entry=sinks.removeAt(0);
+      entry = sinks.removeAt(0);
       _removeNode(g, buckets, zeroIdx, entry, false);
     }
     while (sources.isNotEmpty) {
@@ -39,10 +39,12 @@ List<Edge> _doGreedyFAS(Graph g, List<List<Props>> buckets, int zeroIdx) {
     }
     if (g.nodeCount > 0) {
       for (var i = buckets.length - 2; i > 0; --i) {
-        var bl=buckets[i];
-        entry = bl.isNotEmpty?bl.removeAt(0):null;
+        var bl = buckets[i];
+        entry = bl.isNotEmpty ? bl.removeAt(0) : null;
         if (entry != null) {
-          results = results.concat(_removeNode(g, buckets, zeroIdx, entry, true));
+          results = results.concat(
+            _removeNode(g, buckets, zeroIdx, entry, true),
+          );
           break;
         }
       }
@@ -51,8 +53,13 @@ List<Edge> _doGreedyFAS(Graph g, List<List<Props>> buckets, int zeroIdx) {
   return results;
 }
 
-List<Edge>? _removeNode(Graph g, List<List<Props>> buckets, int zeroIdx, Props entry,
-    [bool collectPredecessors = false]) {
+List<Edge>? _removeNode(
+  Graph g,
+  List<List<Props>> buckets,
+  int zeroIdx,
+  Props entry, [
+  bool collectPredecessors = false,
+]) {
   List<Edge>? results = collectPredecessors ? [] : null;
   g.inEdges(entry.getS(vK))?.forEach((e) {
     var weight = g.edge2(e).getD(valueK);
@@ -101,9 +108,11 @@ _InnerResult2 _buildState(Graph g, double Function(Edge) weightFn) {
     maxIn = math.max(maxIn, p1.getD(innerK));
   }
 
-  List<List<Props>> buckets = List.from(range(0, (maxOut + maxIn + 3).toInt()).map((e) {
-    return <Props>[];
-  }));
+  List<List<Props>> buckets = List.from(
+    range(0, (maxOut + maxIn + 3).toInt()).map((e) {
+      return <Props>[];
+    }),
+  );
   var zeroIdx = (maxIn + 1).toInt();
 
   for (var v in fasGraph.nodes) {
@@ -118,11 +127,14 @@ _InnerResult2 _buildState(Graph g, double Function(Edge) weightFn) {
 
 void _assignBucket(List<List<Props>> buckets, int zeroIdx, Props entry) {
   if (!entry.hasOwn(outK)) {
-    buckets[0].insert(0,entry);
+    buckets[0].insert(0, entry);
   } else if (!entry.hasOwn(innerK)) {
-    buckets[buckets.length - 1].insert(0,entry);
+    buckets[buckets.length - 1].insert(0, entry);
   } else {
-    buckets[(entry.getD(outK) - entry.getD(innerK) + zeroIdx).toInt()].insert(0, entry);
+    buckets[(entry.getD(outK) - entry.getD(innerK) + zeroIdx).toInt()].insert(
+      0,
+      entry,
+    );
   }
 }
 

@@ -23,7 +23,10 @@ Future<void> main(List<String> args) async {
   final seconds = args.length > 1 ? int.parse(args[1]) : 5;
   final c = buildCorpus().firstWhere((c) => c.name.contains(filter));
 
-  final info = await Service.controlWebServer(enable: true, silenceOutput: true);
+  final info = await Service.controlWebServer(
+    enable: true,
+    silenceOutput: true,
+  );
   final ws = info.serverWebSocketUri!;
   final vm = await vmServiceConnectUri(ws.toString());
   final isolateId = Service.getIsolateId(iso.Isolate.current)!;
@@ -41,8 +44,10 @@ Future<void> main(List<String> args) async {
     runs++;
   }
   final end = (await vm.getVMTimelineMicros()).timestamp!;
-  stderr.writeln('${c.name}: $runs runs, '
-      '${(sw.elapsedMicroseconds / runs / 1000).toStringAsFixed(2)} ms/run');
+  stderr.writeln(
+    '${c.name}: $runs runs, '
+    '${(sw.elapsedMicroseconds / runs / 1000).toStringAsFixed(2)} ms/run',
+  );
 
   final samples = await vm.getCpuSamples(isolateId, start, end - start);
   final fns = samples.functions!;
@@ -81,12 +86,14 @@ Future<void> main(List<String> args) async {
     var count = 0;
     for (final s in samples.samples!) {
       final stack = s.stack!;
-      if (stack.isEmpty || !stack.any((f) => name(f).startsWith(inside))) continue;
+      if (stack.isEmpty || !stack.any((f) => name(f).startsWith(inside)))
+        continue;
       count++;
       tops.update(name(stack.first), (v) => v + 1, ifAbsent: () => 1);
     }
     stdout.writeln('\nTop frames inside $inside ($count samples)');
-    final top = tops.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final top = tops.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     for (final e in top.take(20)) {
       stdout.writeln('${e.value.toString().padLeft(6)}  ${e.key}');
     }
@@ -96,12 +103,14 @@ Future<void> main(List<String> args) async {
     final callers = <String, int>{};
     for (final s in samples.samples!) {
       final stack = s.stack!;
-      if (stack.length < 3 || !name(stack.first).startsWith(callersOf)) continue;
+      if (stack.length < 3 || !name(stack.first).startsWith(callersOf))
+        continue;
       final key = '${name(stack[1])}  <-  ${name(stack[2])}';
       callers.update(key, (v) => v + 1, ifAbsent: () => 1);
     }
     stdout.writeln('\nCallers of $callersOf');
-    final top = callers.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final top = callers.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     for (final e in top.take(15)) {
       stdout.writeln('${e.value.toString().padLeft(6)}  ${e.key}');
     }
